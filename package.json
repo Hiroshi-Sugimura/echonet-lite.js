@@ -1,0 +1,14 @@
+{
+  "name": "echonet-lite",
+  "version": "0.0.8",
+  "description": "This module provides ECHONET Lite protocol API.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": {
+    "name": "Hiroshi SUGIMURA"
+  },
+  "license": "MIT",
+  "Keywords": ["ECHONET Lite", "Smart house", "IoT", "Home appliances"]
+}
