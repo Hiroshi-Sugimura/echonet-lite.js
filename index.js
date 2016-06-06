@@ -1,15 +1,10 @@
 //////////////////////////////////////////////////////////////////////
-//	$Date:: 2016-03-29 18:50:22 +0900#$
-//	$Rev: 9375 $
+//	$Date:: 2016-06-06 10:02:22 +0900#$
+//	$Rev: 9703 $
 //	Copyright (C) Hiroshi SUGIMURA 2013.09.27 - above.
 //////////////////////////////////////////////////////////////////////
 // UDPつかう
 var dgram = require('dgram');
-
-// EL Database
-// var dbfilename = "ECHONETLite.db"
-// var sqlite3 = require('sqlite3').verbose();
-// var eldb = new sqlite3.Database(dbfilename);
 
 
 //////////////////////////////////////////////////////////////////////
@@ -31,27 +26,84 @@ var dgram = require('dgram');
 
 // クラス変数
 var EL = {
-EL_port: 3610,
-EL_Multi: '224.0.23.0',
-EL_obj: null,
-facilities: {}  	// ネットワーク内の機器情報リスト
-// データ形式の例
-// { '192.168.0.3': { '05ff01': { d6: '' } },
-// '192.168.0.4': { '05ff01': { '80': '30', '82': '30' } } }
+	// define
+  SETI_SNA: "50",
+  SETC_SNA: "51",
+  GET_SNA: "52",
+  INF_SNA: "53",
+  SETGET_SNA: "5e",
+  SETI: "60",
+  SETC: "61",
+  GET: "62",
+  INF_REQ: "63",
+  SETGET: "6e",
+  SET_RES: "71",
+  GET_RES: "72",
+  INF: "73",
+  INFC: "74",
+  INFC_RES: "7a",
+  SETGET_RES: "7e",
+  EL_port: 3610,
+  EL_Multi: '224.0.23.0',
+  EL_obj: null,
+  EL_cls: null,
+  Node_details:	{
+	  "80": [0x30],
+	  "82": [0x01, 0x0a, 0x01, 0x00], // EL version, 1.1
+	  "83": [0xfe, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00], // identifier
+	  "8a": [0x00, 0x00, 0x77], // maker code
+	  "9d": [0x02, 0x80, 0xd5],       // inf map, 1 Byte目は個数
+	  "9e": [0x00],                 // set map, 1 Byte目は個数
+	  "9f": [0x09, 0x80, 0x82, 0x83, 0x8a, 0xd3, 0xd4, 0xd5, 0xd6, 0xd7], // get map, 1 Byte目は個数
+	  "d3": [0x00, 0x00, 0x01],  // 自ノードで保持するインスタンスリストの総数（ノードプロファイル含まない）, user項目
+	  "d4": [0x00, 0x02],        // 自ノードクラス数, user項目
+	  "d5": [],    // インスタンスリスト通知, user項目
+	  "d6": [],    // 自ノードインスタンスリストS, user項目
+	  "d7": [] },  // 自ノードクラスリストS, user項目
+  debugMode: false,
+  facilities: {}  	// ネットワーク内の機器情報リスト
+	// データ形式の例
+	// { '192.168.0.3': { '05ff01': { d6: '' } },
+	// '192.168.0.4': { '05ff01': { '80': '30', '82': '30' } } }
 };
 
 
 // 初期化，バインド
 EL.initialize = function ( objList, userfunc ) {
+
 	// オブジェクトリストを確保
-	EL_obj = objList;
+	EL.EL_obj = objList;
+
+	// クラスリストにする
+	var classes = objList.map( function(e) {	// クラスだけにかえる
+		return e.substr(0,4);
+	});
+	var classList = classes.filter( function (x, i, self) {		// 重複削除
+		return self.indexOf(x) === i;
+	});
+	EL.EL_cls = classList;
+
+	// インスタンス情報
+	EL.Node_details["d3"] = [ 0x00, 0x00, EL.EL_obj.length]; // D3はノードプロファイル入らない，最大253では？なぜ3Byteなのか？
+	var v = EL.EL_obj.map( function( elem ){
+		return EL.toHexArray( elem );
+	});
+	v.unshift( EL.EL_obj.length );
+	EL.Node_details["d5"] = Array.prototype.concat.apply([], v);  // D5, D6同じでよい．ノードプロファイル入らない．
+	EL.Node_details["d6"] = EL.Node_details["d5"];
+
+	// クラス情報
+	EL.Node_details["d4"] = [ 0x00, EL.EL_cls.length + 1]; // D4だけなぜかノードプロファイル入る．
+	v = EL.EL_cls.map( function( elem ){
+		return EL.toHexArray( elem );
+	});
+	v.unshift( EL.EL_cls.length );
+	EL.Node_details["d7"] = Array.prototype.concat.apply([], v);  // D7はノードプロファイル入らない
 
 	// EL受け取るようのUDP
 	var sock = dgram.createSocket("udp4", function (msg, rinfo) {
 		EL.returner( msg, rinfo, userfunc );
 	});
-
-	// console.log( "EL_port: " + EL.EL_port + " bind." );
 
 	// マルチキャスト設定
 	sock.bind( EL.EL_port, '0.0.0.0', function() {
@@ -59,6 +111,10 @@ EL.initialize = function ( objList, userfunc ) {
 		sock.addMembership( EL.EL_Multi );
 		// console.log( "EL_port bind OK!" );
 	});
+
+
+	// 初期化終わったのでノードのINFをだす
+	EL.sendOPC1( '224.0.23.0', [0x0e,0xf0,0x01], [0x0e,0xf0,0x01], 0x73, 0xd5, EL.Node_details["d5"] );
 
 	return sock;
 };
@@ -71,9 +127,7 @@ EL.initialize = function ( objList, userfunc ) {
 // ELDATA形式
 EL.eldataShow = function( eldata ) {
 	if( eldata != null ) {
-		console.log(
-				   'EHD: ' + eldata.EHD + 'TID: ' +eldata.TID + 'SEOJ: ' + eldata.SEOJ + 'DEOJ: ' + eldata.DEOJ +
-				   '\nEDATA: ' + eldata.EDATA );
+		console.log( 'EHD: ' + eldata.EHD + 'TID: ' +eldata.TID + 'SEOJ: ' + eldata.SEOJ + 'DEOJ: ' + eldata.DEOJ + '\nEDATA: ' + eldata.EDATA );
 	}else{
 		console.log( "EL.eldataShow error. eldata is not EL data." );
 	}
@@ -86,7 +140,6 @@ EL.stringShow = function( str ) {
 	EL.eldataShow( eld );
 };
 
-
 // バイトデータ
 EL.bytesShow = function( bytes ) {
 	eld = EL.parseBytes( bytes );
@@ -94,46 +147,58 @@ EL.bytesShow = function( bytes ) {
 };
 
 
-
 //////////////////////////////////////////////////////////////////////
 // 変換系
 //////////////////////////////////////////////////////////////////////
+
+// Detailだけをparseする，内部で主に使う
 EL.parseDetail = function( opc, str ) {
 
-	var ret = {}; // 戻り値用，連想配列
-	var now = 0;  // 現在のIndex
-	var opc = EL.toHexArray( opc )[0];  // opc
+	try {
+		var ret = {}; // 戻り値用，連想配列
+		var now = 0;  // 現在のIndex
+		var epc = 0;
+		var pdc = 0;
+		var edt = [];
+		var array = EL.toHexArray( str );  // edts
 
-	// opcループ
-	for( i = 0; i< opc; i += 1 ) {
-		// EPC
-		var epc = str.substr( now, 2 );
+		// OPCループ
+		for( var i = 0; i< opc; i += 1 ) {
+			// EPC（機能）
+			epc = array[now];
+			now++;
 
-		// 後半ゼロづめしてくるときがあるのでepc zero対策
-		if( epc == "00" ) {
-			break;
-		}
+			// PDC（EDTのバイト数）
+			pdc = array[now];
+			now++;
 
-		// PDC, データ長
-		var pdc = parseInt( str.substr( now+2, 2 ) );
+			// getの時は pdcが0なのでなにもしない，0でなければ値が入っている
+			if( pdc == 0 ) {
+				ret[ EL.toHexString(epc) ] = "";
+			} else {
+				// PDCループ
+				for( var j = 0; j < pdc; j += 1 ) {
+					// 登録
+					edt.push( array[now] );
+					now++;
+				}
+				ret[ EL.toHexString(epc) ] = EL.bytesToString( edt );
+			}
 
-		// getの時はnum=0
-		if( pdc == 0 ) {
-			ret[ (str.substr( now, 2 )) ] = "";
-		}else {
-			// 登録
-			ret[ str.substr( now, 2 ) ] = str.substr( now+4, pdc*2 );
-		}
+		}  // opcループ
 
-		now += (pdc*2 + 4);
-
-	} // opcループ
+	} catch (e) {
+		console.log('parse detail error. detail string is ');
+		console.dir(str);
+		console.error(e);
+		return {};
+	}
 
 	return ret;
 };
 
 
-// バイトデータをぶち込むとELDATA形式にする
+// バイトデータをいれるとELDATA形式にする
 EL.parseBytes = function( bytes ) {
 
 	// 最低限のELパケットになってない
@@ -151,42 +216,31 @@ EL.parseBytes = function( bytes ) {
 		}
 	}
 
-	var eldata = {
-	EHD : str.substr( 0, 4 ),
-	TID : str.substr( 4, 4 ),
-	SEOJ : str.substr( 8, 6 ),
-	DEOJ : str.substr( 14, 6 ),
-	EDATA: str.substr( 20 ),    // 下記はEDATAの詳細
-	ESV : str.substr( 20, 2 ),
-	OPC : str.substr( 22, 2 ),
-	DETAIL: str.substr( 24 ),
-	DETAILs: EL.parseDetail( str.substr( 22, 2 ), str.substr( 24 ) )
-	};
-
-	return ( eldata );
+	// 文字列にしたので，parseStringで何とかする
+	return ( EL.parseString(str) );
 };
 
 
-// 16進数で表現された文字列をぶち込むとELDATA形式にする
+// 16進数で表現された文字列をいれるとELDATA形式にする
 EL.parseString = function( str ) {
 
 	var eldata = {
-	EHD : str.substr( 0, 4 ),
-	TID : str.substr( 4, 4 ),
-	SEOJ : str.substr( 8, 6 ),
-	DEOJ : str.substr( 14, 6 ),
-	EDATA: str.substr( 20 ),    // 下記はEDATAの詳細
-	ESV : str.substr( 20, 2 ),
-	OPC : str.substr( 22, 2 ),
-	DETAIL: str.substr( 24 ),
-	DETAILs: EL.parseDetail( str.substr( 22, 2 ), str.substr( 24 ) )
+		'EHD'    : str.substr( 0, 4 ),
+		'TID'    : str.substr( 4, 4 ),
+		'SEOJ'   : str.substr( 8, 6 ),
+		'DEOJ'   : str.substr( 14, 6 ),
+		'EDATA'  : str.substr( 20 ),    // 下記はEDATAの詳細
+		'ESV'    : str.substr( 20, 2 ),
+		'OPC'    : str.substr( 22, 2 ),
+		'DETAIL' : str.substr( 24 ),
+		'DETAILs': EL.parseDetail( str.substr( 22, 2 ), str.substr( 24 ) )
 	};
 
 	return ( eldata );
 };
 
 
-// 文字列をぶち込むとELらしい切り方のStringを得る
+// 文字列をいれるとELらしい切り方のStringを得る
 EL.getSeparatedString_String = function( str ) {
 	if( typeof str == 'string' ) {
 		return ( str.substr( 0, 4 ) + " " +
@@ -198,12 +252,13 @@ EL.getSeparatedString_String = function( str ) {
 	}else{
 		console.error( "str is not string." );
 		console.error( str );
+		console.trace();
 		return '';
 	}
 };
 
 
-// ELDATAをぶち込むとELらしい切り方のStringを得る
+// ELDATAをいれるとELらしい切り方のStringを得る
 EL.getSeparatedString_ELDATA = function( eldata ) {
 	return ( eldata.EHD + ' ' + eldata.TID + ' ' + eldata.SEOJ + ' ' + eldata.DEOJ + ' ' + eldata.EDATA );
 };
@@ -211,49 +266,43 @@ EL.getSeparatedString_ELDATA = function( eldata ) {
 
 // ELDATA形式から配列へ
 EL.ELDATA2Array = function( eldata ) {
-	var ret = EL.toHexArray( eldata.EHD +
-							  eldata.TID +
-							  eldata.SEOJ +
-							  eldata.DEOJ +
-							  eldata.EDATA );
-
+	var ret = EL.toHexArray( eldata.EHD + eldata.TID + eldata.SEOJ + eldata.DEOJ + eldata.EDATA );
 	return ret;
 };
 
 
-
-// 1バイト文字をHEX数値にしたい
+// 1バイト文字をHEX数値にしたい，基本機能であるかもしれない．
 EL.charToInteger = function( chara ) {
 	var ret = 0;
 	switch (chara) {
-	case "0": case "1": case "2": case "3": case "4": case "5": case "6": case "7": case "8": case "9":
+	  case "0": case "1": case "2": case "3": case "4": case "5": case "6": case "7": case "8": case "9":
 		ret = parseInt(chara);
 		break;
-	case "a": case "A":
+	  case "a": case "A":
 		ret = 10;
 		break;
 
-	case "b": case "B":
+	  case "b": case "B":
 		ret = 11;
 		break;
 
-	case "c": case "C":
+	  case "c": case "C":
 		ret = 12;
 		break;
 
-	case "d": case "D":
+	  case "d": case "D":
 		ret = 13;
 		break;
 
-	case "e": case "E":
+	  case "e": case "E":
 		ret = 14;
 		break;
 
-	case "f": case "F":
+	  case "f": case "F":
 		ret = 15;
 		break;
 
-	default : ret = 0; break;
+	  default : ret = 0; break;
 	}
 	return ret;
 }
@@ -269,7 +318,7 @@ EL.toHexArray = function( string ) {
 
 	var ret = [];
 
-	for( i=0; i<string.length; i += 2 ) {
+	for( i=0; i < string.length; i += 2 ) {
 
 		l = string.substr( i, 1 );
 		r = string.substr( i+1, 1 );
@@ -278,46 +327,18 @@ EL.toHexArray = function( string ) {
 	}
 
 	return ret;
-}
-
-
-
-//////////////////////////////////////////////////////////////////////
-// データベースからの変換系
-/*
-EL.toEOJStr = function( s, callback ) {
-
-	s = s.substr( 0, 4 );
-	var query = "select ClassNameJ from Object where Class LIKE '" + s + "';";
-
-	// console.dir( query );
-	var str = "";
-	// 多少重いがDB処理は同期待ちするしかない？
-	eldb.all( query, function( err, rows) {
-
-		// allでよんで，無ければないで処理する
-		rows = rows[0];
-
-		if( err ) {
-			console.dir( err );
-		} else {
-			if( rows != null ) {
-				str = rows.ClassNameJ;
-
-				if( typeof str == 'undefined' || str == "" ) {
-					str = "undefined";
-				}
-
-			}else{
-				str = "null";
-			}
-		}
-
-		callback( str );
-	});
-
 };
-*/
+
+
+// バイト配列を文字列にかえる
+EL.bytesToString = function(bytes) {
+	var ret = "";
+
+	for(var i=0; i<bytes.length; i++) {
+		ret += EL.toHexString( bytes[i] );
+	}
+	return ret;
+};
 
 
 //////////////////////////////////////////////////////////////////////
@@ -326,7 +347,6 @@ EL.toEOJStr = function( s, callback ) {
 
 // EL送信のベース
 EL.sendBase = function( ip, buffer ) {
-
 	// 送信する
 	var client = dgram.createSocket("udp4");
 	client.send( buffer, 0, buffer.length, EL.EL_port, ip, function(err, bytes) {
@@ -343,14 +363,37 @@ EL.sendArray = function( ip, array ) {
 
 // ELの非常に典型的なOPC一個でやる
 EL.sendOPC1 = function( ip, seoj, deoj, esv, epc, edt) {
+
+	if( typeof(seoj) == "string" ) {
+		seoj = EL.toHexArray(seoj);
+	}
+
+	if( typeof(deoj) == "string" ) {
+		deoj = EL.toHexArray(deoj);
+	}
+
+	if( typeof(esv) == "string" ){
+		esv = (EL.toHexArray(esv))[0];
+	}
+
+	if( typeof(epc) == "string" ) {
+		epc = (EL.toHexArray(epc))[0]
+	}
+
+	if( typeof(edt) == "number" ) {
+		edt = [edt];
+	}else if( typeof(edt) == "string" ) {
+		edt = EL.toHexArray(edt);
+	}
+
 	var buffer;
 
 	if( esv == 0x62 ) { // get
 		buffer = new Buffer([
 			0x10, 0x81,
 			0x00, 0x00,
-			seoj[0], seoj[1], 0x01,
-			deoj[0], deoj[1], 0x01,
+			seoj[0], seoj[1], seoj[2],
+			deoj[0], deoj[1], deoj[2],
 			esv,
 			0x01,
 			epc,
@@ -359,13 +402,15 @@ EL.sendOPC1 = function( ip, seoj, deoj, esv, epc, edt) {
 		buffer = new Buffer([
 			0x10, 0x81,
 			0x00, 0x00,
-			seoj[0], seoj[1], 0x01,
-			deoj[0], deoj[1], 0x01,
+			seoj[0], seoj[1], seoj[2],
+			deoj[0], deoj[1], deoj[2],
 			esv,
 			0x01,
 			epc,
 			edt.length].concat(edt) );
 	}
+
+	// console.log( buffer );
 
 	// データができたので送信する
 	EL.sendBase( ip, buffer );
@@ -386,68 +431,194 @@ EL.sendString = function( ip, string ) {
 
 // ELの受信データを振り分けるよ，何とかしよう
 EL.returner = function( bytes, rinfo, userfunc ) {
-   // console.log( "EL.returner:EL.parseBytes.");
+	// console.log( "EL.returner:EL.parseBytes.");
 
-	var elstructure = EL.parseBytes( bytes );
+	var els = EL.parseBytes( bytes );
 
 	try{
-		console.log( "EL.returner:selection.");
-
 		// キチンとパースできたか？
-		if( null == elstructure ) {
-			// App.println( 1, "EL.returner:EL.parseBytes is null.");
+		if( null == els ) {
 			return;
 		}
 
 		// ヘッダ確認
-		if( elstructure.EHD != '1081' ) {
-			// App.println( 1, "bytes is not EL. Reseive data is:" );
-			// App.print( 1, bytes );
+		if( els.EHD != '1081' ) {
 			return;
 		}
 
-		// Ver 1.0でサーチ（INF_REQ）された
-		if( elstructure.SEOJ == '05ff01' && elstructure.DEOJ == '0ef001' && elstructure.EDATA == '6301d500' ) {
-			// App.println( 3, "EL.returner:Ver1.0 INF_REQ.");
-			EL.sendOPC1( '224.0.23.0', [0x0e, 0xf0], [0x05, 0xff], 0x73, 0xd5, [EL_obj.length].concat(Array.prototype.concat.apply([], EL_obj)) );
-		}
-		// Ver 1.1でサーチ（Get）された
-		else if( elstructure.SEOJ == '05ff01' && elstructure.DEOJ == '0ef001' && elstructure.EDATA == '6201d600' ) {
-			// App.println( 3, "EL.returner:Ver1.1 GET.");
-			EL.sendOPC1( rinfo.address, [0x0e, 0xf0], [0x05, 0xff], 0x72, 0xd6, [EL_obj.length].concat(Array.prototype.concat.apply([], EL_obj)) );
-		}
-		// 電源の状態をGet対応する
-		else if( elstructure.SEOJ == '05ff01' && elstructure.DEOJ == '0ef001' && elstructure.EDATA == '62018000' ) {
-			EL.sendOPC1( rinfo.address, [0x0e, 0xf0], [0x05, 0xff], 0x72, 0x80, [0x30] );  // EL ver 1.1方式
-		}
-		// 他機器の状態を知るために
-		// node profileが立ち上がったら，オブジェクトリストをもらいに行く
-		else if( elstructure.SEOJ == '0ef001' && elstructure.DEOJ == '0ef001' && elstructure.EDATA == '7401800130' ) {
-			EL.sendOPC1( rinfo.address, [0x05, 0xff], [0x0e, 0xf0], 0x62, 0xd5, [0x00] );
-		}
-		// オブジェクトリストをもらったらオブジェクトの電源状態を確認したい．EL ver1.1 d5, EL ver 1.0 D6
-		else if( ( elstructure.DEOJ == '0ef001' || elstructure.DEOJ == '05ff01' ) && (elstructure.DETAIL.substr(0, 2) == 'd5' || elstructure.DETAIL.substr(0, 2) == 'd6') ) {
-			var msg = "1081000005ff01" + elstructure.SEOJ + "62018000";
-			EL.sendString( rinfo.address, msg );
-		}
-		// SetCに対する返答のSetResは，EDT 0x00でOKの意味を受け取ることとなる．ゆえにその詳細な値をGetする必要がある
-		else if( elstructure.ESV == '71' && elstructure.DETAIL.substr(0,2) == '00' ) {
-			var msg = "1081000005ff01" + elstructure.SEOJ + "6201" + elstructure.DETAIL.substr(0,2) + "00";
-			EL.sendString( rinfo.address, msg );
+		// Node profileに関してきちんと処理する
+		if( els.DEOJ == '0ef000' || els.DEOJ == '0ef001' ) {
+
+			switch( els.ESV ) {
+				////////////////////////////////////////////////////////////////////////////////////
+				// 0x5x
+				// エラー受け取ったときの処理
+			  case EL.SETI_SNA:   // "50"
+			  case EL.SETC_SNA:   // "51"
+			  case EL.GET_SNA:    // "52"
+			  case EL.INF_SNA:    // "53"
+			  case EL.SETGET_SNA: // "5e"
+				// console.log( "EL.returner: get error" );
+				// console.dir( els );
+				return;
+				break;
+
+				////////////////////////////////////////////////////////////////////////////////////
+				// 0x6x
+			  case EL.SETI: // "60
+			  case EL.SETC: // "61"
+				break;
+
+			  case EL.GET: // 0x62
+				// console.log( "EL.returner: get prop. of Node profile.");
+				for( var epc in els.DETAILs ) {
+					if( EL.Node_details[epc] ) { // 持ってるEPCのとき
+						EL.sendOPC1( rinfo.address, [0x0e, 0xf0, 0x01], EL.toHexArray(els.SEOJ), 0x72, EL.toHexArray(epc), EL.Node_details[epc] );
+					} else { // 持っていないEPCのとき, SNA
+						EL.sendOPC1( rinfo.address, [0x0e, 0xf0, 0x01], EL.toHexArray(els.SEOJ), 0x52, EL.toHexArray(epc), [0x00] );
+					}
+				}
+				break;
+
+			  case EL.INFREQ: // 0x63
+				if( els.DETAILs["d5"] == "00" ) {
+					// console.log( "EL.returner: Ver1.0 INF_REQ.");
+					EL.sendOPC1( '224.0.23.0', [0x0e, 0xf0, 0x01], EL.toHexArray(els.SEOJ), 0x73, 0xd5, EL.Node_details["d5"] );
+				}
+				break;
+
+			  case EL.SETGET: // "6e"
+				break;
+
+				////////////////////////////////////////////////////////////////////////////////////
+				// 0x7x
+			  case EL.SET_RES: // 71
+				// SetCに対する返答のSetResは，EDT 0x00でOKの意味を受け取ることとなる．ゆえにその詳細な値をGetする必要がある
+				if(els.DETAIL.substr(0,2) == '00' ) {
+					var msg = "1081000005ff01" + els.SEOJ + "6201" + els.DETAIL.substr(0,2) + "00";
+					EL.sendString( rinfo.address, msg );
+				}
+				break;
+
+			  case EL.GET_RES: // 72
+				// V1.1
+				// d6のEDT表現がとても特殊，EDT1バイト目がインスタンス数になっている
+				if( els.DETAILs.d6 != null && els.DETAILs.d6 != '' ) {
+					// console.log( "EL.returner: get object list! PropertyMap req V1.0.");
+					// プロパティマップに書いてあるオブジェクトのプロパティマップをもらう
+					var array = EL.toHexArray( els.DETAILs.d6 );
+					var instNum = array[0];
+					while( 0 < instNum ) {
+						EL.getPropertyMaps( rinfo.address, array.slice( (instNum - 1)*3 +1, (instNum - 1)*3 +4 ) );
+						instNum -= 1;
+					}
+				}else if( els.DETAILs["9f"] != null ) {
+					var array = EL.toHexArray( els.DETAILs["9f"] );
+					if( array.length < 16 ) { // プロパティマップ16バイト未満は記述形式１
+						var num = array[0];
+						for( var i=0; i<num; i++ ) {
+							// このとき9fをまた取りに行くと無限ループなのでやめる
+							if( array[i+1] != 0x9f ) {
+								EL.sendOPC1( rinfo.address, [0x0e, 0xf0, 0x01], EL.toHexArray(els.SEOJ), 0x62, array[i+1], [0x00] );
+							}
+						}
+					} else {
+						// 16バイト以上なので記述形式2，EPCのarrayを作り直したら，あと同じ
+						var array = EL.parseMapForm2( els.DETAILs["9f"] );
+						var num = array[0];
+						for( var i=0; i<num; i++ ) {
+							// このとき9fをまた取りに行くと無限ループなのでやめる
+							if( array[i+1] != 0x9f ) {
+								EL.sendOPC1( rinfo.address, [0x0e, 0xf0, 0x01], EL.toHexArray(els.SEOJ), 0x62, array[i+1], [0x00] );
+							}
+						}
+					}
+				}
+				break;
+
+			  case EL.INF:  // 0x73
+				// V1.0 オブジェクトリストをもらったらそのオブジェクトのPropertyMapをもらいに行く, デバイスが後で起動した
+				if( els.DETAILs.d5 != null && els.DETAILs.d5 != "" ) {
+					// ノードプロファイルオブジェクトのプロパティマップをもらう
+					EL.getPropertyMaps( rinfo.address, [0x0e, 0xf0, 0x00] );
+				}
+				break;
+
+			  case EL.INFC: // "74"
+				// V1.0 オブジェクトリストをもらったらそのオブジェクトのPropertyMapをもらいに行く
+				if( els.DETAILs.d5 != null && els.DETAILs.d5 ) {
+					// ノードプロファイルオブジェクトのプロパティマップをもらう
+					EL.getPropertyMaps( rinfo.address, [0x0e, 0xf0, 0x00] );
+
+					// console.log( "EL.returner: get object list! PropertyMap req.");
+					var array = EL.toHexArray( els.DETAILs.d5 );
+					var instNum = array[0];
+					while( 0 < instNum ) {
+						EL.getPropertyMaps( rinfo.address, array.slice( (instNum - 1)*3 +1, (instNum - 1)*3 +4 ) );
+						instNum -= 1;
+					}
+				}
+				break;
+
+			  case EL.INFC_RES: // "7a"
+			  case EL.SETGET_RES: // "7e"
+				// console.log( "get " );
+				// console.dir( els );
+				break;
+
+			  default:
+				// console.log( "???" );
+				// console.dir( els );
+				break;
+			}
 		}
 
-		userfunc( rinfo, elstructure );
+		// 受信状態から機器情報修正, GETとINFREQは除く
+		if( els.ESV != "62" && els.ESV != "63" ) {
+			EL.renewFacilities( rinfo.address, els );
+		}
+
+		// 機器オブジェクトに関してはユーザー関数に任す
+		userfunc( rinfo, els );
 	} catch(e) {
-		// App.println( 1, "EL.returner error. get bytes is not EL. Detail is following:");
-		// App.print( 1, "elstructure is" );
-		// App.print( 1, elstructure );
-		// App.print( 1, "bytes is" );
-		// App.print( 1, bytes );
-		// App.print( 1, "rinfo is" );
-		// App.print( 1, rinfo );
-		// App.print( 1, e );
+		console.error("EL.returner error.");
+		console.trace();
+		console.dir(e);
+		console.dir( els );
 	}
 
+};
+
+
+// ネットワーク内のEL機器全体情報を更新する，受信したら勝手に実行される
+EL.renewFacilities = function( ip, els ) {
+	try {
+		epcList = EL.parseDetail( els.OPC, els.DETAIL );
+
+		// 新規IP
+		if( EL.facilities[ ip ] == null ) { //見つからない
+			EL.facilities[ ip ] = {};
+		}
+
+		// 新規obj
+		if( EL.facilities[ ip ][ els.SEOJ ] == null ) {
+			EL.facilities[ ip ][ els.SEOJ ] = {};
+			// 新規オブジェクトのとき，プロパティリストもらおう
+			EL.getPropertyMaps( ip, EL.toHexArray(els.SEOJ) );
+		}
+
+		for( var epc in epcList ) {
+			// 新規epc
+			if( EL.facilities[ ip ][ els.SEOJ ][ epc ] == null ) {
+				EL.facilities[ ip ][ els.SEOJ ][ epc ] = {};
+			}
+
+			EL.facilities[ ip ][ els.SEOJ ][ epc ] = epcList[ epc ];
+		}
+	}catch(e) {
+		console.error("EL.renewFacilities error.");
+		console.dir(e);
+	}
 };
 
 
@@ -459,41 +630,41 @@ EL.returner = function( bytes, rinfo, userfunc ) {
 
 // 機器検索
 EL.search = function() {
-	EL.sendOPC1( EL.EL_Multi, [0x05,0xff], [0x0e, 0xf0], 0x62, 0xD6, [0x00] );
+	EL.sendOPC1( EL.EL_Multi, [0x0e,0xf0, 0x01], [0x0e, 0xf0, 0x00], 0x62, 0xD6, [0x00] );  // すべてノードに対して，すべてのEOJをGetする
 };
 
 
+// プロパティマップをすべて取得する
+EL.getPropertyMaps = function ( ip, eoj ) {
+	EL.sendOPC1( ip, [0x0e,0xf0,0x01], eoj, 0x62, 0x9D, [0x00] );  // INF prop
+	EL.sendOPC1( ip, [0x0e,0xf0,0x01], eoj, 0x62, 0x9E, [0x00] );  // SET prop
+	EL.sendOPC1( ip, [0x0e,0xf0,0x01], eoj, 0x62, 0x9F, [0x00] );  // GET prop
+};
 
-// ネットワーク内のEL機器全体情報を更新する
-EL.renewFacilities = function( ip, obj, opc, detail ) {
-	try {
-		epcList = EL.parseDetail( opc, detail );
 
-		// 新規IP
-		if( EL.facilities[ ip ] == null ) {
-			EL.facilities[ ip ] = {};
-		}
+// parse Propaty Map Form 2
+// 16以上のプロパティ数の時，記述形式2，出力はForm1にすること
+EL.parseMapForm2 = function( bitstr ) {
+	var ret = [];
+	var val = 0x80;
+	var array = EL.toHexArray( bitstr );
 
-		// 新規obj
-		if( EL.facilities[ ip ][ obj ] == null ) {
-			EL.facilities[ ip ][ obj ] = {};
-		}
-
-		for( var epc in epcList ) {
-
-			// 新規epc
-			if( EL.facilities[ ip ][ obj ][ epc ] == null ) {
-				EL.facilities[ ip ][ obj ][ epc ] = {};
+	// bit loop
+	for( var bit=0; bit<8; bit += 1 ) {
+		// byte loop
+		for( var byt=1; byt<17; byt+=1 ) {
+			if( (array[byt] >> bit) & 0x01 ) {
+				ret.push(val);
 			}
-
-			EL.facilities[ ip ][ obj ][ epc ] = epcList[ epc ];
+			val += 1;
 		}
-	}catch(e) {
-		// App.println( 1, "EL.renewFacilities error. ip is " + ip + ". obj is " + obj + ". opc is " + opc);
-		// App.println( 1, "detail is ");
-		// App.println( 1, detail );
 	}
+
+	ret.unshift( ret.length );
+
+	return ret;
 };
+
 
 
 module.exports = EL;
