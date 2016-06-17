@@ -44,7 +44,9 @@ var EL = {
   INFC_RES: "7a",
   SETGET_RES: "7e",
   EL_port: 3610,
+  isIPv6: false,
   EL_Multi: '224.0.23.0',
+  EL_Multi6: 'FF02::1',
   EL_obj: null,
   EL_cls: null,
   Node_details:	{
@@ -69,7 +71,9 @@ var EL = {
 
 
 // 初期化，バインド
-EL.initialize = function ( objList, userfunc ) {
+EL.initialize = function ( objList, userfunc, ipVer ) {
+
+    EL.isIPv6 = (ipVer == 6); // IPv6 flag
 
 	// オブジェクトリストを確保
 	EL.EL_obj = objList;
@@ -101,20 +105,20 @@ EL.initialize = function ( objList, userfunc ) {
 	EL.Node_details["d7"] = Array.prototype.concat.apply([], v);  // D7はノードプロファイル入らない
 
 	// EL受け取るようのUDP
-	var sock = dgram.createSocket("udp4", function (msg, rinfo) {
+	var sock = dgram.createSocket(EL.isIPv6 ? "udp6" : "udp4", function (msg, rinfo) {
 		EL.returner( msg, rinfo, userfunc );
 	});
 
 	// マルチキャスト設定
-	sock.bind( EL.EL_port, '0.0.0.0', function() {
+	sock.bind( EL.EL_port, EL.isIPv6 ? '::' : '0.0.0.0', function() {
 		sock.setMulticastLoopback( true );
-		sock.addMembership( EL.EL_Multi );
+		sock.addMembership( EL.isIPv6 ? EL.EL_Multi6 : EL.EL_Multi );
 		// console.log( "EL_port bind OK!" );
 	});
 
 
 	// 初期化終わったのでノードのINFをだす
-	EL.sendOPC1( '224.0.23.0', [0x0e,0xf0,0x01], [0x0e,0xf0,0x01], 0x73, 0xd5, EL.Node_details["d5"] );
+	EL.sendOPC1( EL.isIPv6 ? EL.EL_Multi6 : EL.EL_Multi, [0x0e,0xf0,0x01], [0x0e,0xf0,0x01], 0x73, 0xd5, EL.Node_details["d5"] );
 
 	return sock;
 };
@@ -348,7 +352,7 @@ EL.bytesToString = function(bytes) {
 // EL送信のベース
 EL.sendBase = function( ip, buffer ) {
 	// 送信する
-	var client = dgram.createSocket("udp4");
+	var client = dgram.createSocket(EL.isIPv6 ? "udp6" : "udp4");
 	client.send( buffer, 0, buffer.length, EL.EL_port, ip, function(err, bytes) {
 		client.close();
 	});
@@ -483,7 +487,7 @@ EL.returner = function( bytes, rinfo, userfunc ) {
 			  case EL.INFREQ: // 0x63
 				if( els.DETAILs["d5"] == "00" ) {
 					// console.log( "EL.returner: Ver1.0 INF_REQ.");
-					EL.sendOPC1( '224.0.23.0', [0x0e, 0xf0, 0x01], EL.toHexArray(els.SEOJ), 0x73, 0xd5, EL.Node_details["d5"] );
+					EL.sendOPC1( EL.isIPv6 ? EL.EL_Multi6 : EL.EL_Multi, [0x0e, 0xf0, 0x01], EL.toHexArray(els.SEOJ), 0x73, 0xd5, EL.Node_details["d5"] );
 				}
 				break;
 
@@ -630,7 +634,7 @@ EL.renewFacilities = function( ip, els ) {
 
 // 機器検索
 EL.search = function() {
-	EL.sendOPC1( EL.EL_Multi, [0x0e,0xf0, 0x01], [0x0e, 0xf0, 0x00], 0x62, 0xD6, [0x00] );  // すべてノードに対して，すべてのEOJをGetする
+	EL.sendOPC1( EL.isIPv6 ? EL.EL_Multi6 : EL.EL_Multi, [0x0e,0xf0, 0x01], [0x0e, 0xf0, 0x00], 0x62, 0xD6, [0x00] );  // すべてノードに対して，すべてのEOJをGetする
 };
 
 
