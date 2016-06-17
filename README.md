@@ -170,7 +170,7 @@ You can install the module as following command.
 
 ### 初期化，バインド, initialize
 
-    EL.initialize = function ( objList, userfunc )
+    EL.initialize = function ( objList, userfunc, ipVer )
 
 
 ### データ表示系, data representations
@@ -377,4 +377,3 @@ seoj, deoj, esv, epcは文字列でもOK，edtは数値も文字列もOKにし�
 0.0.11 マニュアルの英語表記追加
 
 0.0.10 API追加とBug修正，PropertyMap対応，sendOPC1のEPCを3バイトにしたので0.0.9と互換性きえた．Node.jsからだと家電の速度が間に合わないのでUDPの取りこぼしが発生する．ライブラリとしては対処しないこととなった．．
-
