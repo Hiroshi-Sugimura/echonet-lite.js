@@ -270,43 +270,6 @@ EL.ELDATA2Array = function( eldata ) {
 	return ret;
 };
 
-
-// 1バイト文字をHEX数値にしたい，基本機能であるかもしれない．
-EL.charToInteger = function( chara ) {
-	var ret = 0;
-	switch (chara) {
-	  case "0": case "1": case "2": case "3": case "4": case "5": case "6": case "7": case "8": case "9":
-		ret = parseInt(chara);
-		break;
-	  case "a": case "A":
-		ret = 10;
-		break;
-
-	  case "b": case "B":
-		ret = 11;
-		break;
-
-	  case "c": case "C":
-		ret = 12;
-		break;
-
-	  case "d": case "D":
-		ret = 13;
-		break;
-
-	  case "e": case "E":
-		ret = 14;
-		break;
-
-	  case "f": case "F":
-		ret = 15;
-		break;
-
-	  default : ret = 0; break;
-	}
-	return ret;
-}
-
 // 1バイトを文字列の16進表現へ（1Byteは必ず2文字にする）
 EL.toHexString = function( byte ) {
 	// 文字列0をつなげて，後ろから2文字分スライスする
@@ -323,7 +286,7 @@ EL.toHexArray = function( string ) {
 		l = string.substr( i, 1 );
 		r = string.substr( i+1, 1 );
 
-		ret.push( (EL.charToInteger(l) * 16) + EL.charToInteger(r) );
+		ret.push( (parseInt(l, 16) * 16) + parseInt(r, 16) );
 	}
 
 	return ret;
