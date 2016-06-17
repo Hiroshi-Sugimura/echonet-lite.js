@@ -235,14 +235,9 @@ You can install the module as following command.
 
 | from              |    to          |   function                         |
 |:-----------------:|:--------------:|:----------------------------------:|
-| charactor         | Integer        | charToInteger(chara)               |
 | Byte              | 16進表現String | toHexString(byte)                  |
 | 16進表現String    |  Integer[]     | toHexArray(str)                    |
 
-
-* 1バイト文字をHEX数値にしたい
-
-    EL.charToInteger = function( chara )
 
 * 1バイトを文字列の16進表現へ（1Byteは必ず2文字にする）
 
@@ -377,4 +372,3 @@ seoj, deoj, esv, epcは文字列でもOK，edtは数値も文字列もOKにし�
 0.0.11 マニュアルの英語表記追加
 
 0.0.10 API追加とBug修正，PropertyMap対応，sendOPC1のEPCを3バイトにしたので0.0.9と互換性きえた．Node.jsからだと家電の速度が間に合わないのでUDPの取りこぼしが発生する．ライブラリとしては対処しないこととなった．．
-
