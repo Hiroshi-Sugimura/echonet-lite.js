@@ -170,7 +170,7 @@ You can install the module as following command.
 
 ### 初期化，バインド, initialize
 
-    EL.initialize = function ( objList, userfunc )
+    EL.initialize = function ( objList, userfunc, ipVer )
 
 
 ### データ表示系, data representations
