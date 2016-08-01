@@ -470,7 +470,7 @@ EL.returner = function( bytes, rinfo, userfunc ) {
 			  case EL.GET_RES: // 72
 				// V1.1
 				// d6のEDT表現がとても特殊，EDT1バイト目がインスタンス数になっている
-				if( els.DETAILs.d6 != null && els.DETAILs.d6 != '' ) {
+				if( els.SEOJ.substr(0, 4) === '0ef0' && els.DETAILs.d6 != null && els.DETAILs.d6 != '' ) {
 					// console.log( "EL.returner: get object list! PropertyMap req V1.0.");
 					// プロパティマップに書いてあるオブジェクトのプロパティマップをもらう
 					var array = EL.toHexArray( els.DETAILs.d6 );
