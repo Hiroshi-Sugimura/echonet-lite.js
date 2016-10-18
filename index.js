@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////
-//	$Date:: 2016-06-06 10:02:22 +0900#$
-//	$Rev: 9703 $
+//	$Date:: 2016-10-18 10:50:04 +0900#$
+//	$Rev: 10232 $
 //	Copyright (C) Hiroshi SUGIMURA 2013.09.27 - above.
 //////////////////////////////////////////////////////////////////////
 // UDPつかう
@@ -472,7 +472,7 @@ EL.returner = function( bytes, rinfo, userfunc ) {
 				// d6のEDT表現がとても特殊，EDT1バイト目がインスタンス数になっている
 				if( els.SEOJ.substr(0, 4) === '0ef0' && els.DETAILs.d6 != null && els.DETAILs.d6 != '' ) {
 					// console.log( "EL.returner: get object list! PropertyMap req V1.0.");
-					// プロパティマップに書いてあるオブジェクトのプロパティマップをもらう
+					// 自ノードインスタンスリストSに書いてあるオブジェクトのプロパティマップをもらう
 					var array = EL.toHexArray( els.DETAILs.d6 );
 					var instNum = array[0];
 					while( 0 < instNum ) {

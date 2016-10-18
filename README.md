@@ -58,7 +58,7 @@ You can install the module as following command.
 
     // NetworkのELをすべてsearchしてみよう．
 	// search ECHONET nodes in local network
-    EL.search = function();
+    EL.search();
 
 
 ## Demos(Devices)
@@ -329,7 +329,7 @@ The simplest sending method is 'sendOPC1.'
 
 
 
-## Author
+## Authors
 
 神奈川工科大学  創造工学部  ホームエレクトロニクス開発学科．
 
@@ -340,9 +340,21 @@ Dept. of Home Electronics, Faculty of Creative Engineering, Kanagawa Institute o
 
 SUGIMURA, Hiroshi
 
+### thanks
+
+Thanks to Github users!
 
 
 ## Log
+
+0.0.17 473行以下でプロパティマップを受信した場合の処理を記述していますが、
+ノードプロファイル以外の場合もこの処理に入ってしまうバグがあります。
+この修正によりノードプロファイルの場合のみプロパティマップ内のプロパティを取得するようになります。
+
+
+0.0.16 Readmeを少し修正．
+
+0.0.15 HEX変換をNodeの標準ライブラリにしてくれた．IPv6対応してくれた．
 
 0.0.14 EL.sendOPC1の引数の型に関してかなりあいまいに処理できるようにした．
 seoj, deoj, esv, epcは文字列でもOK，edtは数値も文字列もOKにした．
