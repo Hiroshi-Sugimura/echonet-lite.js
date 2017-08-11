@@ -464,7 +464,7 @@ EL.returner = function( bytes, rinfo, userfunc ) {
 				}
 				break;
 
-			  case EL.INFREQ: // 0x63
+			  case EL.INF_REQ: // 0x63
 				if( els.DETAILs["d5"] == "00" ) {
 					// console.log( "EL.returner: Ver1.0 INF_REQ.");
 					EL.sendOPC1( EL.isIPv6 ? EL.EL_Multi6 : EL.EL_Multi, [0x0e, 0xf0, 0x01], EL.toHexArray(els.SEOJ), 0x73, 0xd5, EL.Node_details["d5"] );

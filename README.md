@@ -421,6 +421,8 @@ Thanks to Github users!
 
 ## Log
 
+0.0.20 INF_REQがINFREQだったバグを修正した。
+
 0.0.19 utf-8n対応，EL.parseDetailのエラーに対応，ライブラリのくせに結構標準出力していたあたりを取った。
 
 0.0.18 Readmeを少し修正．
