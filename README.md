@@ -421,6 +421,8 @@ Thanks to Github users!
 
 ## Log
 
+0.0.21 OPC != 1 でのparseDetailsの処理に不具合があったので修正しました。ほかにも'use strict'に対応，varをletにした。
+
 0.0.20 INF_REQがINFREQだったバグを修正した。
 
 0.0.19 utf-8n対応，EL.parseDetailのエラーに対応，ライブラリのくせに結構標準出力していたあたりを取った。

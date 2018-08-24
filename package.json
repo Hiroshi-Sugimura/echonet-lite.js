@@ -1,19 +1,23 @@
 {
   "name": "echonet-lite",
-  "version": "0.0.20",
+  "version": "0.0.21",
   "description": "This module provides ECHONET Lite protocol API.",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "repository" :
-  {
-    "type" : "git",
-    "url" : "https://github.com/Hiroshi-Sugimura/echonet-lite.js"
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Hiroshi-Sugimura/echonet-lite.js"
   },
   "author": {
     "name": "Hiroshi SUGIMURA"
   },
   "license": "MIT",
-  "Keywords": ["ECHONET Lite", "Smart house", "IoT", "Home appliances"]
+  "Keywords": [
+    "ECHONET Lite",
+    "Smart house",
+    "IoT",
+    "Home appliances"
+  ]
 }
