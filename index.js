@@ -4,7 +4,7 @@
 //	Copyright (C) Hiroshi SUGIMURA 2013.09.27 - above.
 //////////////////////////////////////////////////////////////////////
 'use strict'
-// UDPã¤ã‹ã†
+// UDP‚Â‚©‚¤
 let dgram = require('dgram');
 
 
@@ -12,12 +12,12 @@ let dgram = require('dgram');
 // ECHONET Lite
 
 /*
-	ãƒ‡ãƒ¼ã‚¿æ§‹é€ 
+	ƒf[ƒ^\‘¢
 	EHD : str.substr( 0, 4 ),
 	TID : str.substr( 4, 4 ),
 	SEOJ : str.substr( 8, 6 ),
 	DEOJ : str.substr( 14, 6 ),
-	EDATA: str.substr( 20 ),    // ä¸‹è¨˜ã¯EDATAã®è©³ç´°
+	EDATA: str.substr( 20 ),    // ‰º‹L‚ÍEDATA‚ÌÚ×
 	ESV : str.substr( 20, 2 ),
 	OPC : str.substr( 22, 2 ),
 	DETAIL: str.substr( 24 ),
@@ -25,95 +25,92 @@ let dgram = require('dgram');
 */
 
 
-// ã‚¯ãƒ©ã‚¹å¤‰æ•°
+// ƒNƒ‰ƒX•Ï”
 let EL = {
 	// define
-	SETI_SNA: "50",
-	SETC_SNA: "51",
-	GET_SNA: "52",
-	INF_SNA: "53",
-	SETGET_SNA: "5e",
-	SETI: "60",
-	SETC: "61",
-	GET: "62",
-	INF_REQ: "63",
-	SETGET: "6e",
-	SET_RES: "71",
-	GET_RES: "72",
-	INF: "73",
-	INFC: "74",
-	INFC_RES: "7a",
-	SETGET_RES: "7e",
-	EL_port: 3610,
-	isIPv6: false,
-	EL_Multi: '224.0.23.0',
-	EL_Multi6: 'FF02::1',
-	EL_obj: null,
-	EL_cls: null,
-
-	// è‡ªåˆ†è‡ªèº«ã‚‚ELã¨ã—ã¦ãƒ—ãƒ­ãƒ‘ãƒ†ã‚£ã®ç®¡ç†
-	Node_details: {
-		"80": [0x30],
-		"82": [0x01, 0x0a, 0x01, 0x00], // EL version, 1.1
-		"83": [0xfe, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00], // identifier
-		"8a": [0x00, 0x00, 0x77], // maker code
-		"9d": [0x02, 0x80, 0xd5],       // inf map, 1 Byteç›®ã¯å€‹æ•°
-		"9e": [0x00],                 // set map, 1 Byteç›®ã¯å€‹æ•°
-		"9f": [0x09, 0x80, 0x82, 0x83, 0x8a, 0xd3, 0xd4, 0xd5, 0xd6, 0xd7], // get map, 1 Byteç›®ã¯å€‹æ•°
-		"d3": [0x00, 0x00, 0x01],  // è‡ªãƒãƒ¼ãƒ‰ã§ä¿æŒã™ã‚‹ã‚¤ãƒ³ã‚¹ã‚¿ãƒ³ã‚¹ãƒªã‚¹ãƒˆã®ç·æ•°ï¼ˆãƒãƒ¼ãƒ‰ãƒ—ãƒ­ãƒ•ã‚¡ã‚¤ãƒ«å«ã¾ãªã„ï¼‰, useré …ç›®
-		"d4": [0x00, 0x02],        // è‡ªãƒãƒ¼ãƒ‰ã‚¯ãƒ©ã‚¹æ•°, useré …ç›®
-		"d5": [],    // ã‚¤ãƒ³ã‚¹ã‚¿ãƒ³ã‚¹ãƒªã‚¹ãƒˆé€šçŸ¥, useré …ç›®
-		"d6": [],    // è‡ªãƒãƒ¼ãƒ‰ã‚¤ãƒ³ã‚¹ã‚¿ãƒ³ã‚¹ãƒªã‚¹ãƒˆS, useré …ç›®
-		"d7": []
-	},  // è‡ªãƒãƒ¼ãƒ‰ã‚¯ãƒ©ã‚¹ãƒªã‚¹ãƒˆS, useré …ç›®
-	debugMode: false,
-	facilities: {}  	// ãƒãƒƒãƒˆãƒ¯ãƒ¼ã‚¯å†…ã®æ©Ÿå™¨æƒ…å ±ãƒªã‚¹ãƒˆ
-	// ãƒ‡ãƒ¼ã‚¿å½¢å¼ã®ä¾‹
+  SETI_SNA: "50",
+  SETC_SNA: "51",
+  GET_SNA: "52",
+  INF_SNA: "53",
+  SETGET_SNA: "5e",
+  SETI: "60",
+  SETC: "61",
+  GET: "62",
+  INF_REQ: "63",
+  SETGET: "6e",
+  SET_RES: "71",
+  GET_RES: "72",
+  INF: "73",
+  INFC: "74",
+  INFC_RES: "7a",
+  SETGET_RES: "7e",
+  EL_port: 3610,
+  isIPv6: false,
+  EL_Multi: '224.0.23.0',
+  EL_Multi6: 'FF02::1',
+  EL_obj: null,
+  EL_cls: null,
+  Node_details:	{
+	  "80": [0x30],
+	  "82": [0x01, 0x0a, 0x01, 0x00], // EL version, 1.1
+	  "83": [0xfe, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00], // identifier
+	  "8a": [0x00, 0x00, 0x77], // maker code
+	  "9d": [0x02, 0x80, 0xd5],       // inf map, 1 Byte–Ú‚ÍŒÂ”
+	  "9e": [0x00],                 // set map, 1 Byte–Ú‚ÍŒÂ”
+	  "9f": [0x09, 0x80, 0x82, 0x83, 0x8a, 0xd3, 0xd4, 0xd5, 0xd6, 0xd7], // get map, 1 Byte–Ú‚ÍŒÂ”
+	  "d3": [0x00, 0x00, 0x01],  // ©ƒm[ƒh‚Å•Û‚·‚éƒCƒ“ƒXƒ^ƒ“ƒXƒŠƒXƒg‚Ì‘”iƒm[ƒhƒvƒƒtƒ@ƒCƒ‹ŠÜ‚Ü‚È‚¢j, user€–Ú
+	  "d4": [0x00, 0x02],        // ©ƒm[ƒhƒNƒ‰ƒX”, user€–Ú
+	  "d5": [],    // ƒCƒ“ƒXƒ^ƒ“ƒXƒŠƒXƒg’Ê’m, user€–Ú
+	  "d6": [],    // ©ƒm[ƒhƒCƒ“ƒXƒ^ƒ“ƒXƒŠƒXƒgS, user€–Ú
+	  "d7": [] },  // ©ƒm[ƒhƒNƒ‰ƒXƒŠƒXƒgS, user€–Ú
+  debugMode: false,
+  facilities: {}  	// ƒlƒbƒgƒ[ƒN“à‚Ì‹@Šíî•ñƒŠƒXƒg
+	// ƒf[ƒ^Œ`®‚Ì—á
 	// { '192.168.0.3': { '05ff01': { d6: '' } },
 	// '192.168.0.4': { '05ff01': { '80': '30', '82': '30' } } }
 };
 
 
-// åˆæœŸåŒ–ï¼Œãƒã‚¤ãƒ³ãƒ‰
+// ‰Šú‰»CƒoƒCƒ“ƒh
 EL.initialize = function (objList, userfunc, ipVer) {
 
 	EL.isIPv6 = (ipVer == 6); // IPv6 flag
 
-	// ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆãƒªã‚¹ãƒˆã‚’ç¢ºä¿
+	// ƒIƒuƒWƒFƒNƒgƒŠƒXƒg‚ğŠm•Û
 	EL.EL_obj = objList;
 
-	// ã‚¯ãƒ©ã‚¹ãƒªã‚¹ãƒˆã«ã™ã‚‹
-	let classes = objList.map(function (e) {	// ã‚¯ãƒ©ã‚¹ã ã‘ã«ã‹ãˆã‚‹
+	// ƒNƒ‰ƒXƒŠƒXƒg‚É‚·‚é
+	let classes = objList.map(function (e) {	// ƒNƒ‰ƒX‚¾‚¯‚É‚©‚¦‚é
 		return e.substr(0, 4);
 	});
-	let classList = classes.filter(function (x, i, self) {		// é‡è¤‡å‰Šé™¤
+	let classList = classes.filter(function (x, i, self) {		// d•¡íœ
 		return self.indexOf(x) === i;
 	});
 	EL.EL_cls = classList;
 
-	// ã‚¤ãƒ³ã‚¹ã‚¿ãƒ³ã‚¹æƒ…å ±
-	EL.Node_details["d3"] = [0x00, 0x00, EL.EL_obj.length]; // D3ã¯ãƒãƒ¼ãƒ‰ãƒ—ãƒ­ãƒ•ã‚¡ã‚¤ãƒ«å…¥ã‚‰ãªã„ï¼Œæœ€å¤§253ã§ã¯ï¼Ÿãªãœ3Byteãªã®ã‹ï¼Ÿ
+	// ƒCƒ“ƒXƒ^ƒ“ƒXî•ñ
+	EL.Node_details["d3"] = [0x00, 0x00, EL.EL_obj.length]; // D3‚Íƒm[ƒhƒvƒƒtƒ@ƒCƒ‹“ü‚ç‚È‚¢CÅ‘å253‚Å‚ÍH‚È‚º3Byte‚È‚Ì‚©H
 	let v = EL.EL_obj.map(function (elem) {
 		return EL.toHexArray(elem);
 	});
 	v.unshift(EL.EL_obj.length);
-	EL.Node_details["d5"] = Array.prototype.concat.apply([], v);  // D5, D6åŒã˜ã§ã‚ˆã„ï¼ãƒãƒ¼ãƒ‰ãƒ—ãƒ­ãƒ•ã‚¡ã‚¤ãƒ«å…¥ã‚‰ãªã„ï¼
+	EL.Node_details["d5"] = Array.prototype.concat.apply([], v);  // D5, D6“¯‚¶‚Å‚æ‚¢Dƒm[ƒhƒvƒƒtƒ@ƒCƒ‹“ü‚ç‚È‚¢D
 	EL.Node_details["d6"] = EL.Node_details["d5"];
 
-	// ã‚¯ãƒ©ã‚¹æƒ…å ±
-	EL.Node_details["d4"] = [0x00, EL.EL_cls.length + 1]; // D4ã ã‘ãªãœã‹ãƒãƒ¼ãƒ‰ãƒ—ãƒ­ãƒ•ã‚¡ã‚¤ãƒ«å…¥ã‚‹ï¼
+	// ƒNƒ‰ƒXî•ñ
+	EL.Node_details["d4"] = [0x00, EL.EL_cls.length + 1]; // D4‚¾‚¯‚È‚º‚©ƒm[ƒhƒvƒƒtƒ@ƒCƒ‹“ü‚éD
 	v = EL.EL_cls.map(function (elem) {
 		return EL.toHexArray(elem);
 	});
 	v.unshift(EL.EL_cls.length);
-	EL.Node_details["d7"] = Array.prototype.concat.apply([], v);  // D7ã¯ãƒãƒ¼ãƒ‰ãƒ—ãƒ­ãƒ•ã‚¡ã‚¤ãƒ«å…¥ã‚‰ãªã„
+	EL.Node_details["d7"] = Array.prototype.concat.apply([], v);  // D7‚Íƒm[ƒhƒvƒƒtƒ@ƒCƒ‹“ü‚ç‚È‚¢
 
-	// ELå—ã‘å–ã‚‹ã‚ˆã†ã®UDP
+	// ELó‚¯æ‚é‚æ‚¤‚ÌUDP
 	let sock = dgram.createSocket(EL.isIPv6 ? "udp6" : "udp4", function (msg, rinfo) {
 		EL.returner(msg, rinfo, userfunc);
 	});
 
-	// ãƒãƒ«ãƒã‚­ãƒ£ã‚¹ãƒˆè¨­å®š
+	// ƒ}ƒ‹ƒ`ƒLƒƒƒXƒgİ’è
 	sock.bind(EL.EL_port, EL.isIPv6 ? '::' : '0.0.0.0', function () {
 		sock.setMulticastLoopback(true);
 		sock.addMembership(EL.isIPv6 ? EL.EL_Multi6 : EL.EL_Multi);
@@ -121,7 +118,7 @@ EL.initialize = function (objList, userfunc, ipVer) {
 	});
 
 
-	// åˆæœŸåŒ–çµ‚ã‚ã£ãŸã®ã§ãƒãƒ¼ãƒ‰ã®INFã‚’ã ã™
+	// ‰Šú‰»I‚í‚Á‚½‚Ì‚Åƒm[ƒh‚ÌINF‚ğ‚¾‚·
 	EL.sendOPC1(EL.isIPv6 ? EL.EL_Multi6 : EL.EL_Multi, [0x0e, 0xf0, 0x01], [0x0e, 0xf0, 0x01], 0x73, 0xd5, EL.Node_details["d5"]);
 
 	return sock;
@@ -129,10 +126,10 @@ EL.initialize = function (objList, userfunc, ipVer) {
 
 
 //////////////////////////////////////////////////////////////////////
-// eldata ã‚’è¦‹ã‚‹ï¼Œè¡¨ç¤ºé–¢ä¿‚
+// eldata ‚ğŒ©‚éC•\¦ŠÖŒW
 //////////////////////////////////////////////////////////////////////
 
-// ELDATAå½¢å¼
+// ELDATAŒ`®
 EL.eldataShow = function (eldata) {
 	if (eldata != null) {
 		console.log('EHD: ' + eldata.EHD + 'TID: ' + eldata.TID + 'SEOJ: ' + eldata.SEOJ + 'DEOJ: ' + eldata.DEOJ + '\nEDATA: ' + eldata.EDATA);
@@ -142,7 +139,7 @@ EL.eldataShow = function (eldata) {
 };
 
 
-// æ–‡å­—åˆ—
+// •¶š—ñ
 EL.stringShow = function (str) {
 	try {
 		eld = EL.parseString(str);
@@ -152,7 +149,7 @@ EL.stringShow = function (str) {
 	}
 };
 
-// ãƒã‚¤ãƒˆãƒ‡ãƒ¼ã‚¿
+// ƒoƒCƒgƒf[ƒ^
 EL.bytesShow = function (bytes) {
 	eld = EL.parseBytes(bytes);
 	EL.eldataShow(eld);
@@ -160,49 +157,55 @@ EL.bytesShow = function (bytes) {
 
 
 //////////////////////////////////////////////////////////////////////
-// å¤‰æ›ç³»
+// •ÏŠ·Œn
 //////////////////////////////////////////////////////////////////////
 
-// Detailã ã‘ã‚’parseã™ã‚‹ï¼Œå†…éƒ¨ã§ä¸»ã«ä½¿ã†
-EL.parseDetail = function (opc, str) {
-	let ret = {}; // æˆ»ã‚Šå€¤ç”¨ï¼Œé€£æƒ³é…åˆ—
+// Detail‚¾‚¯‚ğparse‚·‚éC“à•”‚Åå‚Ég‚¤
+EL.parseDetail = function( opc, str ) {
+	let ret = {}; // –ß‚è’l—pC˜A‘z”z—ñ
+	str = str.toUpperCase();
+
 	try {
-		let now = 0;  // ç¾åœ¨ã®Index
-		let epc = 0;
-		let pdc = 0;
+		let array = EL.toHexArray( str );  // edts
+		let epc = array[0]; // Å‰‚Í0
+		let pdc = array[1]; // Å‰‚Í1
+		let now = 0;  // Œ»İ‚ÌIndex
 		let edt = [];
-		let array = EL.toHexArray(str);  // edts
-		// OPCã®å‹å¤‰æ›ï¼ˆHEX to DECï¼‰
-		if (typeof opc === 'string') {
-			opc = parseInt(opc, 16);
+
+		// property map‚¾‚¯EDT[0] != ƒoƒCƒg”‚È‚Ì‚Å•Êˆ—
+		if( epc == 0x9d || epc == 0x9e || epc == 0x9f ) {
+			if( pdc >= 16) { // ƒvƒƒpƒeƒB‚Ì”‚ª16ˆÈã‚Ìê‡‚Í format 2
+				ret[ EL.toHexString(epc) ] = EL.bytesToString( EL.parseMapForm2( str.substr(2) ) );
+				return ret;
+			}
+			// format 2‚Å‚È‚¯‚ê‚ÎˆÈ‰º‚Æ“¯‚¶Œ`®‚Å‰ğÍ‰Â”\
 		}
 
-		// OPCãƒ«ãƒ¼ãƒ—
+		// ‚»‚êˆÈŠO‚ÍEDT[0] == byte”
+		// OPCƒ‹[ƒv
 		for (let i = 0; i < opc; i += 1) {
-			// EPCï¼ˆæ©Ÿèƒ½ï¼‰
+			// EPCi‹@”\j
 			epc = array[now];
-			// edtã®åˆæœŸåŒ–ï¼ˆOPC != 1 ç”¨ï¼‰
-			edt = [];
 			now++;
 
-			// PDCï¼ˆEDTã®ãƒã‚¤ãƒˆæ•°ï¼‰
+			// PDCiEDT‚ÌƒoƒCƒg”j
 			pdc = array[now];
 			now++;
 
-			// getã®æ™‚ã¯ pdcãŒ0ãªã®ã§ãªã«ã‚‚ã—ãªã„ï¼Œ0ã§ãªã‘ã‚Œã°å€¤ãŒå…¥ã£ã¦ã„ã‚‹
+			// get‚Ì‚Í pdc‚ª0‚È‚Ì‚Å‚È‚É‚à‚µ‚È‚¢C0‚Å‚È‚¯‚ê‚Î’l‚ª“ü‚Á‚Ä‚¢‚é
 			if (pdc == 0) {
 				ret[EL.toHexString(epc)] = "";
 			} else {
-				// PDCãƒ«ãƒ¼ãƒ—
+				// PDCƒ‹[ƒv
 				for (let j = 0; j < pdc; j += 1) {
-					// ç™»éŒ²
+					// “o˜^
 					edt.push(array[now]);
 					now++;
 				}
 				ret[EL.toHexString(epc)] = EL.bytesToString(edt);
 			}
 
-		}  // opcãƒ«ãƒ¼ãƒ—
+		}  // opcƒ‹[ƒv
 
 	} catch (e) {
 		throw new Error('EL.parseDetail(): detail error. opc: ' + opc + ' str: ' + str);
@@ -213,26 +216,24 @@ EL.parseDetail = function (opc, str) {
 };
 
 
-// ãƒã‚¤ãƒˆãƒ‡ãƒ¼ã‚¿ã‚’ã„ã‚Œã‚‹ã¨ELDATAå½¢å¼ã«ã™ã‚‹
+// ƒoƒCƒgƒf[ƒ^‚ğ‚¢‚ê‚é‚ÆELDATAŒ`®‚É‚·‚é
 EL.parseBytes = function (bytes) {
 	try {
-
-		// æœ€ä½é™ã®ELãƒ‘ã‚±ãƒƒãƒˆã«ãªã£ã¦ãªã„
+		// Å’áŒÀ‚ÌELƒpƒPƒbƒg‚É‚È‚Á‚Ä‚È‚¢
 		if (bytes.length < 14) {
 			console.error(1, "EL.parseBytes error. bytes is less then 14 bytes. bytes.length is " + bytes.length);
 			console.error(1, bytes);
 			return null;
 		}
 
-		// æ•°å€¤ã ã£ãŸã‚‰æ–‡å­—åˆ—ã«ã—ã¦
+		// ”’l‚¾‚Á‚½‚ç•¶š—ñ‚É‚µ‚Ä
 		let str = "";
 		if (bytes[0] != 'string') {
 			for (let i = 0; i < bytes.length; i++) {
 				str += EL.toHexString(bytes[i]);
 			}
 		}
-
-		// æ–‡å­—åˆ—ã«ã—ãŸã®ã§ï¼ŒparseStringã§ä½•ã¨ã‹ã™ã‚‹
+		// •¶š—ñ‚É‚µ‚½‚Ì‚ÅCparseString‚Å‰½‚Æ‚©‚·‚é
 		return (EL.parseString(str));
 	} catch (e) {
 		throw e;
@@ -240,7 +241,7 @@ EL.parseBytes = function (bytes) {
 };
 
 
-// 16é€²æ•°ã§è¡¨ç¾ã•ã‚ŒãŸæ–‡å­—åˆ—ã‚’ã„ã‚Œã‚‹ã¨ELDATAå½¢å¼ã«ã™ã‚‹
+// 16i”‚Å•\Œ»‚³‚ê‚½•¶š—ñ‚ğ‚¢‚ê‚é‚ÆELDATAŒ`®‚É‚·‚é
 EL.parseString = function (str) {
 	let eldata = {};
 
@@ -250,7 +251,7 @@ EL.parseString = function (str) {
 			'TID': str.substr(4, 4),
 			'SEOJ': str.substr(8, 6),
 			'DEOJ': str.substr(14, 6),
-			'EDATA': str.substr(20),    // ä¸‹è¨˜ã¯EDATAã®è©³ç´°
+			'EDATA': str.substr(20),    // ‰º‹L‚ÍEDATA‚ÌÚ×
 			'ESV': str.substr(20, 2),
 			'OPC': str.substr(22, 2),
 			'DETAIL': str.substr(24),
@@ -264,16 +265,16 @@ EL.parseString = function (str) {
 };
 
 
-// æ–‡å­—åˆ—ã‚’ã„ã‚Œã‚‹ã¨ELã‚‰ã—ã„åˆ‡ã‚Šæ–¹ã®Stringã‚’å¾—ã‚‹
+// •¶š—ñ‚ğ‚¢‚ê‚é‚ÆEL‚ç‚µ‚¢Ø‚è•û‚ÌString‚ğ“¾‚é
 EL.getSeparatedString_String = function (str) {
 	try {
 		if (typeof str == 'string') {
 			return (str.substr(0, 4) + " " +
-				str.substr(4, 4) + " " +
-				str.substr(8, 6) + " " +
-				str.substr(14, 6) + " " +
-				str.substr(20, 2) + " " +
-				str.substr(22));
+					str.substr(4, 4) + " " +
+					str.substr(8, 6) + " " +
+					str.substr(14, 6) + " " +
+					str.substr(20, 2) + " " +
+					str.substr(22));
 		}
 		else {
 			// console.error( "str is not string." );
@@ -288,25 +289,25 @@ EL.getSeparatedString_String = function (str) {
 };
 
 
-// ELDATAã‚’ã„ã‚Œã‚‹ã¨ELã‚‰ã—ã„åˆ‡ã‚Šæ–¹ã®Stringã‚’å¾—ã‚‹
+// ELDATA‚ğ‚¢‚ê‚é‚ÆEL‚ç‚µ‚¢Ø‚è•û‚ÌString‚ğ“¾‚é
 EL.getSeparatedString_ELDATA = function (eldata) {
 	return (eldata.EHD + ' ' + eldata.TID + ' ' + eldata.SEOJ + ' ' + eldata.DEOJ + ' ' + eldata.EDATA);
 };
 
 
-// ELDATAå½¢å¼ã‹ã‚‰é…åˆ—ã¸
+// ELDATAŒ`®‚©‚ç”z—ñ‚Ö
 EL.ELDATA2Array = function (eldata) {
 	let ret = EL.toHexArray(eldata.EHD + eldata.TID + eldata.SEOJ + eldata.DEOJ + eldata.EDATA);
 	return ret;
 };
 
-// 1ãƒã‚¤ãƒˆã‚’æ–‡å­—åˆ—ã®16é€²è¡¨ç¾ã¸ï¼ˆ1Byteã¯å¿…ãš2æ–‡å­—ã«ã™ã‚‹ï¼‰
+// 1ƒoƒCƒg‚ğ•¶š—ñ‚Ì16i•\Œ»‚Öi1Byte‚Í•K‚¸2•¶š‚É‚·‚éj
 EL.toHexString = function (byte) {
-	// æ–‡å­—åˆ—0ã‚’ã¤ãªã’ã¦ï¼Œå¾Œã‚ã‹ã‚‰2æ–‡å­—åˆ†ã‚¹ãƒ©ã‚¤ã‚¹ã™ã‚‹
+	// •¶š—ñ0‚ğ‚Â‚È‚°‚ÄCŒã‚ë‚©‚ç2•¶š•ªƒXƒ‰ƒCƒX‚·‚é
 	return (("0" + byte.toString(16)).slice(-2));
 };
 
-// 16é€²è¡¨ç¾ã®æ–‡å­—åˆ—ã‚’æ•°å€¤ã®ãƒã‚¤ãƒˆé…åˆ—ã¸
+// 16i•\Œ»‚Ì•¶š—ñ‚ğ”’l‚ÌƒoƒCƒg”z—ñ‚Ö
 EL.toHexArray = function (string) {
 	let ret = [];
 
@@ -320,7 +321,7 @@ EL.toHexArray = function (string) {
 };
 
 
-// ãƒã‚¤ãƒˆé…åˆ—ã‚’æ–‡å­—åˆ—ã«ã‹ãˆã‚‹
+// ƒoƒCƒg”z—ñ‚ğ•¶š—ñ‚É‚©‚¦‚é
 EL.bytesToString = function (bytes) {
 	let ret = "";
 
@@ -332,12 +333,12 @@ EL.bytesToString = function (bytes) {
 
 
 //////////////////////////////////////////////////////////////////////
-// é€ä¿¡
+// ‘—M
 //////////////////////////////////////////////////////////////////////
 
-// ELé€ä¿¡ã®ãƒ™ãƒ¼ã‚¹
+// EL‘—M‚Ìƒx[ƒX
 EL.sendBase = function (ip, buffer) {
-	// é€ä¿¡ã™ã‚‹
+	// ‘—M‚·‚é
 	let client = dgram.createSocket(EL.isIPv6 ? "udp6" : "udp4");
 	client.send(buffer, 0, buffer.length, EL.EL_port, ip, function (err, bytes) {
 		client.close();
@@ -345,13 +346,13 @@ EL.sendBase = function (ip, buffer) {
 };
 
 
-// é…åˆ—ã®æ™‚
+// ”z—ñ‚Ì
 EL.sendArray = function (ip, array) {
 	EL.sendBase(ip, new Buffer(array));
 };
 
 
-// ELã®éå¸¸ã«å…¸å‹çš„ãªOPCä¸€å€‹ã§ã‚„ã‚‹
+// EL‚Ì”ñí‚É“TŒ^“I‚ÈOPCˆêŒÂ‚Å‚â‚é
 EL.sendOPC1 = function (ip, seoj, deoj, esv, epc, edt) {
 
 	if (typeof (seoj) == "string") {
@@ -402,24 +403,24 @@ EL.sendOPC1 = function (ip, seoj, deoj, esv, epc, edt) {
 
 	// console.log( buffer );
 
-	// ãƒ‡ãƒ¼ã‚¿ãŒã§ããŸã®ã§é€ä¿¡ã™ã‚‹
+	// ƒf[ƒ^‚ª‚Å‚«‚½‚Ì‚Å‘—M‚·‚é
 	EL.sendBase(ip, buffer);
 };
 
 
 
-// ELã®éå¸¸ã«å…¸å‹çš„ãªé€ä¿¡3 æ–‡å­—åˆ—ã‚¿ã‚¤ãƒ—
+// EL‚Ì”ñí‚É“TŒ^“I‚È‘—M3 •¶š—ñƒ^ƒCƒv
 EL.sendString = function (ip, string) {
-	// é€ä¿¡ã™ã‚‹
+	// ‘—M‚·‚é
 	EL.sendBase(ip, new Buffer(EL.toHexArray(string)));
 };
 
 
 //////////////////////////////////////////////////////////////////////
-// ELå—ä¿¡
+// ELóM
 //////////////////////////////////////////////////////////////////////
 
-// ELã®å—ä¿¡ãƒ‡ãƒ¼ã‚¿ã‚’æŒ¯ã‚Šåˆ†ã‘ã‚‹ã‚ˆï¼Œä½•ã¨ã‹ã—ã‚ˆã†
+// EL‚ÌóMƒf[ƒ^‚ğU‚è•ª‚¯‚é‚æC‰½‚Æ‚©‚µ‚æ‚¤
 EL.returner = function (bytes, rinfo, userfunc) {
 	// console.log( "EL.returner:EL.parseBytes.");
 	let els;
@@ -427,179 +428,180 @@ EL.returner = function (bytes, rinfo, userfunc) {
 	try {
 		els = EL.parseBytes(bytes);
 
-		// ã‚­ãƒãƒ³ã¨ãƒ‘ãƒ¼ã‚¹ã§ããŸã‹ï¼Ÿ
+
+		// ƒLƒ`ƒ“‚Æƒp[ƒX‚Å‚«‚½‚©H
 		if (null == els) {
 			return;
 		}
 
-		// ãƒ˜ãƒƒãƒ€ç¢ºèª
+		// ƒwƒbƒ_Šm”F
 		if (els.EHD != '1081') {
 			return;
 		}
 
-		// Node profileã«é–¢ã—ã¦ãã¡ã‚“ã¨å‡¦ç†ã™ã‚‹
+		// Node profile‚ÉŠÖ‚µ‚Ä‚«‚¿‚ñ‚Æˆ—‚·‚é
 		if (els.DEOJ == '0ef000' || els.DEOJ == '0ef001') {
 
 			switch (els.ESV) {
 				////////////////////////////////////////////////////////////////////////////////////
 				// 0x5x
-				// ã‚¨ãƒ©ãƒ¼å—ã‘å–ã£ãŸã¨ãã®å‡¦ç†
-				case EL.SETI_SNA:   // "50"
-				case EL.SETC_SNA:   // "51"
-				case EL.GET_SNA:    // "52"
-				case EL.INF_SNA:    // "53"
-				case EL.SETGET_SNA: // "5e"
-					// console.log( "EL.returner: get error" );
-					// console.dir( els );
-					return;
-					break;
+				// ƒGƒ‰[ó‚¯æ‚Á‚½‚Æ‚«‚Ìˆ—
+			  case EL.SETI_SNA:   // "50"
+			  case EL.SETC_SNA:   // "51"
+			  case EL.GET_SNA:    // "52"
+			  case EL.INF_SNA:    // "53"
+			  case EL.SETGET_SNA: // "5e"
+				// console.log( "EL.returner: get error" );
+				// console.dir( els );
+				return;
+				break;
 
 				////////////////////////////////////////////////////////////////////////////////////
 				// 0x6x
-				case EL.SETI: // "60
-				case EL.SETC: // "61"
-					break;
+			  case EL.SETI: // "60
+			  case EL.SETC: // "61"
+				break;
 
-				case EL.GET: // 0x62
-					// console.log( "EL.returner: get prop. of Node profile.");
-					for (let epc in els.DETAILs) {
-						if (EL.Node_details[epc]) { // æŒã£ã¦ã‚‹EPCã®ã¨ã
-							EL.sendOPC1(rinfo.address, [0x0e, 0xf0, 0x01], EL.toHexArray(els.SEOJ), 0x72, EL.toHexArray(epc), EL.Node_details[epc]);
-						} else { // æŒã£ã¦ã„ãªã„EPCã®ã¨ã, SNA
-							EL.sendOPC1(rinfo.address, [0x0e, 0xf0, 0x01], EL.toHexArray(els.SEOJ), 0x52, EL.toHexArray(epc), [0x00]);
-						}
+			  case EL.GET: // 0x62
+				// console.log( "EL.returner: get prop. of Node profile.");
+				for (let epc in els.DETAILs) {
+					if (EL.Node_details[epc]) { // ‚Á‚Ä‚éEPC‚Ì‚Æ‚«
+						EL.sendOPC1(rinfo.address, [0x0e, 0xf0, 0x01], EL.toHexArray(els.SEOJ), 0x72, EL.toHexArray(epc), EL.Node_details[epc]);
+					} else { // ‚Á‚Ä‚¢‚È‚¢EPC‚Ì‚Æ‚«, SNA
+						EL.sendOPC1(rinfo.address, [0x0e, 0xf0, 0x01], EL.toHexArray(els.SEOJ), 0x52, EL.toHexArray(epc), [0x00]);
 					}
-					break;
+				}
+				break;
 
-				case EL.INF_REQ: // 0x63
-					if (els.DETAILs["d5"] == "00") {
-						// console.log( "EL.returner: Ver1.0 INF_REQ.");
-						EL.sendOPC1(EL.isIPv6 ? EL.EL_Multi6 : EL.EL_Multi, [0x0e, 0xf0, 0x01], EL.toHexArray(els.SEOJ), 0x73, 0xd5, EL.Node_details["d5"]);
-					}
-					break;
+			  case EL.INF_REQ: // 0x63
+				if (els.DETAILs["d5"] == "00") {
+					// console.log( "EL.returner: Ver1.0 INF_REQ.");
+					EL.sendOPC1(EL.isIPv6 ? EL.EL_Multi6 : EL.EL_Multi, [0x0e, 0xf0, 0x01], EL.toHexArray(els.SEOJ), 0x73, 0xd5, EL.Node_details["d5"]);
+				}
+				break;
 
-				case EL.SETGET: // "6e"
-					break;
+			  case EL.SETGET: // "6e"
+				break;
 
 				////////////////////////////////////////////////////////////////////////////////////
 				// 0x7x
-				case EL.SET_RES: // 71
-					// SetCã«å¯¾ã™ã‚‹è¿”ç­”ã®SetResã¯ï¼ŒEDT 0x00ã§OKã®æ„å‘³ã‚’å—ã‘å–ã‚‹ã“ã¨ã¨ãªã‚‹ï¼ã‚†ãˆã«ãã®è©³ç´°ãªå€¤ã‚’Getã™ã‚‹å¿…è¦ãŒã‚ã‚‹
-					if (els.DETAIL.substr(0, 2) == '00') {
-						let msg = "1081000005ff01" + els.SEOJ + "6201" + els.DETAIL.substr(0, 2) + "00";
-						EL.sendString(rinfo.address, msg);
-					}
-					break;
+			  case EL.SET_RES: // 71
+				// SetC‚É‘Î‚·‚é•Ô“š‚ÌSetRes‚ÍCEDT 0x00‚ÅOK‚ÌˆÓ–¡‚ğó‚¯æ‚é‚±‚Æ‚Æ‚È‚éD‚ä‚¦‚É‚»‚ÌÚ×‚È’l‚ğGet‚·‚é•K—v‚ª‚ ‚é
+				if(els.DETAIL.substr(0,2) == '00' ) {
+					let msg = "1081000005ff01" + els.SEOJ + "6201" + els.DETAIL.substr(0,2) + "00";
+					EL.sendString( rinfo.address, msg );
+				}
+				break;
 
-				case EL.GET_RES: // 72
-					// V1.1
-					// d6ã®EDTè¡¨ç¾ãŒã¨ã¦ã‚‚ç‰¹æ®Šï¼ŒEDT1ãƒã‚¤ãƒˆç›®ãŒã‚¤ãƒ³ã‚¹ã‚¿ãƒ³ã‚¹æ•°ã«ãªã£ã¦ã„ã‚‹
-					if (els.SEOJ.substr(0, 4) === '0ef0' && els.DETAILs.d6 != null && els.DETAILs.d6 != '') {
-						// console.log( "EL.returner: get object list! PropertyMap req V1.0.");
-						// è‡ªãƒãƒ¼ãƒ‰ã‚¤ãƒ³ã‚¹ã‚¿ãƒ³ã‚¹ãƒªã‚¹ãƒˆSã«æ›¸ã„ã¦ã‚ã‚‹ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã®ãƒ—ãƒ­ãƒ‘ãƒ†ã‚£ãƒãƒƒãƒ—ã‚’ã‚‚ã‚‰ã†
-						let array = EL.toHexArray(els.DETAILs.d6);
-						let instNum = array[0];
-						while (0 < instNum) {
-							EL.getPropertyMaps(rinfo.address, array.slice((instNum - 1) * 3 + 1, (instNum - 1) * 3 + 4));
-							instNum -= 1;
-						}
-					} else if (els.DETAILs["9f"] != null) {
-						let array = EL.toHexArray(els.DETAILs["9f"]);
-						if (array.length < 16) { // ãƒ—ãƒ­ãƒ‘ãƒ†ã‚£ãƒãƒƒãƒ—16ãƒã‚¤ãƒˆæœªæº€ã¯è¨˜è¿°å½¢å¼ï¼‘
-							let num = array[0];
-							for (let i = 0; i < num; i++) {
-								// ã“ã®ã¨ã9fã‚’ã¾ãŸå–ã‚Šã«è¡Œãã¨ç„¡é™ãƒ«ãƒ¼ãƒ—ãªã®ã§ã‚„ã‚ã‚‹
-								if (array[i + 1] != 0x9f) {
-									EL.sendOPC1(rinfo.address, [0x0e, 0xf0, 0x01], EL.toHexArray(els.SEOJ), 0x62, array[i + 1], [0x00]);
-								}
-							}
-						} else {
-							// 16ãƒã‚¤ãƒˆä»¥ä¸Šãªã®ã§è¨˜è¿°å½¢å¼2ï¼ŒEPCã®arrayã‚’ä½œã‚Šç›´ã—ãŸã‚‰ï¼Œã‚ã¨åŒã˜
-							let array = EL.parseMapForm2(els.DETAILs["9f"]);
-							let num = array[0];
-							for (let i = 0; i < num; i++) {
-								// ã“ã®ã¨ã9fã‚’ã¾ãŸå–ã‚Šã«è¡Œãã¨ç„¡é™ãƒ«ãƒ¼ãƒ—ãªã®ã§ã‚„ã‚ã‚‹
-								if (array[i + 1] != 0x9f) {
-									EL.sendOPC1(rinfo.address, [0x0e, 0xf0, 0x01], EL.toHexArray(els.SEOJ), 0x62, array[i + 1], [0x00]);
-								}
+			  case EL.GET_RES: // 72
+				// V1.1
+				// d6‚ÌEDT•\Œ»‚ª‚Æ‚Ä‚à“ÁêCEDT1ƒoƒCƒg–Ú‚ªƒCƒ“ƒXƒ^ƒ“ƒX”‚É‚È‚Á‚Ä‚¢‚é
+				if( els.SEOJ.substr(0, 4) === '0ef0' && els.DETAILs.d6 != null && els.DETAILs.d6 != '' ) {
+					// console.log( "EL.returner: get object list! PropertyMap req V1.0.");
+					// ©ƒm[ƒhƒCƒ“ƒXƒ^ƒ“ƒXƒŠƒXƒgS‚É‘‚¢‚Ä‚ ‚éƒIƒuƒWƒFƒNƒg‚ÌƒvƒƒpƒeƒBƒ}ƒbƒv‚ğ‚à‚ç‚¤
+					let array = EL.toHexArray( els.DETAILs.d6 );
+					let instNum = array[0];
+					while( 0 < instNum ) {
+						EL.getPropertyMaps( rinfo.address, array.slice( (instNum - 1)*3 +1, (instNum - 1)*3 +4 ) );
+						instNum -= 1;
+					}
+				}else if( els.DETAILs["9f"] != null ) {
+					let array = EL.toHexArray( els.DETAILs["9f"] );
+					if( array.length < 16 ) { // ƒvƒƒpƒeƒBƒ}ƒbƒv16ƒoƒCƒg–¢–‚Í‹LqŒ`®‚P
+						let num = array[0];
+						for( var i=0; i<num; i++ ) {
+							// ‚±‚Ì‚Æ‚«9f‚ğ‚Ü‚½æ‚è‚És‚­‚Æ–³ŒÀƒ‹[ƒv‚È‚Ì‚Å‚â‚ß‚é
+							if( array[i+1] != 0x9f ) {
+								EL.sendOPC1( rinfo.address, [0x0e, 0xf0, 0x01], EL.toHexArray(els.SEOJ), 0x62, array[i+1], [0x00] );
 							}
 						}
-					}
-					break;
-
-				case EL.INF:  // 0x73
-					// V1.0 ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆãƒªã‚¹ãƒˆã‚’ã‚‚ã‚‰ã£ãŸã‚‰ãã®ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã®PropertyMapã‚’ã‚‚ã‚‰ã„ã«è¡Œã, ãƒ‡ãƒã‚¤ã‚¹ãŒå¾Œã§èµ·å‹•ã—ãŸ
-					if (els.DETAILs.d5 != null && els.DETAILs.d5 != "") {
-						// ãƒãƒ¼ãƒ‰ãƒ—ãƒ­ãƒ•ã‚¡ã‚¤ãƒ«ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã®ãƒ—ãƒ­ãƒ‘ãƒ†ã‚£ãƒãƒƒãƒ—ã‚’ã‚‚ã‚‰ã†
-						EL.getPropertyMaps(rinfo.address, [0x0e, 0xf0, 0x00]);
-					}
-					break;
-
-				case EL.INFC: // "74"
-					// V1.0 ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆãƒªã‚¹ãƒˆã‚’ã‚‚ã‚‰ã£ãŸã‚‰ãã®ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã®PropertyMapã‚’ã‚‚ã‚‰ã„ã«è¡Œã
-					if (els.DETAILs.d5 != null && els.DETAILs.d5) {
-						// ãƒãƒ¼ãƒ‰ãƒ—ãƒ­ãƒ•ã‚¡ã‚¤ãƒ«ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã®ãƒ—ãƒ­ãƒ‘ãƒ†ã‚£ãƒãƒƒãƒ—ã‚’ã‚‚ã‚‰ã†
-						EL.getPropertyMaps(rinfo.address, [0x0e, 0xf0, 0x00]);
-
-						// console.log( "EL.returner: get object list! PropertyMap req.");
-						let array = EL.toHexArray(els.DETAILs.d5);
-						let instNum = array[0];
-						while (0 < instNum) {
-							EL.getPropertyMaps(rinfo.address, array.slice((instNum - 1) * 3 + 1, (instNum - 1) * 3 + 4));
-							instNum -= 1;
+					} else {
+						// 16ƒoƒCƒgˆÈã‚È‚Ì‚Å‹LqŒ`®2CEPC‚Ìarray‚ğì‚è’¼‚µ‚½‚çC‚ ‚Æ“¯‚¶
+						let array = EL.parseMapForm2( els.DETAILs["9f"] );
+						let num = array[0];
+						for( let i=0; i<num; i++ ) {
+							// ‚±‚Ì‚Æ‚«9f‚ğ‚Ü‚½æ‚è‚És‚­‚Æ–³ŒÀƒ‹[ƒv‚È‚Ì‚Å‚â‚ß‚é
+							if( array[i+1] != 0x9f ) {
+								EL.sendOPC1( rinfo.address, [0x0e, 0xf0, 0x01], EL.toHexArray(els.SEOJ), 0x62, array[i+1], [0x00] );
+							}
 						}
 					}
-					break;
+				}
+				break;
 
-				case EL.INFC_RES: // "7a"
-				case EL.SETGET_RES: // "7e"
-					// console.log( "get " );
-					// console.dir( els );
-					break;
+			  case EL.INF:  // 0x73
+				// V1.0 ƒIƒuƒWƒFƒNƒgƒŠƒXƒg‚ğ‚à‚ç‚Á‚½‚ç‚»‚ÌƒIƒuƒWƒFƒNƒg‚ÌPropertyMap‚ğ‚à‚ç‚¢‚És‚­, ƒfƒoƒCƒX‚ªŒã‚Å‹N“®‚µ‚½
+				if( els.DETAILs.d5 != null && els.DETAILs.d5 != "" ) {
+					// ƒm[ƒhƒvƒƒtƒ@ƒCƒ‹ƒIƒuƒWƒFƒNƒg‚ÌƒvƒƒpƒeƒBƒ}ƒbƒv‚ğ‚à‚ç‚¤
+					EL.getPropertyMaps( rinfo.address, [0x0e, 0xf0, 0x00] );
+				}
+				break;
 
-				default:
-					// console.log( "???" );
-					// console.dir( els );
-					break;
+			  case EL.INFC: // "74"
+				// V1.0 ƒIƒuƒWƒFƒNƒgƒŠƒXƒg‚ğ‚à‚ç‚Á‚½‚ç‚»‚ÌƒIƒuƒWƒFƒNƒg‚ÌPropertyMap‚ğ‚à‚ç‚¢‚És‚­
+				if( els.DETAILs.d5 != null && els.DETAILs.d5 ) {
+					// ƒm[ƒhƒvƒƒtƒ@ƒCƒ‹ƒIƒuƒWƒFƒNƒg‚ÌƒvƒƒpƒeƒBƒ}ƒbƒv‚ğ‚à‚ç‚¤
+					EL.getPropertyMaps( rinfo.address, [0x0e, 0xf0, 0x00] );
+
+					// console.log( "EL.returner: get object list! PropertyMap req.");
+					let array = EL.toHexArray( els.DETAILs.d5 );
+					let instNum = array[0];
+					while( 0 < instNum ) {
+						EL.getPropertyMaps( rinfo.address, array.slice( (instNum - 1)*3 +1, (instNum - 1)*3 +4 ) );
+						instNum -= 1;
+					}
+				}
+				break;
+
+			  case EL.INFC_RES: // "7a"
+			  case EL.SETGET_RES: // "7e"
+				// console.log( "get " );
+				// console.dir( els );
+				break;
+
+			  default:
+				// console.log( "???" );
+				// console.dir( els );
+				break;
 			}
 		}
 
-		// å—ä¿¡çŠ¶æ…‹ã‹ã‚‰æ©Ÿå™¨æƒ…å ±ä¿®æ­£, GETã¨INFREQã¯é™¤ã
+		// óMó‘Ô‚©‚ç‹@Šíî•ñC³, GET‚ÆINFREQ‚Íœ‚­
 		if (els.ESV != "62" && els.ESV != "63") {
 			EL.renewFacilities(rinfo.address, els);
 		}
 
-		// æ©Ÿå™¨ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã«é–¢ã—ã¦ã¯ãƒ¦ãƒ¼ã‚¶ãƒ¼é–¢æ•°ã«ä»»ã™
+		// ‹@ŠíƒIƒuƒWƒFƒNƒg‚ÉŠÖ‚µ‚Ä‚Íƒ†[ƒU[ŠÖ”‚É”C‚·
+
 		userfunc(rinfo, els);
 	} catch (e) {
 		// console.error("EL.returner(): received packet error.");
 		// console.error( bytes );
 		userfunc(rinfo, els, e);
 	}
-
 };
 
 
-// ãƒãƒƒãƒˆãƒ¯ãƒ¼ã‚¯å†…ã®ELæ©Ÿå™¨å…¨ä½“æƒ…å ±ã‚’æ›´æ–°ã™ã‚‹ï¼Œå—ä¿¡ã—ãŸã‚‰å‹æ‰‹ã«å®Ÿè¡Œã•ã‚Œã‚‹
+// ƒlƒbƒgƒ[ƒN“à‚ÌEL‹@Ší‘S‘Ìî•ñ‚ğXV‚·‚éCóM‚µ‚½‚çŸè‚ÉÀs‚³‚ê‚é
 EL.renewFacilities = function (ip, els) {
 	let epcList;
 	try {
 		epcList = EL.parseDetail(els.OPC, els.DETAIL);
 
-		// æ–°è¦IP
-		if (EL.facilities[ip] == null) { //è¦‹ã¤ã‹ã‚‰ãªã„
+		// V‹KIP
+		if (EL.facilities[ip] == null) { //Œ©‚Â‚©‚ç‚È‚¢
 			EL.facilities[ip] = {};
 		}
 
-		// æ–°è¦obj
+		// V‹Kobj
 		if (EL.facilities[ip][els.SEOJ] == null) {
 			EL.facilities[ip][els.SEOJ] = {};
-			// æ–°è¦ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã®ã¨ãï¼Œãƒ—ãƒ­ãƒ‘ãƒ†ã‚£ãƒªã‚¹ãƒˆã‚‚ã‚‰ãŠã†
+			// V‹KƒIƒuƒWƒFƒNƒg‚Ì‚Æ‚«CƒvƒƒpƒeƒBƒŠƒXƒg‚à‚ç‚¨‚¤
 			EL.getPropertyMaps(ip, EL.toHexArray(els.SEOJ));
 		}
 
 		for (let epc in epcList) {
-			// æ–°è¦epc
+			// V‹Kepc
 			if (EL.facilities[ip][els.SEOJ][epc] == null) {
 				EL.facilities[ip][els.SEOJ][epc] = {};
 			}
@@ -617,25 +619,32 @@ EL.renewFacilities = function (ip, els) {
 
 
 //////////////////////////////////////////////////////////////////////
-// ELï¼Œä¸Šä½ã®é€šä¿¡æ‰‹ç¶šã
+// ELCãˆÊ‚Ì’ÊMè‘±‚«
 //////////////////////////////////////////////////////////////////////
 
-// æ©Ÿå™¨æ¤œç´¢
+// ‹@ŠíŒŸõ
 EL.search = function () {
-	EL.sendOPC1(EL.isIPv6 ? EL.EL_Multi6 : EL.EL_Multi, [0x0e, 0xf0, 0x01], [0x0e, 0xf0, 0x00], 0x62, 0xD6, [0x00]);  // ã™ã¹ã¦ãƒãƒ¼ãƒ‰ã«å¯¾ã—ã¦ï¼Œã™ã¹ã¦ã®EOJã‚’Getã™ã‚‹
+	EL.sendOPC1(EL.isIPv6 ? EL.EL_Multi6 : EL.EL_Multi, [0x0e, 0xf0, 0x01], [0x0e, 0xf0, 0x00], 0x62, 0xD6, [0x00]);  // ‚·‚×‚Äƒm[ƒh‚É‘Î‚µ‚ÄC‚·‚×‚Ä‚ÌEOJ‚ğGet‚·‚é
 };
 
 
-// ãƒ—ãƒ­ãƒ‘ãƒ†ã‚£ãƒãƒƒãƒ—ã‚’ã™ã¹ã¦å–å¾—ã™ã‚‹
-EL.getPropertyMaps = function (ip, eoj) {
-	EL.sendOPC1(ip, [0x0e, 0xf0, 0x01], eoj, 0x62, 0x9D, [0x00]);  // INF prop
-	EL.sendOPC1(ip, [0x0e, 0xf0, 0x01], eoj, 0x62, 0x9E, [0x00]);  // SET prop
-	EL.sendOPC1(ip, [0x0e, 0xf0, 0x01], eoj, 0x62, 0x9F, [0x00]);  // GET prop
+// ƒvƒƒpƒeƒBƒ}ƒbƒv‚ğ‚·‚×‚Äæ“¾‚·‚é
+// ˆê“x‚Éˆê‹C‚Éæ“¾‚·‚é‚ÆƒfƒoƒCƒX‘¤‚ª‘Î‰‚Å‚«‚È‚¢ƒ^ƒCƒ~ƒ“ƒO‚à‚ ‚é‚æ‚¤‚ÅC“K“–‚Éwait‚·‚éB
+EL.getPropertyMaps = function ( ip, eoj ) {
+	EL.sendOPC1( ip, [0x0e,0xf0,0x01], eoj, 0x62, 0x9D, [0x00] );      // INF prop
+
+	setTimeout(() => {
+		EL.sendOPC1( ip, [0x0e,0xf0,0x01], eoj, 0x62, 0x9E, [0x00] );  // SET prop, after 1s
+	}, 2000);
+
+	setTimeout(() => {
+		EL.sendOPC1( ip, [0x0e,0xf0,0x01], eoj, 0x62, 0x9F, [0x00] );  // GET prop, after more 1s
+	}, 4000);
 };
 
 
 // parse Propaty Map Form 2
-// 16ä»¥ä¸Šã®ãƒ—ãƒ­ãƒ‘ãƒ†ã‚£æ•°ã®æ™‚ï¼Œè¨˜è¿°å½¢å¼2ï¼Œå‡ºåŠ›ã¯Form1ã«ã™ã‚‹ã“ã¨
+// 16ˆÈã‚ÌƒvƒƒpƒeƒB”‚ÌC‹LqŒ`®2Co—Í‚ÍForm1‚É‚·‚é‚±‚Æ
 EL.parseMapForm2 = function (bitstr) {
 	let ret = [];
 	let val = 0x80;
