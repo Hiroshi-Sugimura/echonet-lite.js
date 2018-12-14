@@ -421,6 +421,8 @@ Thanks to Github users!
 
 ## Log
 
+0.0.23 Replace new Buffer() by Buffer.from().
+
 0.0.22 property mapを一度に3個聞いていたのをデバイスの通信負荷を考慮して少し待つことにした。
 
 0.0.21 OPC != 1 でのparseDetailsの処理に不具合があったので修正しました。ほかにも'use strict'に対応，varをletにした。
