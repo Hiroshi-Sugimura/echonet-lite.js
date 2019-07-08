@@ -221,8 +221,8 @@ EL.parseBytes = function (bytes) {
 	try {
 		// 最低限のELパケットになってない
 		if (bytes.length < 14) {
-			console.error(1, "EL.parseBytes error. bytes is less then 14 bytes. bytes.length is " + bytes.length);
-			console.error(1, bytes);
+			console.error("## EL.parseBytes error. bytes is less then 14 bytes. bytes.length is " + bytes.length);
+			console.error(bytes);
 			return null;
 		}
 
@@ -348,7 +348,7 @@ EL.sendBase = function (ip, buffer) {
 
 // 配列の時
 EL.sendArray = function (ip, array) {
-	EL.sendBase(ip, new Buffer(array));
+	EL.sendBase(ip, Buffer.from(array));
 };
 
 
@@ -380,7 +380,7 @@ EL.sendOPC1 = function (ip, seoj, deoj, esv, epc, edt) {
 	let buffer;
 
 	if (esv == 0x62) { // get
-		buffer = new Buffer([
+		buffer = Buffer.from([
 			0x10, 0x81,
 			0x00, 0x00,
 			seoj[0], seoj[1], seoj[2],
@@ -390,7 +390,7 @@ EL.sendOPC1 = function (ip, seoj, deoj, esv, epc, edt) {
 			epc,
 			0x00]);
 	} else {
-		buffer = new Buffer([
+		buffer = Buffer.from([
 			0x10, 0x81,
 			0x00, 0x00,
 			seoj[0], seoj[1], seoj[2],
@@ -412,7 +412,7 @@ EL.sendOPC1 = function (ip, seoj, deoj, esv, epc, edt) {
 // ELの非常に典型的な送信3 文字列タイプ
 EL.sendString = function (ip, string) {
 	// 送信する
-	EL.sendBase(ip, new Buffer(EL.toHexArray(string)));
+	EL.sendBase(ip, Buffer.from(EL.toHexArray(string)));
 };
 
 
@@ -616,6 +616,39 @@ EL.renewFacilities = function (ip, els) {
 };
 
 
+
+//--------------------------------------------------------------------
+// facilitiesの定期的な監視
+
+// ネットワーク内のEL機器全体情報を更新したらユーザの関数を呼び出す
+EL.setObserveFacilities = function ( interval, onChanged ) {
+	let oldVal = JSON.stringify(EL.objectSort(EL.facilities));;
+	const onObserve = function() {
+		const newVal = JSON.stringify(EL.objectSort(EL.facilities));;
+		if ( oldVal === newVal ) return;
+		onChanged();
+		oldVal = newVal;
+	};
+
+	setInterval( onObserve, interval );
+};
+
+// キーでソートしてからJSONにする
+// 単純にJSONで比較するとオブジェクトの格納順序の違いだけで比較結果がイコールにならない
+EL.objectSort = function (obj) {
+	// まずキーのみをソートする
+	let keys = Object.keys(obj).sort();
+
+	// 返却する空のオブジェクトを作る
+	let map = {};
+
+	// ソート済みのキー順に返却用のオブジェクトに値を格納する
+	keys.forEach(function(key){
+		map[key] = obj[key];
+	});
+
+	return map;
+};
 
 
 //////////////////////////////////////////////////////////////////////

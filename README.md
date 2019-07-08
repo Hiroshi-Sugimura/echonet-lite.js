@@ -77,6 +77,8 @@ EL.search();
 あとはairconObjのプロパティをグローバル変数として，別の関数から書き換えてもいいですよね．
 これでGetに対応できるようになります．
 
+This is a demo program for developping air conditioner object.
+
 
 ```JavaScript:Demo
 //////////////////////////////////////////////////////////////////////
@@ -84,46 +86,49 @@ EL.search();
 var EL = require('echonet-lite');
 
 // エアコンを例に
+// aircon object code is 0130, instance number is 01
 var objList = ['013001'];
 
 // 自分のエアコンのデータ，今回はこのデータをグローバル的に使用する方法で紹介する．
+// define and management of my aircon data.
 var airconObj = {
     // super
-    "80": [0x30],  // 動作状態
-    "81": [0xff],  // 設置場所
+    "80": [0x30],  // 動作状態, power
+    "81": [0xff],  // 設置場所, setting position
     "82": [0x00, 0x00, 0x66, 0x00], // EL version, 1.1
-    "88": [0x42],  // 異常状態
+    "88": [0x42],  // 異常状態, error status
     "8a": [0x00, 0x00, 0x77], // maker code
     "9d": [0x04, 0x80, 0x8f, 0xa0, 0xb0],        // inf map, 1 Byte目は個数
     "9e": [0x04, 0x80, 0x8f, 0xa0, 0xb0],        // set map, 1 Byte目は個数
     "9f": [0x0d, 0x80, 0x81, 0x82, 0x88, 0x8a, 0x8f, 0x9d, 0x9e, 0x9f, 0xa0, 0xb0, 0xb3, 0xbb], // get map, 1 Byte目は個数
     // child
-    "8f": [0x41], // 節電動作設定
-    "a0": [0x31], // 風量設定
-    "b0": [0x41], // 運転モード設定
-    "b3": [0x19], // 温度設定値
-    "bb": [0x1a] // 室内温度計測値
+    "8f": [0x41], // 節電動作設定, mode of power saving operation
+    "a0": [0x31], // 風量設定, Air volume setting
+    "b0": [0x41], // 運転モード設定, running mode
+    "b3": [0x19], // 温度設定値, temperature setting
+    "bb": [0x1a] // 室内温度計測値, indoor temperature measurement
 };
 
 // ノードプロファイルに関しては内部処理するので，ユーザーはエアコンに関する受信処理だけを記述する．
+// the module processes node profile automatically, programmer should describe process for air conditioner
 var elsocket = EL.initialize( objList, function( rinfo, els ) {
     // コントローラがGetしてくるので，対応してあげる
     // エアコンを指定してきたかチェック
-    if( els.DEOJ == '013000' || els.DEOJ == '013001' ) {
+    if( els.DEOJ == '013000' || els.DEOJ == '013001' ) {  // the data is for aircon?
         // ESVで振り分け，主に0x60系列に対応すればいい
         switch( els.ESV ) {
             ////////////////////////////////////////////////////////////////////////////////////
             // 0x6x
           case EL.SETI: // "60
             break;
-          case EL.SETC: // "61"，返信必要あり
+          case EL.SETC: // "61"，返信必要あり; responce required.
             break;
 
           case EL.GET: // 0x62，Get
             for( var epc in els.DETAILs ) {
-                if( airconObj[epc] ) { // 持ってるEPCのとき
+                if( airconObj[epc] ) { // 持ってるEPCのとき;
                     EL.sendOPC1( rinfo.address, [0x01, 0x30, 0x01], EL.toHexArray(els.SEOJ), 0x72, EL.toHexArray(epc), airconObj[epc] );
-                } else { // 持っていないEPCのとき, SNA
+                } else { // 持っていないEPCのとき, SNA; my air conditioner do not have the property.
                     EL.sendOPC1( rinfo.address, [0x01, 0x30, 0x01], EL.toHexArray(els.SEOJ), 0x52, EL.toHexArray(epc), [0x00] );
                 }
             }
@@ -145,6 +150,7 @@ var elsocket = EL.initialize( objList, function( rinfo, els ) {
 
 //////////////////////////////////////////////////////////////////////
 // 全て立ち上がったのでINFでエアコンONの宣言
+// air conditiner is already.
 EL.sendOPC1( '224.0.23.0', [0x01,0x30,0x01], [0x0e,0xf0,0x01], 0x73, 0x80, [0x30]);
 ```
 
@@ -156,7 +162,7 @@ var EL = {
 EL_port: 3610,
 EL_Multi: '224.0.23.0',
 EL_obj: null,
-facilities: {}  // ネットワーク内の機器情報リスト
+facilities: {}  // ネットワーク内の機器情報リスト; device and property list in the LAN
 // Ex.
 // { '192.168.0.3': { '05ff01': { d6: '' } },
 // { '192.168.0.4': { '05ff01': { '80': '30', '82': '30' } } }
@@ -190,6 +196,7 @@ EL.initialize = function ( objList, userfunc, ipVer )
 ```
 
 そしてuserfuncはこんな感じで使いましょう。
+userfunc is described as following.
 
 ```
 function( rinfo, els, err ) {
@@ -206,7 +213,7 @@ function( rinfo, els, err ) {
 
 ### データ表示系, data representations
 
-* ELDATA形式
+* ELDATA形式, ELDATA type
 
 ```
 EL.eldataShow = function( eldata )
@@ -234,18 +241,20 @@ EL.bytesShow = function( bytes )
 |:-----------------:|:-----------------:|:----------------------------------:|
 | Bytes(=Integer[]) | ELDATA            | parseBytes(bytes)                  |
 | String            | ELDATA            | parseString(str)                   |
-| String            | ELっぽいString    | getSeparatedString_String(str)     |
-| ELDATA            | ELっぽいString    | getSeparatedString_ELDATA(eldata)  |
+| String            | String (like EL)  | getSeparatedString_String(str)     |
+| ELDATA            | String (like EL)  | getSeparatedString_ELDATA(eldata)  |
 | ELDATA            | Bytes(=Integer[]) | ELDATA2Array(eldata)               |
 
 
 * DetailだけをParseする，内部でよく使うけど外部で使うかわかりません．
+* inner function. Parses only detail (for echonet lite data frame).
 
 ```
 EL.parseDetail = function( opc, str )
 ```
 
 * byte dataを入力するとELDATA形式にする
+* bytes -> ELDATA type
 
 ```
 EL.parseBytes = function( bytes )
@@ -253,6 +262,7 @@ EL.parseBytes = function( bytes )
 
 
 * HEXで表現されたStringをいれるとELDATA形式にする
+* HEX string -> ELDATA
 
 ```
 EL.parseString = function( str )
@@ -260,6 +270,7 @@ EL.parseString = function( str )
 
 
 * 文字列をいれるとELらしい切り方のStringを得る
+* String -> EL-like String
 
 ```
 EL.getSeparatedString_String = function( str )
@@ -267,19 +278,21 @@ EL.getSeparatedString_String = function( str )
 
 
 * ELDATAをいれるとELらしい切り方のStringを得る
+* ELDATA -> EL-like String
 
 ```
 EL.getSeparatedString_ELDATA = function( eldata )
 ```
 
 * ELDATA形式から配列へ
+* ELDATA -> Array
 
 ```
 EL.ELDATA2Array = function( eldata )
 ```
 
 
-* 変換表
+* 変換表, convert pair of datas
 
 | from              |    to          |   function                         |
 |:-----------------:|:--------------:|:----------------------------------:|
@@ -288,12 +301,14 @@ EL.ELDATA2Array = function( eldata )
 
 
 * 1バイトを文字列の16進表現へ（1Byteは必ず2文字にする）
+* a byte -> HEX string
 
 ```
 EL.toHexString = function( byte )
 ```
 
 * HEXのStringを数値のバイト配列へ
+* HES String -> Array
 
 ```
 EL.toHexArray = function( string )
@@ -302,19 +317,19 @@ EL.toHexArray = function( string )
 
 ### 送信, send
 
-* EL送信のベース
+* EL送信のベース, base function
 
 ```
 EL.sendBase = function( ip, buffer )
 ```
 
-* 配列の時
+* 配列の時, send Array
 
 ```
 EL.sendArray = function( ip, array )
 ```
 
-* ELの非常に典型的なOPC一個でやる方式
+* ELの非常に典型的なOPC一個でやる方式, send EL-like
 
 ```
 EL.sendOPC1 = function( ip, seoj, deoj, esv, epc, edt)
@@ -330,7 +345,7 @@ EL.sendOPC1( '192.168.2.150', "05ff01", "013501", EL.SETC, "80", "31");
 ```
 
 
-* ELの非常に典型的な送信3 文字列タイプ
+* ELの非常に典型的な送信3 文字列タイプ, send EL-like string
 
 ```
 EL.sendString = function( ip, string )
@@ -361,6 +376,21 @@ EL.search = function()
 
 ```
 EL.renewFacilities = function( ip, obj, opc, detail )
+```
+
+* 機器情報の変化監視 (From Ver. 1.0.0)
+* Set observing function to change EL.facilities.
+
+```
+EL.setObserveFacilities = function( interval, onChanged );
+```
+
+ex.
+
+```
+EL.setObserveFacilities( 1000, function() {  // 1000 ms
+	console.log('EL.facilities are changed.');
+});
 ```
 
 
@@ -420,6 +450,8 @@ Thanks to Github users!
 
 
 ## Log
+
+1.0.0 EL.setObserveFacilitiesを実装した。ついでにいろいろあきらめてVer. 1ということにした。
 
 0.0.23 Replace new Buffer() by Buffer.from().
 
