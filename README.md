@@ -167,11 +167,12 @@ facilities: {}  // ネットワーク内の機器情報リスト; device and pro
 // { '192.168.0.3': { '05ff01': { d6: '' } },
 // { '192.168.0.4': { '05ff01': { '80': '30', '82': '30' } } }
 };
-
+```
 
 ELデータはこのモジュールで定義した構造で，下記のようになっています．
 ELDATA is ECHONET Lite data stracture, which conteints
 
+```
 ELDATA {
   EHD : str.substr( 0, 4 ),
   TID : str.substr( 4, 4 ),
@@ -357,6 +358,9 @@ EL.sendString = function( ip, string )
 ELの受信データを振り分けるよ，何とかしよう．
 ELの受信をすべて自分で書きたい人はこれを完全に書き換えればいいとおもう．
 普通の人はinitializeのuserfuncで事足りるはず．
+
+For controlling all receiving data, update EL.returner function by any function. However this method is not recommended.
+Generally, all process can be described in userfunc of EL.initialize.
 
 ```
 EL.returner = function( bytes, rinfo, userfunc )
