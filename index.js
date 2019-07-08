@@ -625,7 +625,7 @@ EL.setObserveFacilities = function ( interval, onChanged ) {
 	let oldVal = JSON.stringify(EL.objectSort(EL.facilities));;
 	const onObserve = function() {
 		const newVal = JSON.stringify(EL.objectSort(EL.facilities));;
-		if ( oldVal === newVal ) return;
+		if ( oldVal == newVal ) return;
 		onChanged();
 		oldVal = newVal;
 	};

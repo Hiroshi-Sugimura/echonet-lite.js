@@ -455,6 +455,8 @@ Thanks to Github users!
 
 ## Log
 
+1.0.0 bug fix. string equal
+
 1.0.0 EL.setObserveFacilitiesを実装した。ついでにいろいろあきらめてVer. 1ということにした。
 
 0.0.23 Replace new Buffer() by Buffer.from().
