@@ -196,6 +196,11 @@ ELDATA {
 EL.initialize = function ( objList, userfunc, ipVer )
 ```
 
+- ipVer = 0, IPv4 and IPv6
+- ipVer = 4, IPv4 only
+- ipVer = 6, IPv6 only
+
+
 そしてuserfuncはこんな感じで使いましょう。
 userfunc is described as following.
 
@@ -455,7 +460,9 @@ Thanks to Github users!
 
 ## Log
 
-1.0.3 IPv6をIPv4と同時対応可能にした。initializeを下記のようにするとv4,v6同時に通信できる。複数NIC対応のため，MulticastAddressを指定できるようにしたが，うまく利いていない気はする。
+1.0.4 くだらないログがでてました。削除
+
+1.0.3 IPv6をIPv4と同時対応可能にした。initializeを下記のようにするとv4, v6同時に通信できる。複数NIC対応のため，MulticastAddressを指定できるようにしたが，うまく利いていない気はする。
 
 ```
 EL.initialize( objList, function ( rinfo, els, err ) {
@@ -472,7 +479,7 @@ EL.initialize( objList, function ( rinfo, els, err ) {
   ^^^
    この値が0なら，IPv4 & IPv6
    この値が4なら，IPv4 only
-   この値が6なら，IPv6 onli
+   この値が6なら，IPv6 only
 ```
 
 1.0.2 IPv6対応のための布石。Node.jsがIPv6のmulticast対応をきちんとしてくれないので動かないような気がする。

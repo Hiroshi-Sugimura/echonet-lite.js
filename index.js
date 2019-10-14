@@ -129,7 +129,6 @@ EL.initialize = function (objList, userfunc, ipVer = 4, multicastAddr = {v4: '',
 				sock4.setMulticastInterface( multicastAddr.v4 );
 				sock4.addMembership(EL.EL_Multi);
 			}else{
-				console.log('mc is null');
 				sock4.addMembership(EL.EL_Multi);
 			}
 		});
@@ -140,7 +139,6 @@ EL.initialize = function (objList, userfunc, ipVer = 4, multicastAddr = {v4: '',
 				sock6.setMulticastInterface( multicastAddr.v6 );
 				sock6.addMembership(EL.EL_Multi6);
 			}else{
-				console.log('mc6 is null');
 				sock6.addMembership(EL.EL_Multi6);
 			}
 		});
@@ -172,7 +170,7 @@ EL.eldataShow = function (eldata) {
 	if (eldata != null) {
 		console.log('EHD: ' + eldata.EHD + 'TID: ' + eldata.TID + 'SEOJ: ' + eldata.SEOJ + 'DEOJ: ' + eldata.DEOJ + '\nEDATA: ' + eldata.EDATA);
 	} else {
-		console.log("EL.eldataShow error. eldata is not EL data.");
+		console.error("EL.eldataShow error. eldata is not EL data.");
 	}
 };
 
