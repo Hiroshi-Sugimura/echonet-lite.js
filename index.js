@@ -4,8 +4,10 @@
 //	Copyright (C) Hiroshi SUGIMURA 2013.09.27 - above.
 //////////////////////////////////////////////////////////////////////
 'use strict'
-// UDPつかう
-let dgram = require('dgram');
+
+const os = require('os'); // interface listほしい
+const dgram = require('dgram'); // UDPつかう
+
 
 
 //////////////////////////////////////////////////////////////////////
@@ -45,7 +47,6 @@ let EL = {
   INFC_RES: "7a",
   SETGET_RES: "7e",
   EL_port: 3610,
-  ipVer: 4,
   EL_Multi: '224.0.23.0',
   EL_Multi6: 'FF02::1',
   EL_obj: null,
@@ -63,6 +64,9 @@ let EL = {
 	  "d5": [],    // インスタンスリスト通知, user項目
 	  "d6": [],    // 自ノードインスタンスリストS, user項目
 	  "d7": [] },  // 自ノードクラスリストS, user項目
+  ipVer: 4, // 0 = IPv4 & IPv6, 4 = IPv4, 6 = IPv6
+  nicList: {v4: [], v6: []},
+  usingIF: {v4: '', v6: ''}, // '' = default
   debugMode: false,
   facilities: {}  	// ネットワーク内の機器情報リスト
 	// データ形式の例
@@ -76,8 +80,22 @@ let EL = {
 // Nodejsの対応が遅れていてまだうまく動かないみたい，しばらくipVer = 4でやる。
 // 複数NICがあるときにNICを指定できるようにした。NICの設定はmulticastAddrに出力したいインタフェースのIPを指定する。
 // ipVer == 0の時はsocketが4と6の2個手に入れることに注意
-EL.initialize = function (objList, userfunc, ipVer = 4, multicastAddr = {v4: '', v6: ''}) {
+EL.initialize = function (objList, userfunc, ipVer = 4, Interfaces = {v4: '', v6: ''}) {
+	// Network Interface Card List
+	EL.renewNICList();
+
+	// config
 	EL.ipVer = ipVer;
+
+	// 複数NIC対策
+	EL.usingIF.v4 = Interfaces.v4 != undefined && Interfaces.v4 != '' ? Interfaces.v4 : '0.0.0.0';
+	EL.usingIF.v6 = Interfaces.v6 != '' ? Interfaces.v6 : EL.nicList.v6[0].name;
+
+	// 邪魔かもしれないけど
+	console.log('====');
+	console.log('ipVer:', EL.ipVer);
+	console.log('NIC.v4:', EL.usingIF.v4);
+	console.log('NIC.v6:', EL.usingIF.v6);
 
 	// オブジェクトリストを確保
 	EL.EL_obj = objList;
@@ -115,39 +133,39 @@ EL.initialize = function (objList, userfunc, ipVer = 4, multicastAddr = {v4: '',
 		sock4 = dgram.createSocket({type:"udp4",reuseAddr:true}, (msg, rinfo) => {
 			EL.returner(msg, rinfo, userfunc);
 		});
-	}else if( EL.ipVer == 0 || EL.ipVer == 6) {
+	}
+	if( EL.ipVer == 0 || EL.ipVer == 6) {
 		sock6 = dgram.createSocket({type:"udp6",reuseAddr:true}, (msg, rinfo) => {
 			EL.returner(msg, rinfo, userfunc);
 		});
 	}
 
-	// マルチキャスト設定，ネットワークに繋がっていない（IPが一つもない）と例外がでる
+	// マルチキャスト設定，ネットワークに繋がっていない（IPが一つもない）と例外がでる。
 	if( EL.ipVer == 0 || EL.ipVer == 4) {
-		sock4.bind(EL.EL_port, '0.0.0.0', function () {
-			sock4.setMulticastLoopback(true);
-			if( multicastAddr.v4 != '' ) {
-				sock4.setMulticastInterface( multicastAddr.v4 );
+		if(EL.usingIF.v4 == '') { // default nic
+			sock4.bind(EL.EL_port, '0.0.0.0', function () {
+				sock4.setMulticastLoopback(true);
 				sock4.addMembership(EL.EL_Multi);
-			}else{
+			});
+		}else{
+			sock4.bind(EL.EL_port, EL.usingIF.v4, function () {  // NIC指定
+				sock4.setMulticastLoopback(true);
 				sock4.addMembership(EL.EL_Multi);
-			}
-		});
-	}else if( EL.ipVer == 0 || EL.ipVer == 6) {
+			});
+		}
+	}
+	if( EL.ipVer == 0 || EL.ipVer == 6) {
 		sock6.bind(EL.EL_port, '::', function () {
 			sock6.setMulticastLoopback(true);
-			if( multicastAddr.v6 != '' ) {
-				sock6.setMulticastInterface( multicastAddr.v6 );
-				sock6.addMembership(EL.EL_Multi6);
-			}else{
-				sock6.addMembership(EL.EL_Multi6);
-			}
+			sock6.addMembership(EL.EL_Multi6, '::'+'%'+EL.usingIF.v6);
 		});
 	}
 
 	// 初期化終わったのでノードのINFをだす, IPv4, IPv6ともに出す
 	if( EL.ipVer == 0 || EL.ipVer == 4) {
 		EL.sendOPC1( EL.EL_Multi, [0x0e, 0xf0, 0x01], [0x0e, 0xf0, 0x01], 0x73, 0xd5, EL.Node_details["d5"]);
-	}else if( EL.ipVer == 0 || EL.ipVer == 6) {
+	}
+	if( EL.ipVer == 0 || EL.ipVer == 6) {
 		EL.sendOPC1( EL.EL_Multi6, [0x0e, 0xf0, 0x01], [0x0e, 0xf0, 0x01], 0x73, 0xd5, EL.Node_details["d5"]);
 	}
 
@@ -160,6 +178,32 @@ EL.initialize = function (objList, userfunc, ipVer = 4, multicastAddr = {v4: '',
 	}
 };
 
+
+// NICリスト更新
+// loopback無視
+EL.renewNICList = function () {
+	EL.nicList.v4 = [];
+	EL.nicList.v6 = [];
+	let interfaces = os.networkInterfaces();
+	interfaces = EL.objectSort(interfaces);  // dev nameでsortすると仮想LAN候補を後ろに逃がせる（とみた）
+	// console.dir(interfaces);
+	for (let name in interfaces) {
+		if( name == 'lo0') {continue;}
+		interfaces[name].forEach( function(details) {
+			if (!details.internal){
+				switch(details.family){
+				  case "IPv4":
+					EL.nicList.v4.push({name:name, address:details.address});
+					break;
+				  case "IPv6":
+					EL.nicList.v6.push({name:name, address:details.address});
+					break;
+				}
+			}
+		});
+	}
+	return EL.nicList;
+}
 
 //////////////////////////////////////////////////////////////////////
 // eldata を見る，表示関係
@@ -374,20 +418,42 @@ EL.bytesToString = function (bytes) {
 
 // EL送信のベース
 EL.sendBase = function (ip, buffer) {
+	console.log(ip, buffer);
 	// ipv4
 	if( EL.ipVer == 0 || EL.ipVer == 4 ) {
-		let client = dgram.createSocket("udp4");
-		client.send(buffer, 0, buffer.length, EL.EL_port, ip, function (err, bytes) {
-			client.close();
-		});
+		// 送信先がipv4ならやる，'.'が使われているかどうかで判定しちゃう
+		if( ip.indexOf('.') != -1 ) {
+			let client = dgram.createSocket({type:"udp4",reuseAddr:true});
+
+			if( EL.usingIF.v4 != '' ) {
+				client.bind( EL.EL_port + 20000, EL.usingIF.v4, () => {
+					client.setMulticastInterface( EL.usingIF.v4 );
+					client.send(buffer, 0, buffer.length, EL.EL_port, ip, function (err, bytes) {
+						if( err ) { console.error(err); }
+						client.close();
+					});
+				});
+			}else{
+				client.send(buffer, 0, buffer.length, EL.EL_port, ip, function (err, bytes) {
+					if( err ) { console.error(err); }
+					client.close();
+				});
+			}
+
+		}
 	}
 
 	// ipv6
 	if( EL.ipVer == 0 || EL.ipVer == 6 ) {
-		let client = dgram.createSocket("udp6");
-		client.send(buffer, 0, buffer.length, EL.EL_port, ip, function (err, bytes) {
-			client.close();
-		});
+		// 送信先がipv6ならやる，':'が使われているかどうかで判定しちゃう
+		if( ip.indexOf(':') != -1 ) {
+			let client = dgram.createSocket({type:"udp6",reuseAddr:true});
+			ip += '%' + EL.usingIF.v6;
+			client.send(buffer, 0, buffer.length, EL.EL_port, ip, function (err, bytes) {
+				if( err ) { console.error(err); }
+				client.close();
+			});
+		}
 	}
 };
 

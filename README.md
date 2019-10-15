@@ -193,20 +193,16 @@ ELDATA {
 ### 初期化，バインド, initialize
 
 ```
-EL.initialize = function ( objList, userfunc, ipVer )
+EL.initialize = function ( objList, userfunc, ipVer = 4, Interfaces = {v4: '', v6: ''} )
 ```
 
-- ipVer = 0, IPv4 and IPv6
-- ipVer = 4, IPv4 only
-- ipVer = 6, IPv6 only
+- objList is ECHONET Lite object code.
+ - for example, ['05ff01'] is a controller.
 
-
-そしてuserfuncはこんな感じで使いましょう。
-userfunc is described as following.
+- userfunc is the your callback function. userfunc is described as following.
 
 ```
 function( rinfo, els, err ) {
-
 	console.log('==============================');
 	if( err ) {
 		console.dir(err);
@@ -214,6 +210,41 @@ function( rinfo, els, err ) {
 		// ToDo
 	}
 }
+```
+
+
+- ipVer is optional
+ - ipVer = 0, IPv4 and IPv6
+ - ipVer = 4, IPv4 only
+ - ipVer = 6, IPv6 only
+
+- Interfaces is optional
+ - v4 is specified by using IPAddress
+ - v6 is specified by using NIC name
+
+
+- More examples
+
+```
+let objList = ['05ff01'];
+
+let elsocket = EL.initialize( objList, function( rinfo, els, err ) {
+	console.log('==============================');
+	if( err ) {
+		console.dir(err);
+	}else{
+		console.log('----');
+		console.log('Get ECHONET Lite data');
+		console.log('rinfo is '); console.dir(rinfo);
+		console.log('els is ');   console.dir(els);
+	}
+} );  // ipv4 (default)
+// }, 4 );  // ipv4 only
+// }, 6 );  // ipv6 only
+// }, 4, {v4: '10.211.55.2'} ); // ipv4 only and using NIC address
+// }, 6, {v6: 'en0'} );  // ipv6 only and using NIC name
+// }, 0 );  // ipv4 and ipv6 dualstack
+// }, 0, {v4: '10.211.55.2', v6: 'en0'});  // ipv4 and ipv6 dualstack, and these NIC are specified.
 ```
 
 
@@ -238,6 +269,15 @@ EL.stringShow = function( str )
 ```
 EL.bytesShow = function( bytes )
 ```
+
+* NICリスト取得
+
+```
+EL.renewNICList = function()
+```
+
+- 戻り値はObject
+- output is object data.
 
 
 ### 変換系, converters
@@ -459,6 +499,8 @@ Thanks to Github users!
 
 
 ## Log
+
+2.0.0 IPv4，IPv6，デュアルスタック対応，Interface切り替え対応。複雑になってきたので少しコンソールにログがでる。
 
 1.0.4 くだらないログがでてました。削除
 
