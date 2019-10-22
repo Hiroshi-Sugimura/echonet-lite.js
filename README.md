@@ -500,6 +500,7 @@ Thanks to Github users!
 
 ## Log
 
+- 2.0.3 bind見直し
 - 2.0.2 log消し
 - 2.0.1 repush
 - 2.0.0 IPv4，IPv6，デュアルスタック対応，Interface切り替え対応。複雑になってきたので少しコンソールにログがでる。

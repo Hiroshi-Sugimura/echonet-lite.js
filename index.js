@@ -142,20 +142,22 @@ EL.initialize = function (objList, userfunc, ipVer = 4, Interfaces = {v4: '', v6
 
 	// マルチキャスト設定，ネットワークに繋がっていない（IPが一つもない）と例外がでる。
 	if( EL.ipVer == 0 || EL.ipVer == 4) {
-		if(EL.usingIF.v4 == '') { // default nic
-			sock4.bind(EL.EL_port, '0.0.0.0', function () {
+		// if(EL.usingIF.v4 == '') { // default nic
+			// sock4.bind(EL.EL_port, '0.0.0.0', function () {
+			sock4.bind( {'address': '0.0.0.0', 'port': EL.EL_port}, function () {
 				sock4.setMulticastLoopback(true);
 				sock4.addMembership(EL.EL_Multi);
 			});
-		}else{
-			sock4.bind(EL.EL_port, EL.usingIF.v4, function () {  // NIC指定
-				sock4.setMulticastLoopback(true);
-				sock4.addMembership(EL.EL_Multi);
-			});
-		}
+		// }else{
+			// sock4.bind(EL.EL_port, EL.usingIF.v4, function () {  // NIC指定
+			// sock4.bind( {'address': EL.usingIF.v4, 'port': EL.EL_port}, function () {
+				// sock4.setMulticastLoopback(true);
+				// sock4.addMembership(EL.EL_Multi);
+			// });
+		// }
 	}
 	if( EL.ipVer == 0 || EL.ipVer == 6) {
-		sock6.bind(EL.EL_port, '::', function () {
+		sock6.bind({'address': '::', 'port': EL.EL_port}, function () {
 			sock6.setMulticastLoopback(true);
 			sock6.addMembership(EL.EL_Multi6, '::'+'%'+EL.usingIF.v6);
 		});
