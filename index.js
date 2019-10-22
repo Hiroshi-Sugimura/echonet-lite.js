@@ -418,7 +418,7 @@ EL.bytesToString = function (bytes) {
 
 // EL送信のベース
 EL.sendBase = function (ip, buffer) {
-	console.log(ip, buffer);
+	// console.log(ip, buffer);
 	// ipv4
 	if( EL.ipVer == 0 || EL.ipVer == 4 ) {
 		// 送信先がipv4ならやる，'.'が使われているかどうかで判定しちゃう

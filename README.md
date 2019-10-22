@@ -500,14 +500,11 @@ Thanks to Github users!
 
 ## Log
 
-2.0.1 repush
-
-2.0.0 IPv4，IPv6，デュアルスタック対応，Interface切り替え対応。複雑になってきたので少しコンソールにログがでる。
-
-1.0.4 くだらないログがでてました。削除
-
-1.0.3 IPv6をIPv4と同時対応可能にした。initializeを下記のようにするとv4, v6同時に通信できる。複数NIC対応のため，MulticastAddressを指定できるようにしたが，うまく利いていない気はする。
-
+- 2.0.2 log消し
+- 2.0.1 repush
+- 2.0.0 IPv4，IPv6，デュアルスタック対応，Interface切り替え対応。複雑になってきたので少しコンソールにログがでる。
+- 1.0.4 くだらないログがでてました。削除
+- 1.0.3 IPv6をIPv4と同時対応可能にした。initializeを下記のようにするとv4, v6同時に通信できる。複数NIC対応のため，MulticastAddressを指定できるようにしたが，うまく利いていない気はする。
 ```
 EL.initialize( objList, function ( rinfo, els, err ) {
 	if( err ) {
@@ -525,38 +522,19 @@ EL.initialize( objList, function ( rinfo, els, err ) {
    この値が4なら，IPv4 only
    この値が6なら，IPv6 only
 ```
-
-1.0.2 IPv6対応のための布石。Node.jsがIPv6のmulticast対応をきちんとしてくれないので動かないような気がする。
-
-1.0.1 bug fix. string equal，ユーザ設定が間違っているときにどのようにエラーを出すかを今後の課題として記す。
-
-1.0.0 EL.setObserveFacilitiesを実装した。ついでにいろいろあきらめてVer. 1ということにした。
-
-0.0.23 Replace new Buffer() by Buffer.from().
-
-0.0.22 property mapを一度に3個聞いていたのをデバイスの通信負荷を考慮して少し待つことにした。
-
-0.0.21 OPC != 1 でのparseDetailsの処理に不具合があったので修正しました。ほかにも'use strict'に対応，varをletにした。
-
-0.0.20 INF_REQがINFREQだったバグを修正した。
-
-0.0.19 utf-8n対応，EL.parseDetailのエラーに対応，ライブラリのくせに結構標準出力していたあたりを取った。
-
-0.0.18 Readmeを少し修正．
-
-0.0.17 473行以下でプロパティマップを受信した場合の処理を記述していますが、
-ノードプロファイル以外の場合もこの処理に入ってしまうバグがあります。
-この修正によりノードプロファイルの場合のみプロパティマップ内のプロパティを取得するようになります。
-
-
-0.0.16 Readmeを少し修正．
-
-0.0.15 HEX変換をNodeの標準ライブラリにしてくれた．IPv6対応してくれた．
-
-0.0.14 EL.sendOPC1の引数の型に関してかなりあいまいに処理できるようにした．
-seoj, deoj, esv, epcは文字列でもOK，edtは数値も文字列もOKにした．
-また，esvをわかりやすくするために下記も利用できるように定義した．
-
+- 1.0.2 IPv6対応のための布石。Node.jsがIPv6のmulticast対応をきちんとしてくれないので動かないような気がする。
+- 1.0.1 bug fix. string equal，ユーザ設定が間違っているときにどのようにエラーを出すかを今後の課題として記す。
+- 1.0.0 EL.setObserveFacilitiesを実装した。ついでにいろいろあきらめてVer. 1ということにした。
+- 0.0.23 Replace new Buffer() by Buffer.from().
+- 0.0.22 property mapを一度に3個聞いていたのをデバイスの通信負荷を考慮して少し待つことにした。
+- 0.0.21 OPC != 1 でのparseDetailsの処理に不具合があったので修正しました。ほかにも'use strict'に対応，varをletにした。
+- 0.0.20 INF_REQがINFREQだったバグを修正した。
+- 0.0.19 utf-8n対応，EL.parseDetailのエラーに対応，ライブラリのくせに結構標準出力していたあたりを取った。
+- 0.0.18 Readmeを少し修正．
+- 0.0.17 473行以下でプロパティマップを受信した場合の処理を記述していますが、ノードプロファイル以外の場合もこの処理に入ってしまうバグがあります。この修正によりノードプロファイルの場合のみプロパティマップ内のプロパティを取得するようになります。
+- 0.0.16 Readmeを少し修正．
+- 0.0.15 HEX変換をNodeの標準ライブラリにしてくれた．IPv6対応してくれた．
+- 0.0.14 EL.sendOPC1の引数の型に関してかなりあいまいに処理できるようにした．seoj, deoj, esv, epcは文字列でもOK，edtは数値も文字列もOKにした．また，esvをわかりやすくするために下記も利用できるように定義した．
 ```
 EL.SETI_SNA   = "50"
 EL.SETC_SNA   = "51"
@@ -575,11 +553,7 @@ EL.INFC       = "74"
 EL.INFC_RES   = "7a"
 EL.SETGET_RES = "7e"
 ```
-
-0.0.13 ReadmeのsendOPC1が分かりにくかったので修正．
-
-0.0.12 Node Profile Objectに対するGet関係に対応．facilities構成に関して，ESVがSetとINFREQできたEPCをtoIPデバイスのものとして確保するバグを修正．結構頑張って規格に対応したつもりです．README手直し
-
-0.0.11 マニュアルの英語表記追加
-
-0.0.10 API追加とBug修正，PropertyMap対応，sendOPC1のEPCを3バイトにしたので0.0.9と互換性きえた．Node.jsからだと家電の速度が間に合わないのでUDPの取りこぼしが発生する．ライブラリとしては対処しないこととなった．．
+- 0.0.13 ReadmeのsendOPC1が分かりにくかったので修正．
+- 0.0.12 Node Profile Objectに対するGet関係に対応．facilities構成に関して，ESVがSetとINFREQできたEPCをtoIPデバイスのものとして確保するバグを修正．結構頑張って規格に対応したつもりです．README手直し
+- 0.0.11 マニュアルの英語表記追加
+- 0.0.10 API追加とBug修正，PropertyMap対応，sendOPC1のEPCを3バイトにしたので0.0.9と互換性きえた．Node.jsからだと家電の速度が間に合わないのでUDPの取りこぼしが発生する．ライブラリとしては対処しないこととなった．．
