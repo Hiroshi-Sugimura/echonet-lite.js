@@ -193,7 +193,7 @@ ELDATA {
 ### 初期化，バインド, initialize
 
 ```
-EL.initialize = function ( objList, userfunc, ipVer = 4, Interfaces = {v4: '', v6: ''} )
+EL.initialize = function ( objList, userfunc, ipVer = 4, Options = {v4: '', v6: '', ignoreMe: false} )
 ```
 
 - objList is ECHONET Lite object code.
@@ -218,9 +218,10 @@ function( rinfo, els, err ) {
  - ipVer = 4, IPv4 only
  - ipVer = 6, IPv6 only
 
-- Interfaces is optional
- - v4 is specified by using IPAddress
- - v6 is specified by using NIC name
+- Options is optional
+ - v4 is specified for using IPAddress
+ - v6 is specified for using NIC name
+ - ignoreMe is specified to ignore self IP address
 
 
 - More examples
@@ -243,6 +244,7 @@ let elsocket = EL.initialize( objList, function( rinfo, els, err ) {
 // }, 6 );  // ipv6 only
 // }, 4, {v4: '10.211.55.2'} ); // ipv4 only and using NIC address
 // }, 6, {v6: 'en0'} );  // ipv6 only and using NIC name
+// }, 4, {ignoreMe: true} );  // ipv4 and ingnoreMe
 // }, 0 );  // ipv4 and ipv6 dualstack
 // }, 0, {v4: '10.211.55.2', v6: 'en0'});  // ipv4 and ipv6 dualstack, and these NIC are specified.
 ```
@@ -500,6 +502,7 @@ Thanks to Github users!
 
 ## Log
 
+- 2.1.0 自IPの受信を無視する，ignoreMeオプションを実装
 - 2.0.3 bind見直し
 - 2.0.2 log消し
 - 2.0.1 repush

@@ -1,6 +1,4 @@
 //////////////////////////////////////////////////////////////////////
-//	$Date:: 2016-10-18 10:50:04 +0900#$
-//	$Rev: 10232 $
 //	Copyright (C) Hiroshi SUGIMURA 2013.09.27 - above.
 //////////////////////////////////////////////////////////////////////
 'use strict'
@@ -67,6 +65,7 @@ let EL = {
   ipVer: 4, // 0 = IPv4 & IPv6, 4 = IPv4, 6 = IPv6
   nicList: {v4: [], v6: []},
   usingIF: {v4: '', v6: ''}, // '' = default
+    ignoreMe: false, // true = 自IPから送信されたデータ受信を無視
   debugMode: false,
   facilities: {}  	// ネットワーク内の機器情報リスト
 	// データ形式の例
@@ -80,7 +79,7 @@ let EL = {
 // Nodejsの対応が遅れていてまだうまく動かないみたい，しばらくipVer = 4でやる。
 // 複数NICがあるときにNICを指定できるようにした。NICの設定はmulticastAddrに出力したいインタフェースのIPを指定する。
 // ipVer == 0の時はsocketが4と6の2個手に入れることに注意
-EL.initialize = function (objList, userfunc, ipVer = 4, Interfaces = {v4: '', v6: ''}) {
+EL.initialize = function (objList, userfunc, ipVer = 4, Options = {v4: '', v6: '', ignoreMe: false}) {
 	// Network Interface Card List
 	EL.renewNICList();
 
@@ -88,14 +87,19 @@ EL.initialize = function (objList, userfunc, ipVer = 4, Interfaces = {v4: '', v6
 	EL.ipVer = ipVer;
 
 	// 複数NIC対策
-	EL.usingIF.v4 = Interfaces.v4 != undefined && Interfaces.v4 != '' ? Interfaces.v4 : '0.0.0.0';
-	EL.usingIF.v6 = Interfaces.v6 != '' ? Interfaces.v6 : EL.nicList.v6[0].name;
+    EL.usingIF.v4 = Options.v4 != undefined && Options.v4 != '' ? Options.v4 : '0.0.0.0';
+    EL.usingIF.v6 = Options.v6 != '' ? Options.v6 : EL.nicList.v6[0].name;
+    
+    // 自IPから送信されたデータ受信を無視
+    EL.ignoreMe = Options.ignoreMe;
 
 	// 邪魔かもしれないけど
-	console.log('====');
+	console.log('==== echonet-lite.js');
 	console.log('ipVer:', EL.ipVer);
 	console.log('NIC.v4:', EL.usingIF.v4);
 	console.log('NIC.v6:', EL.usingIF.v6);
+    console.log('ignoreMe:', EL.ignoreMe);
+
 
 	// オブジェクトリストを確保
 	EL.EL_obj = objList;
@@ -534,14 +538,40 @@ EL.sendString = function (ip, string) {
 // EL受信
 //////////////////////////////////////////////////////////////////////
 
-// ELの受信データを振り分けるよ，何とかしよう
+// ELの受信データを振り分ける
 EL.returner = function (bytes, rinfo, userfunc) {
-	// console.log( "EL.returner:EL.parseBytes.");
-	let els;
+    // console.log( "========");
+    // console.log( "EL.returner:EL.parseBytes.");
+    
+    // 自IPを無視する設定があればチェックして無視する
+    let ignoreIP = false;
+    if( EL.ignoreMe == true ) {
+        EL.nicList.v4.forEach( (ip) => {
+            // console.dir(rinfo);
+            // console.dir(ip);
+            if( ip.address === rinfo.address ) {
+                // console.log('v4 mutch');
+                ignoreIP = true;
+                return;
+            }
+        });
+        EL.nicList.v6.forEach( (ip) => {
+            if( ip.address === rinfo.address ) {
+                // console.log('v6 mutch');
+                ignoreIP = true;
+                return;
+            }
+        });
+    }    
+    if(ignoreIP == true) {
+        return;
+    }
+    
+    // 無視しない
+    let els;
 
 	try {
 		els = EL.parseBytes(bytes);
-
 
 		// キチンとパースできたか？
 		if (null == els) {
