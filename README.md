@@ -20,6 +20,7 @@ You can install the module as following command.
 
 ## Demos(controller)
 
+デモプログラムはこんな感じです。動作させるためにはECHONET Lite対応デバイスが必要です。もしお持ちでない場合には**[MoekadenRoom](https://github.com/SonyCSL/MoekadenRoom)**というシミュレータがおすすめです。Here is a demonstration script.For test exectuion, some devices with ECHONET Lite is required.If you do not have any device, we recommend the **[MoekadenRoom](https://github.com/SonyCSL/MoekadenRoom)** as a simulator.
 
 ```JavaScript:Demo
 // モジュールの機能をELとして使う
@@ -502,6 +503,7 @@ Thanks to Github users!
 
 ## Log
 
+- 2.1.1 GetPropertyMapのときに，各プロパティ読み取りのWAITをつけた。処理が遅いデバイス対策
 - 2.1.0 自IPの受信を無視する，ignoreMeオプションを実装
 - 2.0.3 bind見直し
 - 2.0.2 log消し

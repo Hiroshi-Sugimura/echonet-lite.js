@@ -65,7 +65,7 @@ let EL = {
   ipVer: 4, // 0 = IPv4 & IPv6, 4 = IPv4, 6 = IPv6
   nicList: {v4: [], v6: []},
   usingIF: {v4: '', v6: ''}, // '' = default
-    ignoreMe: false, // true = 自IPから送信されたデータ受信を無視
+  ignoreMe: false, // true = 自IPから送信されたデータ受信を無視
   debugMode: false,
   facilities: {}  	// ネットワーク内の機器情報リスト
 	// データ形式の例
@@ -87,18 +87,18 @@ EL.initialize = function (objList, userfunc, ipVer = 4, Options = {v4: '', v6: '
 	EL.ipVer = ipVer;
 
 	// 複数NIC対策
-    EL.usingIF.v4 = Options.v4 != undefined && Options.v4 != '' ? Options.v4 : '0.0.0.0';
-    EL.usingIF.v6 = Options.v6 != '' ? Options.v6 : EL.nicList.v6[0].name;
-    
-    // 自IPから送信されたデータ受信を無視
-    EL.ignoreMe = Options.ignoreMe;
+	EL.usingIF.v4 = Options.v4 != undefined && Options.v4 != '' ? Options.v4 : '0.0.0.0';
+	EL.usingIF.v6 = Options.v6 != '' ? Options.v6 : EL.nicList.v6[0].name;
+
+	// 自IPから送信されたデータ受信を無視
+	EL.ignoreMe = Options.ignoreMe;
 
 	// 邪魔かもしれないけど
 	console.log('==== echonet-lite.js');
 	console.log('ipVer:', EL.ipVer);
 	console.log('NIC.v4:', EL.usingIF.v4);
 	console.log('NIC.v6:', EL.usingIF.v6);
-    console.log('ignoreMe:', EL.ignoreMe);
+	console.log('ignoreMe:', EL.ignoreMe);
 
 
 	// オブジェクトリストを確保
@@ -146,19 +146,10 @@ EL.initialize = function (objList, userfunc, ipVer = 4, Options = {v4: '', v6: '
 
 	// マルチキャスト設定，ネットワークに繋がっていない（IPが一つもない）と例外がでる。
 	if( EL.ipVer == 0 || EL.ipVer == 4) {
-		// if(EL.usingIF.v4 == '') { // default nic
-			// sock4.bind(EL.EL_port, '0.0.0.0', function () {
-			sock4.bind( {'address': '0.0.0.0', 'port': EL.EL_port}, function () {
-				sock4.setMulticastLoopback(true);
-				sock4.addMembership(EL.EL_Multi);
-			});
-		// }else{
-			// sock4.bind(EL.EL_port, EL.usingIF.v4, function () {  // NIC指定
-			// sock4.bind( {'address': EL.usingIF.v4, 'port': EL.EL_port}, function () {
-				// sock4.setMulticastLoopback(true);
-				// sock4.addMembership(EL.EL_Multi);
-			// });
-		// }
+		sock4.bind( {'address': '0.0.0.0', 'port': EL.EL_port}, function () {
+			sock4.setMulticastLoopback(true);
+			sock4.addMembership(EL.EL_Multi);
+		});
 	}
 	if( EL.ipVer == 0 || EL.ipVer == 6) {
 		sock6.bind({'address': '::', 'port': EL.EL_port}, function () {
@@ -519,8 +510,6 @@ EL.sendOPC1 = function (ip, seoj, deoj, esv, epc, edt) {
 			edt.length].concat(edt));
 	}
 
-	// console.log( buffer );
-
 	// データができたので送信する
 	EL.sendBase(ip, buffer);
 };
@@ -540,35 +529,31 @@ EL.sendString = function (ip, string) {
 
 // ELの受信データを振り分ける
 EL.returner = function (bytes, rinfo, userfunc) {
-    // console.log( "========");
-    // console.log( "EL.returner:EL.parseBytes.");
-    
-    // 自IPを無視する設定があればチェックして無視する
-    let ignoreIP = false;
-    if( EL.ignoreMe == true ) {
-        EL.nicList.v4.forEach( (ip) => {
-            // console.dir(rinfo);
-            // console.dir(ip);
-            if( ip.address === rinfo.address ) {
-                // console.log('v4 mutch');
-                ignoreIP = true;
-                return;
-            }
-        });
-        EL.nicList.v6.forEach( (ip) => {
-            if( ip.address === rinfo.address ) {
-                // console.log('v6 mutch');
-                ignoreIP = true;
-                return;
-            }
-        });
-    }    
-    if(ignoreIP == true) {
-        return;
-    }
-    
-    // 無視しない
-    let els;
+	// console.log( "========");
+	// console.log( "EL.returner:EL.parseBytes.");
+
+	// 自IPを無視する設定があればチェックして無視する
+	let ignoreIP = false;
+	if( EL.ignoreMe == true ) {
+		EL.nicList.v4.forEach( (ip) => {
+			if( ip.address === rinfo.address ) {
+				ignoreIP = true;
+				return;
+			}
+		});
+		EL.nicList.v6.forEach( (ip) => {
+			if( ip.address === rinfo.address ) {
+				ignoreIP = true;
+				return;
+			}
+		});
+	}
+	if(ignoreIP == true) {
+		return;
+	}
+
+	// 無視しない
+	let els;
 
 	try {
 		els = EL.parseBytes(bytes);
@@ -662,17 +647,24 @@ EL.returner = function (bytes, rinfo, userfunc) {
 						for( let i=0; i<num; i++ ) {
 							// このとき9fをまた取りに行くと無限ループなのでやめる
 							if( array[i+1] != 0x9f ) {
-								EL.sendOPC1( rinfo.address, [0x0e, 0xf0, 0x01], EL.toHexArray(els.SEOJ), 0x62, array[i+1], [0x00] );
+								// ものすごい勢いでGetするとデバイスが追い付かないので，200ms Waitする
+								setTimeout(() => {
+									EL.sendOPC1( rinfo.address, [0x0e, 0xf0, 0x01], EL.toHexArray(els.SEOJ), 0x62, array[i+1], [0x00] );
+								}, 200*i);
 							}
 						}
 					} else {
 						// 16バイト以上なので記述形式2，EPCのarrayを作り直したら，あと同じ
 						let array = EL.parseMapForm2( els.DETAILs["9f"] );
+						// console.log('Type2', array);
 						let num = array[0];
 						for( let i=0; i<num; i++ ) {
 							// このとき9fをまた取りに行くと無限ループなのでやめる
 							if( array[i+1] != 0x9f ) {
-								EL.sendOPC1( rinfo.address, [0x0e, 0xf0, 0x01], EL.toHexArray(els.SEOJ), 0x62, array[i+1], [0x00] );
+								// ものすごい勢いでGetするとデバイスが追い付かないので，200ms Waitする
+								setTimeout(() => {
+									EL.sendOPC1( rinfo.address, [0x0e, 0xf0, 0x01], EL.toHexArray(els.SEOJ), 0x62, array[i+1], [0x00] );
+								}, 200*i);
 							}
 						}
 					}
@@ -697,6 +689,7 @@ EL.returner = function (bytes, rinfo, userfunc) {
 					let array = EL.toHexArray( els.DETAILs.d5 );
 					let instNum = array[0];
 					while( 0 < instNum ) {
+						// ものすごい勢いでGetするとデバイスが追い付かないので，200ms Waitする
 						EL.getPropertyMaps( rinfo.address, array.slice( (instNum - 1)*3 +1, (instNum - 1)*3 +4 ) );
 						instNum -= 1;
 					}
