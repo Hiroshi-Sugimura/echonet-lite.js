@@ -251,8 +251,9 @@ EL.parseDetail = function( opc, str ) {
 
 		// property mapだけEDT[0] != バイト数なので別処理
 		if( epc == 0x9d || epc == 0x9e || epc == 0x9f ) {
-			if( pdc >= 16) { // プロパティの数が16以上の場合は format 2
-				ret[ EL.toHexString(epc) ] = EL.bytesToString( EL.parseMapForm2( str.substr(2) ) );
+			if( pdc >= 17) { // PDCが17以上の場合は format 2
+				// PDC以降のデータでproperty mapを生成する
+				ret[ EL.toHexString(epc) ] = EL.bytesToString( EL.parseMapForm2( str.substr(4) ) );
 				return ret;
 			}
 			// format 2でなければ以下と同じ形式で解析可能
@@ -642,7 +643,7 @@ EL.returner = function (bytes, rinfo, userfunc) {
 					}
 				}else if( els.DETAILs["9f"] != null ) {
 					let array = EL.toHexArray( els.DETAILs["9f"] );
-					if( array.length < 16 ) { // プロパティマップ16バイト未満は記述形式１
+					if( array.length <= 16 ) { // プロパティマップ16バイト以下は記述形式１
 						let num = array[0];
 						for( let i=0; i<num; i++ ) {
 							// このとき9fをまた取りに行くと無限ループなのでやめる
@@ -654,7 +655,7 @@ EL.returner = function (bytes, rinfo, userfunc) {
 							}
 						}
 					} else {
-						// 16バイト以上なので記述形式2，EPCのarrayを作り直したら，あと同じ
+						// 16バイト超なので記述形式2，EPCのarrayを作り直したら，あと同じ
 						let array = EL.parseMapForm2( els.DETAILs["9f"] );
 						// console.log('Type2', array);
 						let num = array[0];
