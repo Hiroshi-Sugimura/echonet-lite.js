@@ -251,8 +251,8 @@ EL.parseDetail = function( opc, str ) {
 
 		// property mapだけEDT[0] != バイト数なので別処理
 		if( epc == 0x9d || epc == 0x9e || epc == 0x9f ) {
-			if( pdc >= 17) { // PDCが17以上の場合は format 2
-				// PDC以降のデータでproperty mapを生成する
+			if( pdc >= 17) { // プロパティの数が16以上の場合（プロパティカウンタ含めてPDC17以上）は format 2
+				// 0byte=epc, 2byte=pdc, 4byte=edt
 				ret[ EL.toHexString(epc) ] = EL.bytesToString( EL.parseMapForm2( str.substr(4) ) );
 				return ret;
 			}
@@ -353,12 +353,8 @@ EL.getSeparatedString_String = function (str) {
 					str.substr(14, 6) + " " +
 					str.substr(20, 2) + " " +
 					str.substr(22));
-		}
-		else {
+		} else {
 			// console.error( "str is not string." );
-			// console.error( str );
-			// console.trace();
-			// return '';
 			throw new Error("str is not string.");
 		}
 	} catch (e) {
@@ -643,7 +639,7 @@ EL.returner = function (bytes, rinfo, userfunc) {
 					}
 				}else if( els.DETAILs["9f"] != null ) {
 					let array = EL.toHexArray( els.DETAILs["9f"] );
-					if( array.length <= 16 ) { // プロパティマップ16バイト以下は記述形式１
+					if( array.length < 17 ) { // プロパティの数16個未満は記述形式１( =カウンタ含めて17バイト未満
 						let num = array[0];
 						for( let i=0; i<num; i++ ) {
 							// このとき9fをまた取りに行くと無限ループなのでやめる
@@ -655,9 +651,8 @@ EL.returner = function (bytes, rinfo, userfunc) {
 							}
 						}
 					} else {
-						// 16バイト超なので記述形式2，EPCのarrayを作り直したら，あと同じ
-						let array = EL.parseMapForm2( els.DETAILs["9f"] );
-						// console.log('Type2', array);
+						// プロパティ16個以上（17byte以上）なので記述形式2，EPCのarrayを作り直したら，あと同じ
+						let array = EL.parseMapForm2( els.DETAILs["9f"] ); // 2~17byte目がプロパティマップ
 						let num = array[0];
 						for( let i=0; i<num; i++ ) {
 							// このとき9fをまた取りに行くと無限ループなのでやめる
@@ -829,7 +824,7 @@ EL.getPropertyMaps = function ( ip, eoj ) {
 
 
 // parse Propaty Map Form 2
-// 16以上のプロパティ数の時，記述形式2，出力はForm1にすること
+// 16以上のプロパティ数の時，記述形式2，出力はForm1にすること, bitstr = EDT
 EL.parseMapForm2 = function (bitstr) {
 	let ret = [];
 	let val = 0x80;
@@ -847,7 +842,6 @@ EL.parseMapForm2 = function (bitstr) {
 	}
 
 	ret.unshift(ret.length);
-
 	return ret;
 };
 

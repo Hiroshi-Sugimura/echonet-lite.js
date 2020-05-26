@@ -503,6 +503,7 @@ Thanks to Github users!
 
 ## Log
 
+- 2.2.0 PropertyMap解析のときに，形式2の読み取りにバグがあったのを修正
 - 2.1.1 GetPropertyMapのときに，各プロパティ読み取りのWAITをつけた。処理が遅いデバイス対策
 - 2.1.0 自IPの受信を無視する，ignoreMeオプションを実装
 - 2.0.3 bind見直し
