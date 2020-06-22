@@ -7,18 +7,21 @@ This module provides **ECHONET Lite protocol**.
 The ECHONET Lite protocol is a communication protocol for smart home devices.
 
 
-## Install
+# Install
 
 下記コマンドでモジュールをインストールできます．
 
 You can install the module as following command.
 
-```
- > npm install echonet-lite
+
+```bash
+npm i echonet-lite
 ```
 
 
-## Demos(controller)
+# Demos
+
+## Controller demo
 
 デモプログラムはこんな感じです。動作させるためにはECHONET Lite対応デバイスが必要です。もしお持ちでない場合には**[MoekadenRoom](https://github.com/SonyCSL/MoekadenRoom)**というシミュレータがおすすめです。Here is a demonstration script.For test exectuion, some devices with ECHONET Lite is required.If you do not have any device, we recommend the **[MoekadenRoom](https://github.com/SonyCSL/MoekadenRoom)** as a simulator.
 
@@ -72,7 +75,7 @@ EL.search();
 ```
 
 
-## Demos(Devices)
+## Device demo
 
 こんな感じで作ってみたらどうでしょうか．
 あとはairconObjのプロパティをグローバル変数として，別の関数から書き換えてもいいですよね．
@@ -156,7 +159,7 @@ EL.sendOPC1( '224.0.23.0', [0x01,0x30,0x01], [0x0e,0xf0,0x01], 0x73, 0x80, [0x30
 ```
 
 
-## Data stracture
+# Data stracture
 
 ```
 var EL = {
@@ -188,10 +191,13 @@ ELDATA {
 ```
 
 
-## API
+# API
 
+## 初期化と受信, 監視, initialize, receriver callback and observation
 
-### 初期化，バインド, initialize
+![](img/base.png)
+
+* initialize
 
 ```
 EL.initialize = function ( objList, userfunc, ipVer = 4, Options = {v4: '', v6: '', ignoreMe: false} )
@@ -251,7 +257,27 @@ let elsocket = EL.initialize( objList, function( rinfo, els, err ) {
 ```
 
 
-### データ表示系, data representations
+* NICリスト再取得, renew NIC list
+
+```
+EL.renewNICList = function()
+```
+
+- 戻り値はObject
+- output is object data.
+
+
+* ECHONET Liteネットワーク監視
+
+```
+EL.setObserveFacilities = function ( interval, onChanged )
+```
+
+
+## データ表示系, data representations
+
+![](img/show.png)
+
 
 * ELDATA形式, ELDATA type
 
@@ -273,21 +299,15 @@ EL.stringShow = function( str )
 EL.bytesShow = function( bytes )
 ```
 
-* NICリスト取得
-
-```
-EL.renewNICList = function()
-```
-
-- 戻り値はObject
-- output is object data.
 
 
-### 変換系, converters
+## 変換系, converters
 
+![](img/convert.png)
 
 | from              |    to             |   function                         |
 |:-----------------:|:-----------------:|:----------------------------------:|
+| String            | ELDATA(EDT)       | parseDetail(opc,str)                  |
 | Bytes(=Integer[]) | ELDATA            | parseBytes(bytes)                  |
 | String            | ELDATA            | parseString(str)                   |
 | String            | String (like EL)  | getSeparatedString_String(str)     |
@@ -364,7 +384,9 @@ EL.toHexArray = function( string )
 ```
 
 
-### 送信, send
+## 送信, send
+
+![](img/send.png)
 
 * EL送信のベース, base function
 
@@ -401,23 +423,6 @@ EL.sendString = function( ip, string )
 ```
 
 
-### 受信データの完全コントロール, Full control method for received data.
-
-ELの受信データを振り分けるよ，何とかしよう．
-ELの受信をすべて自分で書きたい人はこれを完全に書き換えればいいとおもう．
-普通の人はinitializeのuserfuncで事足りるはず．
-
-For controlling all receiving data, update EL.returner function by any function. However this method is not recommended.
-Generally, all process can be described in userfunc of EL.initialize.
-
-```
-EL.returner = function( bytes, rinfo, userfunc )
-```
-
-
-
-### EL，上位の通信手続き
-
 * 機器検索
 
 ```
@@ -446,8 +451,21 @@ EL.setObserveFacilities( 1000, function() {  // 1000 ms
 ```
 
 
-## ECHONET Lite攻略情報
+## 受信データの完全コントロール, Full control method for received data.
 
+ELの受信データを振り分けるよ，何とかしよう．
+ELの受信をすべて自分で書きたい人はこれを完全に書き換えればいいとおもう．
+普通の人はinitializeのuserfuncで事足りるはず．
+
+For controlling all receiving data, update EL.returner function by any function. However this method is not recommended.
+Generally, all process can be described in userfunc of EL.initialize.
+
+```
+EL.returner = function( bytes, rinfo, userfunc )
+```
+
+
+# echonet-lite.js 攻略情報 / Knowhow
 
 * コントローラ開発者向け
 
@@ -484,26 +502,36 @@ EL.sendOPC1( '192.168.2.103', [0x05,0xff,0x01], [0x01,0x35,0x01], 0x61, 0x80, [0
 ```
 
 
+# meta data
 
 ## Authors
 
-神奈川工科大学  創造工学部  ホームエレクトロニクス開発学科．
+神奈川工科大学  創造工学部  ホームエレクトロニクス開発学科; Dept. of Home Electronics, Faculty of Creative Engineering, Kanagawa Institute of Technology
 
-Dept. of Home Electronics, Faculty of Creative Engineering, Kanagawa Institute of Technology.
+杉村　博; SUGIMURA, Hiroshi
 
-
-杉村　博
-
-SUGIMURA, Hiroshi
-
-### thanks
+## thanks
 
 Thanks to Github users!
+
+## License
+
+MIT License
+
+```
+-- License summary --
+o Commercial use
+o Modification
+o Distribution
+o Private use
+x Liability
+x Warranty
+```
 
 
 ## Log
 
-- 2.2.0 PropertyMap解析のときに，形式2の読み取りにバグがあったのを修正
+- 2.2.0 PropertyMap解析のときに，形式2の読み取りにバグがあったのを修正，READMEを整理＆充実させた。
 - 2.1.1 GetPropertyMapのときに，各プロパティ読み取りのWAITをつけた。処理が遅いデバイス対策
 - 2.1.0 自IPの受信を無視する，ignoreMeオプションを実装
 - 2.0.3 bind見直し
