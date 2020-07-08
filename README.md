@@ -226,9 +226,10 @@ function( rinfo, els, err ) {
  - ipVer = 6, IPv6 only
 
 - Options is optional
- - v4 is specified for using IPAddress
- - v6 is specified for using NIC name
- - ignoreMe is specified to ignore self IP address
+ - v4 is specified for using IPAddress, default '' is auto
+ - v6 is specified for using NIC name, default '' is auto
+ - ignoreMe is specified to ignore self IP address, default false
+ - autoGetProperties is automatic get for properties, default true (trial)
 
 
 - More examples
@@ -531,7 +532,8 @@ x Warranty
 
 ## Log
 
-- 2.2.0 PropertyMap解析のときに，形式2の読み取りにバグがあったのを修正，READMEを整理＆充実させた。
+- 2.2.1 InitializeにautoGetPropertiesオプションを追加した。トライアルです。
+- 2.2.0 PropertyMap解析のときに，形式2の読み取りにバグがあったのを修正，READMEを整理＆図をつくって充実させた。
 - 2.1.1 GetPropertyMapのときに，各プロパティ読み取りのWAITをつけた。処理が遅いデバイス対策
 - 2.1.0 自IPの受信を無視する，ignoreMeオプションを実装
 - 2.0.3 bind見直し
