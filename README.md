@@ -200,7 +200,7 @@ ELDATA {
 * initialize
 
 ```
-EL.initialize = function ( objList, userfunc, ipVer = 4, Options = {v4: '', v6: '', ignoreMe: false} )
+EL.initialize = function ( objList, userfunc, ipVer = 4, Options = {v4: '', v6: '', ignoreMe: false, autoGetProperties: true, debugMode: false} )
 ```
 
 - objList is ECHONET Lite object code.
@@ -230,6 +230,7 @@ function( rinfo, els, err ) {
  - v6 is specified for using NIC name, default '' is auto
  - ignoreMe is specified to ignore self IP address, default false
  - autoGetProperties is automatic get for properties, default true (trial)
+ - debugMode shows innser log, default false
 
 
 - More examples
@@ -532,6 +533,7 @@ x Warranty
 
 ## Log
 
+- 2.2.2 autoGetPropertiesをもう少し強化した。debugModeを追加した。
 - 2.2.1 InitializeにautoGetPropertiesオプションを追加した。トライアルです。
 - 2.2.0 PropertyMap解析のときに，形式2の読み取りにバグがあったのを修正，READMEを整理＆図をつくって充実させた。
 - 2.1.1 GetPropertyMapのときに，各プロパティ読み取りのWAITをつけた。処理が遅いデバイス対策
