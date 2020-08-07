@@ -390,6 +390,11 @@ EL.toHexArray = function( string )
 
 ![](img/send.png)
 
+
+APIは送信の成功失敗に関わらず，TIDをreturnすることにしました。
+送信TIDはEL.tid[]で管理しています。
+sendOPC1だけはEL.tidを自動的に+1します。
+
 * EL送信のベース, base function
 
 ```
@@ -533,6 +538,8 @@ x Warranty
 
 ## Log
 
+- 2.3.1 send系関数全部がTIDを戻り値とするようにした。sendOPC1以外はTIDはを自動設定しない
+- 2.3.0 sendOPC1がTIDを自動設定して，戻り値とするようにした
 - 2.2.2 autoGetPropertiesをもう少し強化した。debugModeを追加した。
 - 2.2.1 InitializeにautoGetPropertiesオプションを追加した。トライアルです。
 - 2.2.0 PropertyMap解析のときに，形式2の読み取りにバグがあったのを修正，READMEを整理＆図をつくって充実させた。

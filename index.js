@@ -65,6 +65,7 @@ let EL = {
 	ipVer: 4, // 0 = IPv4 & IPv6, 4 = IPv4, 6 = IPv6
 	nicList: {v4: [], v6: []},
 	usingIF: {v4: '', v6: ''}, // '' = default
+	tid: [0,0],   // transaction id
 	ignoreMe: false, // true = 自IPから送信されたデータ受信を無視
 	autoGetProperties: true, // true = 自動的にGetPropertyをする
 	debugMode: false,
@@ -411,6 +412,8 @@ EL.bytesToString = function (bytes) {
 
 // EL送信のベース
 EL.sendBase = function (ip, buffer) {
+	let tid = [ buffer[2], buffer[3] ];
+
 	// console.log(ip, buffer);
 	// ipv4
 	if( EL.ipVer == 0 || EL.ipVer == 4 ) {
@@ -422,13 +425,13 @@ EL.sendBase = function (ip, buffer) {
 				client.bind( EL.EL_port + 20000, EL.usingIF.v4, () => {
 					client.setMulticastInterface( EL.usingIF.v4 );
 					client.send(buffer, 0, buffer.length, EL.EL_port, ip, function (err, bytes) {
-						if( err ) { console.error(err); }
+						if( err ) { console.error('TID:', tid[0], tid[1], err); }
 						client.close();
 					});
 				});
 			}else{
 				client.send(buffer, 0, buffer.length, EL.EL_port, ip, function (err, bytes) {
-					if( err ) { console.error(err); }
+					if( err ) { console.error('TID:', tid[0], tid[1], err); }
 					client.close();
 				});
 			}
@@ -443,22 +446,40 @@ EL.sendBase = function (ip, buffer) {
 			let client = dgram.createSocket({type:"udp6",reuseAddr:true});
 			ip += '%' + EL.usingIF.v6;
 			client.send(buffer, 0, buffer.length, EL.EL_port, ip, function (err, bytes) {
-				if( err ) { console.error(err); }
+				if( err ) { console.error('TID:', tid[0], tid[1], err); }
 				client.close();
 			});
 		}
 	}
+
+	return tid;
 };
 
 
 // 配列の時
 EL.sendArray = function (ip, array) {
-	EL.sendBase(ip, Buffer.from(array));
+	return EL.sendBase(ip, Buffer.from(array));
 };
 
 
 // ELの非常に典型的なOPC一個でやる
 EL.sendOPC1 = function (ip, seoj, deoj, esv, epc, edt) {
+
+	// TIDの調整
+	let carry = 0; // 繰り上がり
+	if( EL.tid[1] == 0xff ) {
+		EL.tid[1] = 0;
+		carry = 1;
+	} else {
+		EL.tid[1] += 1;
+	}
+	if( carry == 1 ) {
+		if( EL.tid[0] == 0xff ) {
+			EL.tid[0] = 0;
+		} else {
+			EL.tid[0] += 1;
+		}
+	}
 
 	if (typeof (seoj) == "string") {
 		seoj = EL.toHexArray(seoj);
@@ -487,7 +508,8 @@ EL.sendOPC1 = function (ip, seoj, deoj, esv, epc, edt) {
 	if (esv == 0x62) { // get
 		buffer = Buffer.from([
 			0x10, 0x81,
-			0x00, 0x00,
+			// 0x00, 0x00,
+			EL.tid[0], EL.tid[1],
 			seoj[0], seoj[1], seoj[2],
 			deoj[0], deoj[1], deoj[2],
 			esv,
@@ -497,7 +519,8 @@ EL.sendOPC1 = function (ip, seoj, deoj, esv, epc, edt) {
 	} else {
 		buffer = Buffer.from([
 			0x10, 0x81,
-			0x00, 0x00,
+			// 0x00, 0x00,
+			EL.tid[0], EL.tid[1],
 			seoj[0], seoj[1], seoj[2],
 			deoj[0], deoj[1], deoj[2],
 			esv,
@@ -507,7 +530,7 @@ EL.sendOPC1 = function (ip, seoj, deoj, esv, epc, edt) {
 	}
 
 	// データができたので送信する
-	EL.sendBase(ip, buffer);
+	return EL.sendBase(ip, buffer);
 };
 
 
@@ -515,7 +538,7 @@ EL.sendOPC1 = function (ip, seoj, deoj, esv, epc, edt) {
 // ELの非常に典型的な送信3 文字列タイプ
 EL.sendString = function (ip, string) {
 	// 送信する
-	EL.sendBase(ip, Buffer.from(EL.toHexArray(string)));
+	return EL.sendBase(ip, Buffer.from(EL.toHexArray(string)));
 };
 
 
