@@ -68,6 +68,8 @@ let EL = {
 	tid: [0,0],   // transaction id
 	ignoreMe: false, // true = 自IPから送信されたデータ受信を無視
 	autoGetProperties: true, // true = 自動的にGetPropertyをする
+	autoGetDelay: 3000, // 自動取得のときに，すぐにGetせずにDelayする
+	autoGetWaitings: 0, // 自動取得待ちの個数
 	debugMode: false,
 	facilities: {}  	// ネットワーク内の機器情報リスト
 	// データ形式の例
@@ -81,7 +83,7 @@ let EL = {
 // Nodejsの対応が遅れていてまだうまく動かないみたい，しばらくipVer = 4でやる。
 // 複数NICがあるときにNICを指定できるようにした。NICの設定はmulticastAddrに出力したいインタフェースのIPを指定する。
 // ipVer == 0の時はsocketが4と6の2個手に入れることに注意
-EL.initialize = function (objList, userfunc, ipVer = 4, Options = {v4: '', v6: '', ignoreMe: false, autoGetProperties: true, debugMode: false}) {
+EL.initialize = function (objList, userfunc, ipVer = 4, Options = {v4: '', v6: '', ignoreMe: false, autoGetProperties: true, autoGetDelay: 3000, debugMode: false}) {
 
 	EL.debugMode = Options.debugMode; // true: show debug log
 	EL.renewNICList();	// Network Interface Card List
@@ -93,6 +95,8 @@ EL.initialize = function (objList, userfunc, ipVer = 4, Options = {v4: '', v6: '
 
 	EL.ignoreMe = Options.ignoreMe;	// 自IPから送信されたデータ受信を無視
 	EL.autoGetProperties = Options.autoGetProperties;	// 自動的なデータ送信の有無
+	EL.autoGetDelay = Options.autoGetDelay;	// 自動GetのDelay
+	EL.autoGetWaitings = 0;
 
 	// 邪魔なので
 	if( EL.debugMode == true ) {
@@ -200,6 +204,14 @@ EL.renewNICList = function () {
 		});
 	}
 	return EL.nicList;
+}
+
+
+
+EL.decreaseWaitings = function () {
+	if( EL.autoGetWaitings != 0 ) {
+		EL.autoGetWaitings -= 1;
+	}
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -643,8 +655,12 @@ EL.returner = function (bytes, rinfo, userfunc) {
 				// SetCに対する返答のSetResは，EDT 0x00でOKの意味を受け取ることとなる．ゆえにその詳細な値をGetする必要がある
 				// autoGetPropertiesがfalseなら自動取得しない
 				if( els.DETAIL.substr(0,2) == '00' && EL.autoGetProperties ) {
-					let msg = "1081000005ff01" + els.SEOJ + "6201" + els.DETAIL.substr(0,2) + "00";
-					EL.sendString( rinfo.address, msg );
+					setTimeout(() => {
+						let msg = "1081000005ff01" + els.SEOJ + "6201" + els.DETAIL.substr(0,2) + "00";
+						EL.sendString( rinfo.address, msg );
+						EL.decreaseWaitings();
+					}, EL.autoGetDelay * (EL.autoGetWaitings+1));
+					EL.autoGetWaitings += 1;
 				}
 				break;
 
@@ -668,10 +684,12 @@ EL.returner = function (bytes, rinfo, userfunc) {
 						for( let i=0; i<num; i++ ) {
 							// このとき9fをまた取りに行くと無限ループなのでやめる
 							if( array[i+1] != 0x9f ) {
-								// ものすごい勢いでGetするとデバイスが追い付かないので，200ms Waitする
+								// ものすごい勢いでGetするとデバイスが追い付かないので，autoGetDelay * (autoGetWaitings+1) する
 								setTimeout(() => {
 									EL.sendOPC1( rinfo.address, [0x0e, 0xf0, 0x01], EL.toHexArray(els.SEOJ), 0x62, array[i+1], [0x00] );
-								}, 200*i);
+									EL.decreaseWaitings();
+								}, EL.autoGetDelay * (EL.autoGetWaitings+1));
+								EL.autoGetWaitings += 1;
 							}
 						}
 					} else {
@@ -684,7 +702,9 @@ EL.returner = function (bytes, rinfo, userfunc) {
 								// ものすごい勢いでGetするとデバイスが追い付かないので，200ms Waitする
 								setTimeout(() => {
 									EL.sendOPC1( rinfo.address, [0x0e, 0xf0, 0x01], EL.toHexArray(els.SEOJ), 0x62, array[i+1], [0x00] );
-								}, 200*i);
+									EL.decreaseWaitings();
+								}, EL.autoGetDelay * (EL.autoGetWaitings+1));
+								EL.autoGetWaitings += 1;
 							}
 						}
 					}
@@ -711,7 +731,6 @@ EL.returner = function (bytes, rinfo, userfunc) {
 					let array = EL.toHexArray( els.DETAILs.d5 );
 					let instNum = array[0];
 					while( 0 < instNum ) {
-						// ものすごい勢いでGetするとデバイスが追い付かないので，200ms Waitする
 						EL.getPropertyMaps( rinfo.address, array.slice( (instNum - 1)*3 +1, (instNum - 1)*3 +4 ) );
 						instNum -= 1;
 					}
@@ -720,13 +739,9 @@ EL.returner = function (bytes, rinfo, userfunc) {
 
 			case EL.INFC_RES: // "7a"
 			case EL.SETGET_RES: // "7e"
-				// console.log( "get " );
-				// console.dir( els );
 				break;
 
 			default:
-				// console.log( "???" );
-				// console.dir( els );
 				break;
 			}
 		}
@@ -737,11 +752,8 @@ EL.returner = function (bytes, rinfo, userfunc) {
 		}
 
 		// 機器オブジェクトに関してはユーザー関数に任す
-
 		userfunc(rinfo, els);
 	} catch (e) {
-		// console.error("EL.returner(): received packet error.");
-		// console.error( bytes );
 		userfunc(rinfo, els, e);
 	}
 };
@@ -840,15 +852,27 @@ EL.search = function () {
 // プロパティマップをすべて取得する
 // 一度に一気に取得するとデバイス側が対応できないタイミングもあるようで，適当にwaitする。
 EL.getPropertyMaps = function ( ip, eoj ) {
-	EL.sendOPC1( ip, [0x0e,0xf0,0x01], eoj, 0x62, 0x9D, [0x00] );      // INF prop
+
+	setTimeout(() => {
+		EL.sendOPC1( ip, [0x0e,0xf0,0x01], eoj, 0x62, 0x9D, [0x00] );      // INF prop
+		EL.decreaseWaitings();
+	}, EL.autoGetDelay * (EL.autoGetWaitings+1));
+	EL.autoGetWaitings += 1;
+
 
 	setTimeout(() => {
 		EL.sendOPC1( ip, [0x0e,0xf0,0x01], eoj, 0x62, 0x9E, [0x00] );  // SET prop, after 1s
-	}, 2000);
+		EL.decreaseWaitings();
+	}, EL.autoGetDelay * (EL.autoGetWaitings+1));
+	EL.autoGetWaitings += 1;
+
 
 	setTimeout(() => {
 		EL.sendOPC1( ip, [0x0e,0xf0,0x01], eoj, 0x62, 0x9F, [0x00] );  // GET prop, after more 1s
-	}, 4000);
+		EL.decreaseWaitings();
+	}, EL.autoGetDelay * (EL.autoGetWaitings+1));
+	EL.autoGetWaitings += 1;
+
 };
 
 

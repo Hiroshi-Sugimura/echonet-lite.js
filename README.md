@@ -230,6 +230,7 @@ function( rinfo, els, err ) {
  - v6 is specified for using NIC name, default '' is auto
  - ignoreMe is specified to ignore self IP address, default false
  - autoGetProperties is automatic get for properties, default true (trial)
+ - autoGetDelay is period of the auto get EDTs, default 3000ms
  - debugMode shows innser log, default false
 
 
@@ -538,6 +539,7 @@ x Warranty
 
 ## Log
 
+- 2.4.0 自動取得をすぐ実行するとデバイス側が対応出来ないことが多いので，3秒（autoGetDelay）待つことにした
 - 2.3.1 send系関数全部がTIDを戻り値とするようにした。sendOPC1以外はTIDはを自動設定しない
 - 2.3.0 sendOPC1がTIDを自動設定して，戻り値とするようにした
 - 2.2.2 autoGetPropertiesをもう少し強化した。debugModeを追加した。
