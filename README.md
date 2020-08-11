@@ -539,6 +539,7 @@ x Warranty
 
 ## Log
 
+- 2.4.1 OPCが複数のときにparseDetailで不具合があったのを修正した。関連する関数はparseDetail, parseString, parseBytes, renewFacilitiesの4つ。
 - 2.4.0 自動取得をすぐ実行するとデバイス側が対応出来ないことが多いので，3秒（autoGetDelay）待つことにした
 - 2.3.1 send系関数全部がTIDを戻り値とするようにした。sendOPC1以外はTIDはを自動設定しない
 - 2.3.0 sendOPC1がTIDを自動設定して，戻り値とするようにした
@@ -553,23 +554,6 @@ x Warranty
 - 2.0.0 IPv4，IPv6，デュアルスタック対応，Interface切り替え対応。複雑になってきたので少しコンソールにログがでる。
 - 1.0.4 くだらないログがでてました。削除
 - 1.0.3 IPv6をIPv4と同時対応可能にした。initializeを下記のようにするとv4, v6同時に通信できる。複数NIC対応のため，MulticastAddressを指定できるようにしたが，うまく利いていない気はする。
-```
-EL.initialize( objList, function ( rinfo, els, err ) {
-	if( err ) {
-		console.log('========');
-		console.dir(err);
-		console.log('========');
-	}else{
-		// console.log('Get ECHONET Lite data');
-		// console.log('rinfo is ');
-		// console.dir(rinfo);
-	}
-}, 0);
-  ^^^
-   この値が0なら，IPv4 & IPv6
-   この値が4なら，IPv4 only
-   この値が6なら，IPv6 only
-```
 - 1.0.2 IPv6対応のための布石。Node.jsがIPv6のmulticast対応をきちんとしてくれないので動かないような気がする。
 - 1.0.1 bug fix. string equal，ユーザ設定が間違っているときにどのようにエラーを出すかを今後の課題として記す。
 - 1.0.0 EL.setObserveFacilitiesを実装した。ついでにいろいろあきらめてVer. 1ということにした。

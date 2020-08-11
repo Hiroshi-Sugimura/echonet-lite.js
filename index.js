@@ -91,18 +91,19 @@ EL.initialize = function (objList, userfunc, ipVer = 4, Options = {v4: '', v6: '
 
 	// 複数NIC対策
 	EL.usingIF.v4 = Options.v4 != undefined && Options.v4 != '' ? Options.v4 : '0.0.0.0';
-	EL.usingIF.v6 = Options.v6 != '' ? Options.v6 : EL.nicList.v6[0].name;
+	EL.usingIF.v6 = Options.v6 != undefined ? Options.v6 : EL.nicList.v6[0].name;
 
-	EL.ignoreMe = Options.ignoreMe;	// 自IPから送信されたデータ受信を無視
-	EL.autoGetProperties = Options.autoGetProperties;	// 自動的なデータ送信の有無
-	EL.autoGetDelay = Options.autoGetDelay;	// 自動GetのDelay
+	EL.ignoreMe = Options.ignoreMe ? true : false;	// 自IPから送信されたデータ受信を無視
+	EL.autoGetProperties = Options.autoGetProperties ? true : false;	// 自動的なデータ送信の有無
+	EL.autoGetDelay = Options.autoGetDelay? Options.autoGetDelay : 3000;	// 自動GetのDelay
 	EL.autoGetWaitings = 0;
 
 	// 邪魔なので
 	if( EL.debugMode == true ) {
 		console.log('==== echonet-lite.js ====');
 		console.log('ipVer:', EL.ipVer, ', v4:', EL.usingIF.v4, ', v6:', EL.usingIF.v6);
-		console.log('ignoreMe:', EL.ignoreMe, ', autoGetProperties:', EL.autoGetProperties, ', debugMode:', EL.debugMode);
+		console.log('autoGetProperties:', EL.autoGetProperties, ', autoGetDelay: ', EL.autoGetDelay );
+		console.log('ignoreMe:', EL.ignoreMe, ', debugMode:', EL.debugMode );
 	}
 
 	// オブジェクトリストを確保
@@ -258,8 +259,8 @@ EL.parseDetail = function( opc, str ) {
 		let array = EL.toHexArray( str );  // edts
 		let epc = array[0]; // 最初は0
 		let pdc = array[1]; // 最初は1
-		let now = 0;  // 現在のIndex
-		let edt = [];
+		let now = 0;  // 入力データの現在処理位置, Index
+		let edt = [];  // 各edtをここに集めて，retに集約
 
 		// property mapだけEDT[0] != バイト数なので別処理
 		if( epc == 0x9d || epc == 0x9e || epc == 0x9f ) {
@@ -274,8 +275,8 @@ EL.parseDetail = function( opc, str ) {
 		// それ以外はEDT[0] == byte数
 		// OPCループ
 		for (let i = 0; i < opc; i += 1) {
-			// EPC（機能）
-			epc = array[now];
+			epc = array[now];  // EPC = 機能
+			edt = []; // EDT = データのバイト数
 			now++;
 
 			// PDC（EDTのバイト数）
