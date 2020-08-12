@@ -200,7 +200,7 @@ ELDATA {
 * initialize
 
 ```
-EL.initialize = function ( objList, userfunc, ipVer = 4, Options = {v4: '', v6: '', ignoreMe: false, autoGetProperties: true, debugMode: false} )
+EL.initialize = function ( objList, userfunc, ipVer = 4, Options = {v4: '', v6: '', ignoreMe: true, autoGetProperties: true, debugMode: false} )
 ```
 
 - objList is ECHONET Lite object code.
@@ -228,7 +228,7 @@ function( rinfo, els, err ) {
 - Options is optional
  - v4 is specified for using IPAddress, default '' is auto
  - v6 is specified for using NIC name, default '' is auto
- - ignoreMe is specified to ignore self IP address, default false
+ - ignoreMe is specified to ignore self IP address, default true
  - autoGetProperties is automatic get for properties, default true (trial)
  - autoGetDelay is period of the auto get EDTs, default 3000ms
  - debugMode shows innser log, default false
@@ -537,8 +537,9 @@ x Warranty
 ```
 
 
-## Log
+## Login
 
+- 2.4.2 ignoreMeのときの自IPとして127.0.0.1を排除するように設定。v6は::1を排除する。ignoreMeをデフォルトtrueに。
 - 2.4.1 OPCが複数のときにparseDetailで不具合があったのを修正した。関連する関数はparseDetail, parseString, parseBytes, renewFacilitiesの4つ。
 - 2.4.0 自動取得をすぐ実行するとデバイス側が対応出来ないことが多いので，3秒（autoGetDelay）待つことにした
 - 2.3.1 send系関数全部がTIDを戻り値とするようにした。sendOPC1以外はTIDはを自動設定しない

@@ -66,9 +66,9 @@ let EL = {
 	nicList: {v4: [], v6: []},
 	usingIF: {v4: '', v6: ''}, // '' = default
 	tid: [0,0],   // transaction id
-	ignoreMe: false, // true = 自IPから送信されたデータ受信を無視
+	ignoreMe: true, // true = 自IPから送信されたデータ受信を無視
 	autoGetProperties: true, // true = 自動的にGetPropertyをする
-	autoGetDelay: 3000, // 自動取得のときに，すぐにGetせずにDelayする
+	autoGetDelay: 2000, // 自動取得のときに，すぐにGetせずにDelayする
 	autoGetWaitings: 0, // 自動取得待ちの個数
 	debugMode: false,
 	facilities: {}  	// ネットワーク内の機器情報リスト
@@ -83,7 +83,7 @@ let EL = {
 // Nodejsの対応が遅れていてまだうまく動かないみたい，しばらくipVer = 4でやる。
 // 複数NICがあるときにNICを指定できるようにした。NICの設定はmulticastAddrに出力したいインタフェースのIPを指定する。
 // ipVer == 0の時はsocketが4と6の2個手に入れることに注意
-EL.initialize = function (objList, userfunc, ipVer = 4, Options = {v4: '', v6: '', ignoreMe: false, autoGetProperties: true, autoGetDelay: 3000, debugMode: false}) {
+EL.initialize = function (objList, userfunc, ipVer = 4, Options = {v4: '', v6: '', ignoreMe: true, autoGetProperties: true, autoGetDelay: 2000, debugMode: false}) {
 
 	EL.debugMode = Options.debugMode; // true: show debug log
 	EL.renewNICList();	// Network Interface Card List
@@ -93,9 +93,9 @@ EL.initialize = function (objList, userfunc, ipVer = 4, Options = {v4: '', v6: '
 	EL.usingIF.v4 = Options.v4 != undefined && Options.v4 != '' ? Options.v4 : '0.0.0.0';
 	EL.usingIF.v6 = Options.v6 != undefined ? Options.v6 : EL.nicList.v6[0].name;
 
-	EL.ignoreMe = Options.ignoreMe ? true : false;	// 自IPから送信されたデータ受信を無視
+	EL.ignoreMe = Options.ignoreMe != false ? true : false;	// 自IPから送信されたデータ受信を無視, default true, 微妙な条件の書き方はundef対策
 	EL.autoGetProperties = Options.autoGetProperties ? true : false;	// 自動的なデータ送信の有無
-	EL.autoGetDelay = Options.autoGetDelay? Options.autoGetDelay : 3000;	// 自動GetのDelay
+	EL.autoGetDelay = Options.autoGetDelay? Options.autoGetDelay : 2000;	// 自動GetのDelay
 	EL.autoGetWaitings = 0;
 
 	// 邪魔なので
@@ -207,13 +207,20 @@ EL.renewNICList = function () {
 	return EL.nicList;
 }
 
-
-
+// 自動取得待ちの個数管理
 EL.decreaseWaitings = function () {
 	if( EL.autoGetWaitings != 0 ) {
+		// console.log( 'decrease:', 'waitings: ', EL.autoGetWaitings );
 		EL.autoGetWaitings -= 1;
 	}
 }
+
+EL.increaseWaitings = function () {
+	// console.log( 'increase:', 'waitings: ', EL.autoGetWaitings, 'delay: ', EL.autoGetDelay * (EL.autoGetWaitings+1) );
+	EL.autoGetWaitings += 1;
+}
+
+
 
 //////////////////////////////////////////////////////////////////////
 // eldata を見る，表示関係
@@ -567,6 +574,13 @@ EL.returner = function (bytes, rinfo, userfunc) {
 	// 自IPを無視する設定があればチェックして無視する
 	let ignoreIP = false;
 	if( EL.ignoreMe == true ) {
+		// loop back
+		if( rinfo.address === '127.0.0.1' || rinfo.address === '::1') {
+			ignoreIP = true;
+			return;
+		}
+
+		// my ip
 		EL.nicList.v4.forEach( (ip) => {
 			if( ip.address === rinfo.address ) {
 				ignoreIP = true;
@@ -579,9 +593,6 @@ EL.returner = function (bytes, rinfo, userfunc) {
 				return;
 			}
 		});
-	}
-	if(ignoreIP == true) {
-		return;
 	}
 
 	// 無視しない
@@ -656,12 +667,13 @@ EL.returner = function (bytes, rinfo, userfunc) {
 				// SetCに対する返答のSetResは，EDT 0x00でOKの意味を受け取ることとなる．ゆえにその詳細な値をGetする必要がある
 				// autoGetPropertiesがfalseなら自動取得しない
 				if( els.DETAIL.substr(0,2) == '00' && EL.autoGetProperties ) {
+					// console.log('EL.SET_RES: autoGetProperties');
 					setTimeout(() => {
 						let msg = "1081000005ff01" + els.SEOJ + "6201" + els.DETAIL.substr(0,2) + "00";
 						EL.sendString( rinfo.address, msg );
 						EL.decreaseWaitings();
 					}, EL.autoGetDelay * (EL.autoGetWaitings+1));
-					EL.autoGetWaitings += 1;
+					EL.increaseWaitings();
 				}
 				break;
 
@@ -686,11 +698,12 @@ EL.returner = function (bytes, rinfo, userfunc) {
 							// このとき9fをまた取りに行くと無限ループなのでやめる
 							if( array[i+1] != 0x9f ) {
 								// ものすごい勢いでGetするとデバイスが追い付かないので，autoGetDelay * (autoGetWaitings+1) する
+								// console.log('GET_RES 9f format1', rinfo.address);
 								setTimeout(() => {
 									EL.sendOPC1( rinfo.address, [0x0e, 0xf0, 0x01], EL.toHexArray(els.SEOJ), 0x62, array[i+1], [0x00] );
 									EL.decreaseWaitings();
 								}, EL.autoGetDelay * (EL.autoGetWaitings+1));
-								EL.autoGetWaitings += 1;
+								EL.increaseWaitings();
 							}
 						}
 					} else {
@@ -701,11 +714,12 @@ EL.returner = function (bytes, rinfo, userfunc) {
 							// このとき9fをまた取りに行くと無限ループなのでやめる
 							if( array[i+1] != 0x9f ) {
 								// ものすごい勢いでGetするとデバイスが追い付かないので，200ms Waitする
+								// console.log('GET_RES 9f format2', rinfo.address);
 								setTimeout(() => {
 									EL.sendOPC1( rinfo.address, [0x0e, 0xf0, 0x01], EL.toHexArray(els.SEOJ), 0x62, array[i+1], [0x00] );
 									EL.decreaseWaitings();
 								}, EL.autoGetDelay * (EL.autoGetWaitings+1));
-								EL.autoGetWaitings += 1;
+								EL.increaseWaitings();
 							}
 						}
 					}
@@ -775,6 +789,7 @@ EL.renewFacilities = function (ip, els) {
 		if (EL.facilities[ip][els.SEOJ] == null) {
 			EL.facilities[ip][els.SEOJ] = {};
 			// 新規オブジェクトのとき，プロパティリストもらおう
+			// console.log('new facilities');
 			// 自動取得フラグがfalseならやらない
 			if( EL.autoGetProperties ) {
 				EL.getPropertyMaps(ip, EL.toHexArray(els.SEOJ));
@@ -853,26 +868,27 @@ EL.search = function () {
 // プロパティマップをすべて取得する
 // 一度に一気に取得するとデバイス側が対応できないタイミングもあるようで，適当にwaitする。
 EL.getPropertyMaps = function ( ip, eoj ) {
+	// console.log('EL.getPropertyMaps');
 
 	setTimeout(() => {
 		EL.sendOPC1( ip, [0x0e,0xf0,0x01], eoj, 0x62, 0x9D, [0x00] );      // INF prop
 		EL.decreaseWaitings();
 	}, EL.autoGetDelay * (EL.autoGetWaitings+1));
-	EL.autoGetWaitings += 1;
+	EL.increaseWaitings();
 
 
 	setTimeout(() => {
 		EL.sendOPC1( ip, [0x0e,0xf0,0x01], eoj, 0x62, 0x9E, [0x00] );  // SET prop, after 1s
 		EL.decreaseWaitings();
 	}, EL.autoGetDelay * (EL.autoGetWaitings+1));
-	EL.autoGetWaitings += 1;
+	EL.increaseWaitings();
 
 
 	setTimeout(() => {
 		EL.sendOPC1( ip, [0x0e,0xf0,0x01], eoj, 0x62, 0x9F, [0x00] );  // GET prop, after more 1s
 		EL.decreaseWaitings();
 	}, EL.autoGetDelay * (EL.autoGetWaitings+1));
-	EL.autoGetWaitings += 1;
+	EL.increaseWaitings();
 
 };
 
