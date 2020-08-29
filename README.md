@@ -537,8 +537,9 @@ x Warranty
 ```
 
 
-## Login
+## Log
 
+- 2.5.0 これから個体識別番号でELネットワーク管理をしたいので，その布石にNodeprofileの個体識別番号を自動生成することとした。macアドレスを利用するので重複しないとおもう。識別番号リストの確保もできるようにした。
 - 2.4.2 ignoreMeのときの自IPとして127.0.0.1を排除するように設定。v6は::1を排除する。ignoreMeをデフォルトtrueに。
 - 2.4.1 OPCが複数のときにparseDetailで不具合があったのを修正した。関連する関数はparseDetail, parseString, parseBytes, renewFacilitiesの4つ。
 - 2.4.0 自動取得をすぐ実行するとデバイス側が対応出来ないことが多いので，3秒（autoGetDelay）待つことにした

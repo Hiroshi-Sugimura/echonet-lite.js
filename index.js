@@ -52,8 +52,10 @@ let EL = {
 	Node_details:	{
 		"80": [0x30],
 		"82": [0x01, 0x0a, 0x01, 0x00], // EL version, 1.1
-		"83": [0xfe, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00], // identifier
-		"8a": [0x00, 0x00, 0x77], // maker code
+		"83": [0xfe, 0x00, 0x00, 0x77, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01], // identifier, renewNICList()できちんとセット
+		"88": [0x42], // Fault status
+		"8a": [0x00, 0x00, 0x77], // maker code, manufacturer code, kait = 00 00 77
+		"8a": [0x00, 0x00, 0x02], // Business facility code, homeele = 00 00 02
 		"9d": [0x02, 0x80, 0xd5],       // inf map, 1 Byte目は個数
 		"9e": [0x00],                 // set map, 1 Byte目は個数
 		"9f": [0x09, 0x80, 0x82, 0x83, 0x8a, 0xd3, 0xd4, 0xd5, 0xd6, 0xd7], // get map, 1 Byte目は個数
@@ -71,7 +73,8 @@ let EL = {
 	autoGetDelay: 2000, // 自動取得のときに，すぐにGetせずにDelayする
 	autoGetWaitings: 0, // 自動取得待ちの個数
 	debugMode: false,
-	facilities: {}  	// ネットワーク内の機器情報リスト
+	facilities: {},	// ネットワーク内の機器情報リスト
+	identificationNumbers: {}  // ELの識別番号
 	// データ形式の例
 	// { '192.168.0.3': { '05ff01': { d6: '' } },
 	// '192.168.0.4': { '05ff01': { '80': '30', '82': '30' } } }
@@ -203,6 +206,22 @@ EL.renewNICList = function () {
 				}
 			}
 		});
+	}
+
+	// macアドレスを識別番号に転用，localhost, lo0はmacを持たないので使えないから排除
+	for (let name in interfaces) {
+		if( name == 'lo0') {continue;}
+
+		interfaces[name].some( function(details) {
+			if ( !details.internal ) {
+				// ここで見つけたdetails.macを， Node_details["83"]の8--13 byteに当て込む
+				let macArray = EL.toHexArray( details.mac.replace(/:/g, '') );
+				EL.Node_details["83"] = [0xfe, 0x00, 0x00, 0x77, 0x00, 0x00, 0x02, macArray[0], macArray[1], macArray[2], macArray[3], macArray[4], macArray[5], 0x00, 0x00, 0x00, 0x01]; // identifier
+				// console.dir(EL.Node_details["83"]);
+				return true; // 一つ見つかればそれで良い
+			}
+		})
+		break;
 	}
 	return EL.nicList;
 }
@@ -803,6 +822,11 @@ EL.renewFacilities = function (ip, els) {
 			}
 
 			EL.facilities[ip][els.SEOJ][epc] = epcList[epc];
+
+			// もしEPC = 0x83の時は識別番号なので，識別番号リストに確保
+			if( epc === '83' ) {
+				EL.identificationNumbers[ epcList[epc] ] = { ip: ip, OBJ: els.SEOJ };
+			}
 		}
 	} catch (e) {
 		console.error("EL.renewFacilities error.");
@@ -869,6 +893,20 @@ EL.search = function () {
 // 一度に一気に取得するとデバイス側が対応できないタイミングもあるようで，適当にwaitする。
 EL.getPropertyMaps = function ( ip, eoj ) {
 	// console.log('EL.getPropertyMaps');
+
+	// プロパティマップももらうけど，まずは識別番号をもらう
+	setTimeout(() => {
+		EL.sendOPC1( ip, [0x0e,0xf0,0x01], [0x0e, 0xf0, 0x00], 0x62, 0x83, [0x00] );      // identificationNumbers
+		EL.decreaseWaitings();
+	}, EL.autoGetDelay * (EL.autoGetWaitings+1));
+	EL.increaseWaitings();
+
+	setTimeout(() => {
+		EL.sendOPC1( ip, [0x0e,0xf0,0x01], eoj, 0x62, 0x83, [0x00] );      // INF prop
+		EL.decreaseWaitings();
+	}, EL.autoGetDelay * (EL.autoGetWaitings+1));
+	EL.increaseWaitings();
+
 
 	setTimeout(() => {
 		EL.sendOPC1( ip, [0x0e,0xf0,0x01], eoj, 0x62, 0x9D, [0x00] );      // INF prop
