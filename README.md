@@ -23,7 +23,7 @@ npm i echonet-lite
 
 ## Controller demo
 
-デモプログラムはこんな感じです。動作させるためにはECHONET Lite対応デバイスが必要です。もしお持ちでない場合には**[MoekadenRoom](https://github.com/SonyCSL/MoekadenRoom)**というシミュレータがおすすめです。Here is a demonstration script.For test exectuion, some devices with ECHONET Lite is required.If you do not have any device, we recommend the **[MoekadenRoom](https://github.com/SonyCSL/MoekadenRoom)** as a simulator.
+デモプログラムはこんな感じです。動作させるためにはECHONET Lite対応デバイスが必要です。もしお持ちでない場合には**[MoekadenRoom](https://github.com/SonyCSL/MoekadenRoom)**というシミュレータがおすすめです。Here is a demonstration script.For test exectuion, some devices with ECHONET Lite is required.If you do not have any device, we recommend the **[MoekadenRoom](https://github.com/SonyCSL/MoekadenRoom)** as a simulator.
 
 ```JavaScript:Demo
 // モジュールの機能をELとして使う
@@ -539,6 +539,9 @@ x Warranty
 
 ## Log
 
+- 2.5.3 bug fix. ignoreMe
+- 2.5.2 bug fix. ipv6 mac
+- 2.5.1 bug fix. ipv6 win
 - 2.5.0 これから個体識別番号でELネットワーク管理をしたいので，その布石にNodeprofileの個体識別番号を自動生成することとした。macアドレスを利用するので重複しないとおもう。識別番号リストの確保もできるようにした。
 - 2.4.2 ignoreMeのときの自IPとして127.0.0.1を排除するように設定。v6は::1を排除する。ignoreMeをデフォルトtrueに。
 - 2.4.1 OPCが複数のときにparseDetailで不具合があったのを修正した。関連する関数はparseDetail, parseString, parseBytes, renewFacilitiesの4つ。

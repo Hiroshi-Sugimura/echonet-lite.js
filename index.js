@@ -70,7 +70,7 @@ let EL = {
 	tid: [0,0],   // transaction id
 	ignoreMe: true, // true = 自IPから送信されたデータ受信を無視
 	autoGetProperties: true, // true = 自動的にGetPropertyをする
-	autoGetDelay: 2000, // 自動取得のときに，すぐにGetせずにDelayする
+	autoGetDelay: 1000, // 自動取得のときに，すぐにGetせずにDelayする
 	autoGetWaitings: 0, // 自動取得待ちの個数
 	debugMode: false,
 	facilities: {},	// ネットワーク内の機器情報リスト
@@ -86,7 +86,7 @@ let EL = {
 // Nodejsの対応が遅れていてまだうまく動かないみたい，しばらくipVer = 4でやる。
 // 複数NICがあるときにNICを指定できるようにした。NICの設定はmulticastAddrに出力したいインタフェースのIPを指定する。
 // ipVer == 0の時はsocketが4と6の2個手に入れることに注意
-EL.initialize = function (objList, userfunc, ipVer = 4, Options = {v4: '', v6: '', ignoreMe: true, autoGetProperties: true, autoGetDelay: 2000, debugMode: false}) {
+EL.initialize = function (objList, userfunc, ipVer = 4, Options = {v4: '', v6: '', ignoreMe: true, autoGetProperties: true, autoGetDelay: 1000, debugMode: false}) {
 
 	EL.debugMode = Options.debugMode; // true: show debug log
 	EL.renewNICList();	// Network Interface Card List
@@ -94,12 +94,16 @@ EL.initialize = function (objList, userfunc, ipVer = 4, Options = {v4: '', v6: '
 
 	// 複数NIC対策
 	EL.usingIF.v4 = Options.v4 != undefined && Options.v4 != '' ? Options.v4 : '0.0.0.0';
-	EL.usingIF.v6 = Options.v6 != undefined ? Options.v6 : EL.nicList.v6[0].name;
+	if( EL.nicList.v6.length > 1 ) {  // v6が選択可能
+		EL.usingIF.v6 = Options.v6 != undefined ? '%' + Options.v6 : '%' + EL.nicList.v6[0].name;
+	}else{
+		EL.usingIF.v6 = '';  // v6が無い、または一つしか無い場合は選択しない = default = ''
+	}
 
 	EL.ignoreMe = Options.ignoreMe != false ? true : false;	// 自IPから送信されたデータ受信を無視, default true, 微妙な条件の書き方はundef対策
-	EL.autoGetProperties = Options.autoGetProperties ? true : false;	// 自動的なデータ送信の有無
-	EL.autoGetDelay = Options.autoGetDelay? Options.autoGetDelay : 2000;	// 自動GetのDelay
-	EL.autoGetWaitings = 0;
+	EL.autoGetProperties = Options.autoGetProperties != false ? true : false;	// 自動的なデータ送信の有無
+	EL.autoGetDelay = Options.autoGetDelay != undefined ? Options.autoGetDelay : 1000;	// 自動GetのDelay
+	EL.autoGetWaitings = 0;   // 自動取得の待ち処理個数
 
 	// 邪魔なので
 	if( EL.debugMode == true ) {
@@ -162,7 +166,7 @@ EL.initialize = function (objList, userfunc, ipVer = 4, Options = {v4: '', v6: '
 	if( EL.ipVer == 0 || EL.ipVer == 6) {
 		sock6.bind({'address': '::', 'port': EL.EL_port}, function () {
 			sock6.setMulticastLoopback(true);
-			sock6.addMembership(EL.EL_Multi6, '::'+'%'+EL.usingIF.v6);
+			sock6.addMembership(EL.EL_Multi6, '::' + EL.usingIF.v6);
 		});
 	}
 
@@ -224,7 +228,7 @@ EL.renewNICList = function () {
 		break;
 	}
 	return EL.nicList;
-}
+};
 
 // 自動取得待ちの個数管理
 EL.decreaseWaitings = function () {
@@ -232,13 +236,40 @@ EL.decreaseWaitings = function () {
 		// console.log( 'decrease:', 'waitings: ', EL.autoGetWaitings );
 		EL.autoGetWaitings -= 1;
 	}
-}
+};
 
 EL.increaseWaitings = function () {
 	// console.log( 'increase:', 'waitings: ', EL.autoGetWaitings, 'delay: ', EL.autoGetDelay * (EL.autoGetWaitings+1) );
 	EL.autoGetWaitings += 1;
-}
+};
 
+
+// 自分からの送信データを無視するために
+EL.myIPaddress = function(rinfo) {
+	let ignoreIP = false;
+	if( EL.ignoreMe == true ) {
+		// loop back
+		if( rinfo.address === '127.0.0.1' || rinfo.address === '::1') {
+			ignoreIP = true;
+			return true;
+		}
+		// my ip
+		EL.nicList.v4.forEach( (ip) => {
+			if( ip.address === rinfo.address ) {
+				ignoreIP = true;
+				return true;
+			}
+		});
+		EL.nicList.v6.forEach( (ip) => {
+			if( ip.address === rinfo.address ) {
+				ignoreIP = true;
+				return true;
+			}
+		});
+	}
+
+	return ignoreIP;
+};
 
 
 //////////////////////////////////////////////////////////////////////
@@ -483,7 +514,7 @@ EL.sendBase = function (ip, buffer) {
 		// 送信先がipv6ならやる，':'が使われているかどうかで判定しちゃう
 		if( ip.indexOf(':') != -1 ) {
 			let client = dgram.createSocket({type:"udp6",reuseAddr:true});
-			ip += '%' + EL.usingIF.v6;
+			ip += EL.usingIF.v6;
 			client.send(buffer, 0, buffer.length, EL.EL_port, ip, function (err, bytes) {
 				if( err ) { console.error('TID:', tid[0], tid[1], err); }
 				client.close();
@@ -591,6 +622,7 @@ EL.returner = function (bytes, rinfo, userfunc) {
 	// console.log( "EL.returner:EL.parseBytes.");
 
 	// 自IPを無視する設定があればチェックして無視する
+	/*
 	let ignoreIP = false;
 	if( EL.ignoreMe == true ) {
 		// loop back
@@ -613,6 +645,14 @@ EL.returner = function (bytes, rinfo, userfunc) {
 			}
 		});
 	}
+	*/
+
+	if( EL.myIPaddress(rinfo) ) {
+		// console.log('ignore: ', rinfo.address );
+		return;
+	}
+	// console.log('received: ', rinfo.address );
+
 
 	// 無視しない
 	let els;
