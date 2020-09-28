@@ -539,6 +539,7 @@ x Warranty
 
 ## Log
 
+- 2.5.4 bug fix. Option.v6
 - 2.5.3 bug fix. ignoreMe
 - 2.5.2 bug fix. ipv6 mac
 - 2.5.1 bug fix. ipv6 win

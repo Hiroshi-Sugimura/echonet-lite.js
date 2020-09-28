@@ -93,9 +93,9 @@ EL.initialize = function (objList, userfunc, ipVer = 4, Options = {v4: '', v6: '
 	EL.ipVer = ipVer;	// ip version
 
 	// 複数NIC対策
-	EL.usingIF.v4 = Options.v4 != undefined && Options.v4 != '' ? Options.v4 : '0.0.0.0';
+	EL.usingIF.v4 = (Options.v4 != undefined && Options.v4 != '') ? Options.v4 : '0.0.0.0';
 	if( EL.nicList.v6.length > 1 ) {  // v6が選択可能
-		EL.usingIF.v6 = Options.v6 != undefined ? '%' + Options.v6 : '%' + EL.nicList.v6[0].name;
+		EL.usingIF.v6 = (Options.v6 != undefined && Options.v6 !="") ? '%' + Options.v6 : '%' + EL.nicList.v6[0].name;
 	}else{
 		EL.usingIF.v6 = '';  // v6が無い、または一つしか無い場合は選択しない = default = ''
 	}
@@ -622,37 +622,9 @@ EL.returner = function (bytes, rinfo, userfunc) {
 	// console.log( "EL.returner:EL.parseBytes.");
 
 	// 自IPを無視する設定があればチェックして無視する
-	/*
-	let ignoreIP = false;
-	if( EL.ignoreMe == true ) {
-		// loop back
-		if( rinfo.address === '127.0.0.1' || rinfo.address === '::1') {
-			ignoreIP = true;
-			return;
-		}
-
-		// my ip
-		EL.nicList.v4.forEach( (ip) => {
-			if( ip.address === rinfo.address ) {
-				ignoreIP = true;
-				return;
-			}
-		});
-		EL.nicList.v6.forEach( (ip) => {
-			if( ip.address === rinfo.address ) {
-				ignoreIP = true;
-				return;
-			}
-		});
-	}
-	*/
-
 	if( EL.myIPaddress(rinfo) ) {
-		// console.log('ignore: ', rinfo.address );
 		return;
 	}
-	// console.log('received: ', rinfo.address );
-
 
 	// 無視しない
 	let els;
