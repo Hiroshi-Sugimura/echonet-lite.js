@@ -539,6 +539,7 @@ x Warranty
 
 ## Log
 
+- 2.5.6 SET_RESはfacilitiesへの登録をやめた
 - 2.5.5 bug fix. format 2
 - 2.5.4 bug fix. Option.v6
 - 2.5.3 bug fix. ignoreMe

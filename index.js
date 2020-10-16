@@ -800,8 +800,8 @@ EL.returner = function (bytes, rinfo, userfunc) {
 			}
 		}
 
-		// 受信状態から機器情報修正, GETとINFREQは除く
-		if (els.ESV != "62" && els.ESV != "63") {
+		// 受信状態から機器情報修正, GETとINFREQ，SET_RESは除く
+		if (els.ESV != "62" && els.ESV != "63" && els.ESV != '71') {
 			EL.renewFacilities(rinfo.address, els);
 		}
 
