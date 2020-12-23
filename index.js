@@ -74,10 +74,10 @@ let EL = {
   autoGetWaitings: 0, // 自動取得待ちの個数
   debugMode: false,
   facilities: {},	// ネットワーク内の機器情報リスト
-  identificationNumbers: {}  // ELの識別番号
 	// データ形式の例
 	// { '192.168.0.3': { '05ff01': { d6: '' } },
 	// '192.168.0.4': { '05ff01': { '80': '30', '82': '30' } } }
+  identificationNumbers: []  // ELの識別番号リスト
 };
 
 
@@ -845,7 +845,7 @@ EL.renewFacilities = function (ip, els) {
 
 			// もしEPC = 0x83の時は識別番号なので，識別番号リストに確保
 			if( epc === '83' ) {
-				EL.identificationNumbers[ epcList[epc] ] = { ip: ip, OBJ: els.SEOJ };
+				EL.identificationNumbers.push( {id: epcList[epc], ip: ip, OBJ: els.SEOJ } );
 			}
 		}
 	} catch (e) {

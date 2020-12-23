@@ -162,7 +162,7 @@ EL.sendOPC1( '224.0.23.0', [0x01,0x30,0x01], [0x0e,0xf0,0x01], 0x73, 0x80, [0x30
 # Data stracture
 
 ```
-var EL = {
+let EL = {
 EL_port: 3610,
 EL_Multi: '224.0.23.0',
 EL_obj: null,
@@ -176,6 +176,7 @@ facilities: {}  // ネットワーク内の機器情報リスト; device and pro
 ELデータはこのモジュールで定義した構造で，下記のようになっています．
 ELDATA is ECHONET Lite data stracture, which conteints
 
+## 受信データ
 ```
 ELDATA {
   EHD : str.substr( 0, 4 ),
@@ -188,6 +189,39 @@ ELDATA {
   DETAIL: str.substr( 24 ),
   DETAILs: EL.parseDetail( str.substr( 22, 2 ), str.substr( 24 ) )
 }
+```
+
+## オブジェクト内の機器情報リスト, facilities information
+
+こんな感じ
+
+```
+EL.facilities =
+{ '192.168.2.103':
+   { '05ff01': { '80': '', d6: '' },
+     '0ef001': { '80': '30', d6: '0100' } },
+  '192.168.2.104': { '0ef001': { d6: '0105ff01' }, '05ff01': { '80': '30' } },
+  '192.168.2.115': { '0ef001': { '80': '30', d6: '01013501' } } }
+```
+
+## 識別番号リスト, identification numbers
+
+こんな感じ
+
+```
+EL.identificationNumbers
+[
+  {
+    id: 'fe0000776e5b0d002b5b0ef00100000000',
+    ip: '192.168.2.11',
+    OBJ: '0ef001'
+  },
+  {
+    id: 'fe0000776a6ee920fd7002870100000000',
+    ip: '192.168.2.11',
+    OBJ: '028701'
+  }
+]
 ```
 
 
@@ -539,6 +573,7 @@ x Warranty
 
 ## Log
 
+- 2.5.7 識別番号の自動生成はオブジェクトではなく配列とした
 - 2.5.6 SET_RESはfacilitiesへの登録をやめた
 - 2.5.5 bug fix. format 2
 - 2.5.4 bug fix. Option.v6
