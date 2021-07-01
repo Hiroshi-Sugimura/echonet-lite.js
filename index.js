@@ -319,16 +319,6 @@ EL.parseDetail = function( opc, str ) {
 		let now = 0;  // 入力データの現在処理位置, Index
 		let edt = [];  // 各edtをここに集めて，retに集約
 
-		// property mapだけEDT[0] != バイト数なので別処理
-		if( epc == 0x9d || epc == 0x9e || epc == 0x9f ) {
-			if( pdc >= 17) { // プロパティの数が16以上の場合（プロパティカウンタ含めてPDC17以上）は format 2
-				// 0byte=epc, 2byte=pdc, 4byte=edt
-				ret[ EL.toHexString(epc) ] = EL.bytesToString( EL.parseMapForm2( str.substr(4) ) );
-				return ret;
-			}
-			// format 2でなければ以下と同じ形式で解析可能
-		}
-
 		// それ以外はEDT[0] == byte数
 		// OPCループ
 		for (let i = 0; i < opc; i += 1) {
