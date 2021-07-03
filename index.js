@@ -717,10 +717,12 @@ EL.returner = function (bytes, rinfo, userfunc) {
 				break;
 
 			  case EL.GET_RES: // 72
+				// autoGetPropertiesがfalseなら自動取得しない
+				if( EL.autoGetProperties == false ) { return; }
+
 				// V1.1
 				// d6のEDT表現がとても特殊，EDT1バイト目がインスタンス数になっている
-				// autoGetPropertiesがfalseなら自動取得しない
-				if( els.SEOJ.substr(0, 4) === '0ef0' && els.DETAILs.d6 != null && els.DETAILs.d6 != '' && EL.autoGetProperties ) {
+				if( els.SEOJ.substr(0, 4) === '0ef0' && els.DETAILs.d6 != null && els.DETAILs.d6 != '' ) {
 					// console.log( "EL.returner: get object list! PropertyMap req V1.0.");
 					// 自ノードインスタンスリストSに書いてあるオブジェクトのプロパティマップをもらう
 					let array = EL.toHexArray( els.DETAILs.d6 );
@@ -729,37 +731,20 @@ EL.returner = function (bytes, rinfo, userfunc) {
 						EL.getPropertyMaps( rinfo.address, array.slice( (instNum - 1)*3 +1, (instNum - 1)*3 +4 ) );
 						instNum -= 1;
 					}
-				}else if( els.DETAILs["9f"] != null && EL.autoGetProperties) {  // 自動プロパティ取得は初期化フラグ, 9fはGetProps. 基本的に9fは9d, 9eの和集合になる。(そのような決まりはないが)
+				}else if( els.DETAILs["9f"] != null ) {  // 自動プロパティ取得は初期化フラグ, 9fはGetProps. 基本的に9fは9d, 9eの和集合になる。(そのような決まりはないが)
+					// DETAILsは解析後なので，format 1も2も関係なく処理する
 					let array = EL.toHexArray( els.DETAILs["9f"] );
-					if( array.length < 17 ) { // プロパティの数16個未満は記述形式１( =カウンタ含めて17バイト未満
-						let num = array[0];
-						for( let i=0; i<num; i++ ) {
-							// このとき9fをまた取りに行くと無限ループなのでやめる
-							if( array[i+1] != 0x9f ) {
-								// ものすごい勢いでGetするとデバイスが追い付かないので，autoGetDelay * (autoGetWaitings+1) する
-								// console.log('GET_RES 9f format1', rinfo.address);
-								setTimeout(() => {
-									EL.sendOPC1( rinfo.address, [0x0e, 0xf0, 0x01], EL.toHexArray(els.SEOJ), 0x62, array[i+1], [0x00] );
-									EL.decreaseWaitings();
-								}, EL.autoGetDelay * (EL.autoGetWaitings+1));
-								EL.increaseWaitings();
-							}
-						}
-					} else {
-						// プロパティ16個以上（17byte以上）なので記述形式2，EPCのarrayを作り直したら，あと同じ
-						let array = EL.parseMapForm2( els.DETAILs["9f"] ); // 2~17byte目がプロパティマップ
-						let num = array[0];
-						for( let i=0; i<num; i++ ) {
-							// このとき9fをまた取りに行くと無限ループなのでやめる
-							if( array[i+1] != 0x9f ) {
-								// ものすごい勢いでGetするとデバイスが追い付かないので，200ms Waitする
-								// console.log('GET_RES 9f format2', rinfo.address);
-								setTimeout(() => {
-									EL.sendOPC1( rinfo.address, [0x0e, 0xf0, 0x01], EL.toHexArray(els.SEOJ), 0x62, array[i+1], [0x00] );
-									EL.decreaseWaitings();
-								}, EL.autoGetDelay * (EL.autoGetWaitings+1));
-								EL.increaseWaitings();
-							}
+					let num = array[0];
+					for( let i=0; i<num; i++ ) {
+						// このとき9fをまた取りに行くと無限ループなのでやめる
+						if( array[i+1] != 0x9f ) {
+							// コントローラの速度でGet処理するとデバイスが追い付かないので，autoGetDelay * (autoGetWaitings+1) する
+							// console.log('GET_RES 9f format1', rinfo.address);
+							setTimeout(() => {
+								EL.sendOPC1( rinfo.address, [0x0e, 0xf0, 0x01], EL.toHexArray(els.SEOJ), 0x62, array[i+1], [0x00] );
+								EL.decreaseWaitings();
+							}, EL.autoGetDelay * (EL.autoGetWaitings+1));
+							EL.increaseWaitings();
 						}
 					}
 				}

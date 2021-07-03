@@ -573,6 +573,7 @@ x Warranty
 
 ## Log
 
+- 2.5.8 PropertyMap2のautoGetの時に，違うEPCをGetするバグを直した
 - 2.5.7 識別番号の自動生成はオブジェクトではなく配列とした
 - 2.5.6 SET_RESはfacilitiesへの登録をやめた
 - 2.5.5 bug fix. format 2
