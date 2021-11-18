@@ -294,6 +294,14 @@ let elsocket = EL.initialize( objList, function( rinfo, els, err ) {
 ```
 
 
+* 解放, release
+
+```
+EL.release = function()
+```
+
+
+
 * NICリスト再取得, renew NIC list
 
 ```
@@ -308,6 +316,12 @@ EL.renewNICList = function()
 
 ```
 EL.setObserveFacilities = function ( interval, onChanged )
+```
+
+* ECHONET Liteネットワーク監視終了（タイマー解放）
+
+```
+EL.clearObserveFacilities = function ();
 ```
 
 
@@ -573,6 +587,7 @@ x Warranty
 
 ## Log
 
+- 2.6.0 method(release, clearObserveFacilities)を追加
 - 2.5.8 PropertyMap2のautoGetの時に，違うEPCをGetするバグを直した
 - 2.5.7 識別番号の自動生成はオブジェクトではなく配列とした
 - 2.5.6 SET_RESはfacilitiesへの登録をやめた
