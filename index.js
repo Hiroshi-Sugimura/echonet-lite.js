@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////////////
-//	Copyright (C) Hiroshi SUGIMURA 2013.09.27 - above.
+//	Copyright (C) Hiroshi SUGIMURA 2013.09.27
 //////////////////////////////////////////////////////////////////////
 'use strict'
 
@@ -386,7 +386,6 @@ EL.parseDetail = function( opc, str ) {
 
 	} catch (e) {
 		throw new Error('EL.parseDetail(): detail error. opc: ' + opc + ' str: ' + str);
-		return {};
 	}
 
 	return ret;
@@ -519,6 +518,8 @@ EL.bytesToString = function (bytes) {
 
 // EL送信のベース
 EL.sendBase = function (ip, buffer) {
+	EL.debugMode ? console.log( "======== sendBase:", ip ) :0;
+	EL.debugMode ? console.log( buffer ) :0;
 	let tid = [ buffer[2], buffer[3] ];
 
 	// console.log(ip, buffer);
@@ -649,14 +650,74 @@ EL.sendString = function (ip, string) {
 };
 
 
+// ELの返信用、典型的なOPC一個でやる．TIDを併せて返信しないといけないため
+EL.replyOPC1 = function (ip, tid, seoj, deoj, esv, epc, edt) {
+
+	if (typeof (tid) == "string") {
+		tid = EL.toHexArray(tid);
+	}
+
+	if (typeof (seoj) == "string") {
+		seoj = EL.toHexArray(seoj);
+	}
+
+	if (typeof (deoj) == "string") {
+		deoj = EL.toHexArray(deoj);
+	}
+
+	if (typeof (esv) == "string") {
+		esv = (EL.toHexArray(esv))[0];
+	}
+
+	if (typeof (epc) == "string") {
+		epc = (EL.toHexArray(epc))[0]
+	}
+
+	if (typeof (edt) == "number") {
+		edt = [edt];
+	} else if (typeof (edt) == "string") {
+		edt = EL.toHexArray(edt);
+	}
+
+	let buffer;
+
+	if (esv == 0x62) { // get
+		buffer = Buffer.from([
+			0x10, 0x81,
+			tid[0], tid[1],
+			seoj[0], seoj[1], seoj[2],
+			deoj[0], deoj[1], deoj[2],
+			esv,
+			0x01,
+			epc,
+			0x00]);
+	} else {
+		buffer = Buffer.from([
+			0x10, 0x81,
+			tid[0], tid[1],
+			seoj[0], seoj[1], seoj[2],
+			deoj[0], deoj[1], deoj[2],
+			esv,
+			0x01,
+			epc,
+			edt.length].concat(edt));
+	}
+
+	// データができたので送信する
+	return EL.sendBase(ip, buffer);
+};
+
+
+
+
 //////////////////////////////////////////////////////////////////////
 // EL受信
 //////////////////////////////////////////////////////////////////////
 
 // ELの受信データを振り分ける
 EL.returner = function (bytes, rinfo, userfunc) {
-	// console.log( "========");
-	// console.log( "EL.returner:EL.parseBytes.");
+	EL.debugMode ? console.log( "======== returner:", rinfo.address ) :0;
+	EL.debugMode ? console.log( bytes) :0;
 
 	// 自IPを無視する設定があればチェックして無視する
 	if( EL.myIPaddress(rinfo) ) {
@@ -706,9 +767,9 @@ EL.returner = function (bytes, rinfo, userfunc) {
 				// console.log( "EL.returner: get prop. of Node profile.");
 				for (let epc in els.DETAILs) {
 					if (EL.Node_details[epc]) { // 持ってるEPCのとき
-						EL.sendOPC1(rinfo.address, [0x0e, 0xf0, 0x01], EL.toHexArray(els.SEOJ), 0x72, EL.toHexArray(epc), EL.Node_details[epc]);
+						EL.replyOPC1(rinfo.address, EL.toHexArray(els.TID), [0x0e, 0xf0, 0x01], EL.toHexArray(els.SEOJ), 0x72, EL.toHexArray(epc), EL.Node_details[epc]);
 					} else { // 持っていないEPCのとき, SNA
-						EL.sendOPC1(rinfo.address, [0x0e, 0xf0, 0x01], EL.toHexArray(els.SEOJ), 0x52, EL.toHexArray(epc), [0x00]);
+						EL.replyOPC1(rinfo.address, EL.toHexArray(els.TID), [0x0e, 0xf0, 0x01], EL.toHexArray(els.SEOJ), 0x52, EL.toHexArray(epc), [0x00]);
 					}
 				}
 				break;
