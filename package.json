@@ -1,6 +1,6 @@
 {
   "name": "echonet-lite",
-  "version": "2.7.0",
+  "version": "2.7.1",
   "description": "This module provides ECHONET Lite protocol API.",
   "main": "index.js",
   "scripts": {

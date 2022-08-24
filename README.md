@@ -603,6 +603,7 @@ x Warranty
 
 ## Log
 
+- 2.7.1 NIC auto 対応、NIC list取得のバグ修正、WindowsによるIPv6 Multicastのして方法が不明(bug)
 - 2.7.0 method(replyOPC1)を追加、bugfix（自動返信でのTIDの設定ミスを修正）
 - 2.6.0 method(release, clearObserveFacilities)を追加
 - 2.5.8 PropertyMap2のautoGetの時に，違うEPCをGetするバグを直した

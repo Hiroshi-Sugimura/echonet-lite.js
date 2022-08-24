@@ -93,10 +93,10 @@ let EL = {
 // Nodejsの対応が遅れていてまだうまく動かないみたい，しばらくipVer = 4でやる。
 // 複数NICがあるときにNICを指定できるようにした。NICの設定はmulticastAddrに出力したいインタフェースのIPを指定する。
 // ipVer == 0の時はsocketが4と6の2個手に入れることに注意
-EL.initialize = function (objList, userfunc, ipVer = 4, Options = {v4: '', v6: '', ignoreMe: true, autoGetProperties: true, autoGetDelay: 1000, debugMode: false}) {
+EL.initialize = async function (objList, userfunc, ipVer = 4, Options = {v4: '', v6: '', ignoreMe: true, autoGetProperties: true, autoGetDelay: 1000, debugMode: false}) {
 
 	EL.debugMode = Options.debugMode; // true: show debug log
-	EL.renewNICList();	// Network Interface Card List
+	await EL.renewNICList();	// Network Interface Card List
 	EL.ipVer = ipVer;	// ip version
 
 	EL.sock4 = null;
@@ -106,11 +106,27 @@ EL.initialize = function (objList, userfunc, ipVer = 4, Options = {v4: '', v6: '
 	EL.facilities = {};
 	EL.identificationNumbers = [];
 
+	EL.debugMode ? console.log('EL.initialize() NIC list:', EL.nicList) : 0;
 
 	// 複数NIC対策
-	EL.usingIF.v4 = (Options.v4 != undefined && Options.v4 != '') ? Options.v4 : '0.0.0.0';
+	EL.usingIF.v4 = (Options.v4 != undefined && Options.v4 != '' && Options.v4 != 'auto') ? Options.v4 : '0.0.0.0';
 	if( EL.nicList.v6.length > 1 ) {  // v6が選択可能
-		EL.usingIF.v6 = (Options.v6 != undefined && Options.v6 !="") ? '%' + Options.v6 : '%' + EL.nicList.v6[0].name;
+		if( process.platform == 'win32' ) {  // windows
+			let nic = EL.nicList.v6.find( (dev) => {
+				if( dev.name == Options.v6 || dev.address == Options.v6 ) {
+					return true;
+				}
+			});
+
+			if( Options.v6 == undefined || Options.v6 =="" || Options.v6 =="auto" || !nic ) { // なんでもいい場合や、指定のnicがない場合
+				EL.usingIF.v6 = '';
+			}else if( nic ) {  // 指定があって、nicが見つかった場合
+				EL.usingIF.v6 = nic.address;
+				// EL.usingIF.v6 = '%' + nic.name;
+			}
+		}else{  // mac or linux
+			EL.usingIF.v6 = (Options.v6 != undefined && Options.v6 !="") ? '%' + Options.v6 : '%' + EL.nicList.v6[0].name;
+		}
 	}else{
 		EL.usingIF.v6 = '';  // v6が無い、または一つしか無い場合は選択しない = default = ''
 	}
@@ -180,7 +196,11 @@ EL.initialize = function (objList, userfunc, ipVer = 4, Options = {v4: '', v6: '
 	if( EL.ipVer == 0 || EL.ipVer == 6) {
 		EL.sock6.bind({'address': '::', 'port': EL.EL_port}, function () {
 			EL.sock6.setMulticastLoopback(true);
-			EL.sock6.addMembership(EL.EL_Multi6, '::' + EL.usingIF.v6);
+			if( process.platform == 'win32' ) {  // windows
+				EL.sock6.addMembership(EL.EL_Multi6, '::' + EL.usingIF.v6);  // bug fixのために分けたけど今は意味はなし
+			}else{
+				EL.sock6.addMembership(EL.EL_Multi6, '::' + EL.usingIF.v6);
+			}
 		});
 	}
 
@@ -219,43 +239,56 @@ EL.release = function () {
 
 // NICリスト更新
 // loopback無視
-EL.renewNICList = function () {
+EL.renewNICList = async function () {
 	EL.nicList.v4 = [];
 	EL.nicList.v6 = [];
-	let interfaces = os.networkInterfaces();
-	interfaces = EL.objectSort(interfaces);  // dev nameでsortすると仮想LAN候補を後ろに逃がせる（とみた）
-	// console.dir(interfaces);
+	let interfaces = await os.networkInterfaces();
+	interfaces = await EL.objectSort(interfaces);  // dev nameでsortすると仮想LAN候補を後ろに逃がせる（とみた）
+	// console.log('EL.renewNICList(): interfaces:', interfaces);
+
 	for (let name in interfaces) {
 		if( name == 'lo0') {continue;}
-		interfaces[name].forEach( function(details) {
-			if (!details.internal){
-				switch(details.family){
-					case "IPv4":
+		for( const details of interfaces[name] ) {
+			if ( !details.internal ) {
+				switch(details.family) {
+					case 4:   // win
+					case "IPv4":  // mac
+					// await console.log( 'EL.renewNICList(): IPv4 details:', details );
 					EL.nicList.v4.push({name:name, address:details.address});
 					break;
-					case "IPv6":
+
+					case 6:  // win
+					case "IPv6":  // mac
+					// await console.log( 'EL.renewNICList(): IPv6 details:', details );
 					EL.nicList.v6.push({name:name, address:details.address});
+					break;
+
+					default:
+					await console.log( 'EL.renewNICList(): no assoc default:', details );
 					break;
 				}
 			}
-		});
+		}
+		// await console.log( 'EL.renewNICList(): nicList:', EL.nicList );
 	}
+	// await console.log( 'EL.renewNICList(): nicList:', EL.nicList );
 
 	// macアドレスを識別番号に転用，localhost, lo0はmacを持たないので使えないから排除
 	for (let name in interfaces) {
 		if( name == 'lo0') {continue;}
-
-		interfaces[name].some( function(details) {
+		await interfaces[name].some( async function(details) {
 			if ( !details.internal ) {
-				// ここで見つけたdetails.macを， Node_details["83"]の8--13 byteに当て込む
-				let macArray = EL.toHexArray( details.mac.replace(/:/g, '') );
+				// ここで見つけたdetails.macを， Node_details["83"]の8--13 byteに当て込む（自分の識別番号）
+				let macArray = await EL.toHexArray( details.mac.replace(/:/g, '') );
 				EL.Node_details["83"] = [0xfe, 0x00, 0x00, 0x77, 0x00, 0x00, 0x02, macArray[0], macArray[1], macArray[2], macArray[3], macArray[4], macArray[5], 0x00, 0x00, 0x00, 0x01]; // identifier
 				// console.dir(EL.Node_details["83"]);
 				return true; // 一つ見つかればそれで良い
 			}
-		})
-			break;
+		});
+		break;
 	}
+
+	// await console.log( 'EL.renewNICList(): nicList:', EL.nicList );
 	return EL.nicList;
 };
 
