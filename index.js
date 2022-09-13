@@ -30,61 +30,61 @@ ELSTRUCTURE {
 // クラス変数
 let EL = {
 	// define
-	SETI_SNA: "50",
-	SETC_SNA: "51",
-	GET_SNA: "52",
-	INF_SNA: "53",
-	SETGET_SNA: "5e",
-	SETI: "60",
-	SETC: "61",
-	GET: "62",
-	INF_REQ: "63",
-	SETGET: "6e",
-	SET_RES: "71",
-	GET_RES: "72",
-	INF: "73",
-	INFC: "74",
-	INFC_RES: "7a",
-	SETGET_RES: "7e",
-	EL_port: 3610,
-	EL_Multi: '224.0.23.0',
-	EL_Multi6: 'FF02::1',
-	EL_obj: null,
-	EL_cls: null,
+  SETI_SNA: "50",
+  SETC_SNA: "51",
+  GET_SNA: "52",
+  INF_SNA: "53",
+  SETGET_SNA: "5e",
+  SETI: "60",
+  SETC: "61",
+  GET: "62",
+  INF_REQ: "63",
+  SETGET: "6e",
+  SET_RES: "71",
+  GET_RES: "72",
+  INF: "73",
+  INFC: "74",
+  INFC_RES: "7a",
+  SETGET_RES: "7e",
+  EL_port: 3610,
+  EL_Multi: '224.0.23.0',
+  EL_Multi6: 'FF02::1',
+  EL_obj: null,
+  EL_cls: null,
 
 	// member
-	sock4: null,
-	sock6: null,
-	Node_details:	{
-		"80": [0x30],
-		"82": [0x01, 0x0a, 0x01, 0x00], // EL version, 1.1
-		"83": [0xfe, 0x00, 0x00, 0x77, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01], // identifier, renewNICList()できちんとセット
-		"88": [0x42], // Fault status
-		"8a": [0x00, 0x00, 0x77], // maker code, manufacturer code, kait = 00 00 77
-		"8a": [0x00, 0x00, 0x02], // Business facility code, homeele = 00 00 02
-		"9d": [0x02, 0x80, 0xd5],       // inf map, 1 Byte目は個数
-		"9e": [0x00],                 // set map, 1 Byte目は個数
-		"9f": [0x09, 0x80, 0x82, 0x83, 0x8a, 0xd3, 0xd4, 0xd5, 0xd6, 0xd7], // get map, 1 Byte目は個数
-		"d3": [0x00, 0x00, 0x01],  // 自ノードで保持するインスタンスリストの総数（ノードプロファイル含まない）, user項目
-		"d4": [0x00, 0x02],        // 自ノードクラス数, user項目
-		"d5": [],    // インスタンスリスト通知, user項目
-		"d6": [],    // 自ノードインスタンスリストS, user項目
-		"d7": [] },  // 自ノードクラスリストS, user項目
-	ipVer: 4, // 0 = IPv4 & IPv6, 4 = IPv4, 6 = IPv6
-	nicList: {v4: [], v6: []},
-	usingIF: {v4: '', v6: ''}, // '' = default
-	tid: [0,0],   // transaction id
-	ignoreMe: true, // true = 自IPから送信されたデータ受信を無視
-	autoGetProperties: true, // true = 自動的にGetPropertyをする
-	autoGetDelay: 1000, // 自動取得のときに，すぐにGetせずにDelayする
-	autoGetWaitings: 0, // 自動取得待ちの個数
-	observeFacilitiesTimerId: null,
-	debugMode: false,
-	facilities: {},	// ネットワーク内の機器情報リスト
+  sock4: null,
+  sock6: null,
+  Node_details:	{
+	  "80": [0x30],
+	  "82": [0x01, 0x0a, 0x01, 0x00], // EL version, 1.1
+	  "83": [0xfe, 0x00, 0x00, 0x77, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01], // identifier, renewNICList()できちんとセット
+	  "88": [0x42], // Fault status
+	  "8a": [0x00, 0x00, 0x77], // maker code, manufacturer code, kait = 00 00 77
+	  "8a": [0x00, 0x00, 0x02], // Business facility code, homeele = 00 00 02
+	  "9d": [0x02, 0x80, 0xd5],       // inf map, 1 Byte目は個数
+	  "9e": [0x00],                 // set map, 1 Byte目は個数
+	  "9f": [0x09, 0x80, 0x82, 0x83, 0x8a, 0xd3, 0xd4, 0xd5, 0xd6, 0xd7], // get map, 1 Byte目は個数
+	  "d3": [0x00, 0x00, 0x01],  // 自ノードで保持するインスタンスリストの総数（ノードプロファイル含まない）, user項目
+	  "d4": [0x00, 0x02],        // 自ノードクラス数, user項目
+	  "d5": [],    // インスタンスリスト通知, user項目
+	  "d6": [],    // 自ノードインスタンスリストS, user項目
+	  "d7": [] },  // 自ノードクラスリストS, user項目
+  ipVer: 4, // 0 = IPv4 & IPv6, 4 = IPv4, 6 = IPv6
+  nicList: {v4: [], v6: []},
+  usingIF: {v4: '', v6: ''}, // '' = default
+  tid: [0,0],   // transaction id
+  ignoreMe: true, // true = 自IPから送信されたデータ受信を無視
+  autoGetProperties: true, // true = 自動的にGetPropertyをする
+  autoGetDelay: 1000, // 自動取得のときに，すぐにGetせずにDelayする
+  autoGetWaitings: 0, // 自動取得待ちの個数
+  observeFacilitiesTimerId: null,
+  debugMode: false,
+  facilities: {},	// ネットワーク内の機器情報リスト
 	// データ形式の例
 	// { '192.168.0.3': { '05ff01': { d6: '' } },
 	// '192.168.0.4': { '05ff01': { '80': '30', '82': '30' } } }
-	identificationNumbers: []  // ELの識別番号リスト
+  identificationNumbers: []  // ELの識別番号リスト
 };
 
 
@@ -251,19 +251,19 @@ EL.renewNICList = async function () {
 		for( const details of interfaces[name] ) {
 			if ( !details.internal ) {
 				switch(details.family) {
-					case 4:   // win
-					case "IPv4":  // mac
+				  case 4:   // win
+				  case "IPv4":  // mac
 					// await console.log( 'EL.renewNICList(): IPv4 details:', details );
 					EL.nicList.v4.push({name:name, address:details.address});
 					break;
 
-					case 6:  // win
-					case "IPv6":  // mac
+				  case 6:  // win
+				  case "IPv6":  // mac
 					// await console.log( 'EL.renewNICList(): IPv6 details:', details );
 					EL.nicList.v6.push({name:name, address:details.address});
 					break;
 
-					default:
+				  default:
 					await console.log( 'EL.renewNICList(): no assoc default:', details );
 					break;
 				}
@@ -292,6 +292,8 @@ EL.renewNICList = async function () {
 	return EL.nicList;
 };
 
+// EL.autoGetWaitingsMax = 0;  // @@@debug
+
 // 自動取得待ちの個数管理
 EL.decreaseWaitings = function () {
 	if( EL.autoGetWaitings != 0 ) {
@@ -303,6 +305,9 @@ EL.decreaseWaitings = function () {
 EL.increaseWaitings = function () {
 	// console.log( 'increase:', 'waitings: ', EL.autoGetWaitings, 'delay: ', EL.autoGetDelay * (EL.autoGetWaitings+1) );
 	EL.autoGetWaitings += 1;
+
+	// @@@debug
+	// EL.autoGetWaitingsMax = EL.autoGetWaitingsMax > EL.autoGetWaitings ? EL.autoGetWaitingsMax : EL.autoGetWaitings;
 };
 
 
@@ -323,13 +328,14 @@ EL.myIPaddress = function(rinfo) {
 			}
 		});
 		EL.nicList.v6.forEach( (ip) => {
-			if( ip.address === rinfo.address ) {
+			if( ip.address === rinfo.address.split('%')[0] ) {
 				ignoreIP = true;
 				return true;
 			}
 		});
 	}
 
+	// console.log( 'rinfo.address:', rinfo.address, 'is ignoreIP:', ignoreIP );  // @@@debug
 	return ignoreIP;
 };
 
@@ -753,7 +759,8 @@ EL.returner = function (bytes, rinfo, userfunc) {
 	EL.debugMode ? console.log( bytes) :0;
 
 	// 自IPを無視する設定があればチェックして無視する
-	if( EL.myIPaddress(rinfo) ) {
+	// 無視しないならチェックもしない
+	if( EL.ignoreMe ? EL.myIPaddress(rinfo) : false ) {
 		return;
 	}
 
@@ -780,11 +787,11 @@ EL.returner = function (bytes, rinfo, userfunc) {
 				////////////////////////////////////////////////////////////////////////////////////
 				// 0x5x
 				// エラー受け取ったときの処理
-				case EL.SETI_SNA:   // "50"
-				case EL.SETC_SNA:   // "51"
-				case EL.GET_SNA:    // "52"
-				case EL.INF_SNA:    // "53"
-				case EL.SETGET_SNA: // "5e"
+			  case EL.SETI_SNA:   // "50"
+			  case EL.SETC_SNA:   // "51"
+			  case EL.GET_SNA:    // "52"
+			  case EL.INF_SNA:    // "53"
+			  case EL.SETGET_SNA: // "5e"
 				// console.log( "EL.returner: get error" );
 				// console.dir( els );
 				return;
@@ -792,11 +799,11 @@ EL.returner = function (bytes, rinfo, userfunc) {
 
 				////////////////////////////////////////////////////////////////////////////////////
 				// 0x6x
-				case EL.SETI: // "60
-				case EL.SETC: // "61"
+			  case EL.SETI: // "60
+			  case EL.SETC: // "61"
 				break;
 
-				case EL.GET: // 0x62
+			  case EL.GET: // 0x62
 				// console.log( "EL.returner: get prop. of Node profile.");
 				for (let epc in els.DETAILs) {
 					if (EL.Node_details[epc]) { // 持ってるEPCのとき
@@ -807,7 +814,7 @@ EL.returner = function (bytes, rinfo, userfunc) {
 				}
 				break;
 
-				case EL.INF_REQ: // 0x63
+			  case EL.INF_REQ: // 0x63
 				if (els.DETAILs["d5"] == "00") {
 					// console.log( "EL.returner: Ver1.0 INF_REQ.");
 					if( EL.ipVer == 0 || EL.ipVer == 4) { // ipv4
@@ -820,12 +827,12 @@ EL.returner = function (bytes, rinfo, userfunc) {
 				}
 				break;
 
-				case EL.SETGET: // "6e"
+			  case EL.SETGET: // "6e"
 				break;
 
 				////////////////////////////////////////////////////////////////////////////////////
 				// 0x7x
-				case EL.SET_RES: // 71
+			  case EL.SET_RES: // 71
 				// SetCに対する返答のSetResは，EDT 0x00でOKの意味を受け取ることとなる．ゆえにその詳細な値をGetする必要がある
 				// autoGetPropertiesがfalseなら自動取得しない
 				if( els.DETAIL.substr(0,2) == '00' && EL.autoGetProperties ) {
@@ -839,7 +846,7 @@ EL.returner = function (bytes, rinfo, userfunc) {
 				}
 				break;
 
-				case EL.GET_RES: // 72
+			  case EL.GET_RES: // 72
 				// autoGetPropertiesがfalseなら自動取得しない
 				if( EL.autoGetProperties == false ) { return; }
 
@@ -873,7 +880,7 @@ EL.returner = function (bytes, rinfo, userfunc) {
 				}
 				break;
 
-				case EL.INF:  // 0x73
+			  case EL.INF:  // 0x73
 				// V1.0 オブジェクトリストをもらったらそのオブジェクトのPropertyMapをもらいに行く, デバイスが後で起動した
 				// autoGetPropertiesがfalseならやらない
 				if( els.DETAILs.d5 != null && els.DETAILs.d5 != ""  && EL.autoGetProperties) {
@@ -882,7 +889,7 @@ EL.returner = function (bytes, rinfo, userfunc) {
 				}
 				break;
 
-				case EL.INFC: // "74"
+			  case EL.INFC: // "74"
 				// V1.0 オブジェクトリストをもらったらそのオブジェクトのPropertyMapをもらいに行く
 				// autoGetPropertiesがfalseならやらない
 				if( els.DETAILs.d5 != null && els.DETAILs.d5  && EL.autoGetProperties) {
@@ -899,11 +906,11 @@ EL.returner = function (bytes, rinfo, userfunc) {
 				}
 				break;
 
-				case EL.INFC_RES: // "7a"
-				case EL.SETGET_RES: // "7e"
+			  case EL.INFC_RES: // "7a"
+			  case EL.SETGET_RES: // "7e"
 				break;
 
-				default:
+			  default:
 				break;
 			}
 		}
