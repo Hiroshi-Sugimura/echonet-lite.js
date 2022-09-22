@@ -296,7 +296,7 @@ EL.renewNICList = async function () {
 	return EL.nicList;
 };
 
-EL.autoGetWaitingsMax = 0;  // @@@debug 性能測定
+// EL.autoGetWaitingsMax = 0;  // @@@debug 性能測定
 
 // 自動取得待ちの個数管理
 EL.decreaseWaitings = function () {
@@ -305,9 +305,9 @@ EL.decreaseWaitings = function () {
 		EL.autoGetWaitings -= 1;
 
 		// @@@debug 性能測定
-		if( EL.autoGetWaitings == 1 ) {
-			console.log( new Date().toFormat("YYYY-MM-DDTHH24:MI:SS"), '| autoGetWaitings < 2');
-		}
+		// if( EL.autoGetWaitings == 1 ) {
+			// console.log( new Date().toFormat("YYYY-MM-DDTHH24:MI:SS"), '| autoGetWaitings < 2');
+		// }
 	}
 };
 
@@ -317,11 +317,11 @@ EL.increaseWaitings = function () {
 	EL.autoGetWaitings += 1;
 
 	// @@@debug 性能測定
-	if( EL.autoGetWaitings == 2 ) {
-		console.log( new Date().toFormat("YYYY-MM-DDTHH24:MI:SS"), '| autoGetWaitings > 1');
-	}
+	// if( EL.autoGetWaitings == 2 ) {
+		// console.log( new Date().toFormat("YYYY-MM-DDTHH24:MI:SS"), '| autoGetWaitings > 1');
+	// }
 
-	EL.autoGetWaitingsMax = EL.autoGetWaitingsMax > EL.autoGetWaitings ? EL.autoGetWaitingsMax : EL.autoGetWaitings;
+	// EL.autoGetWaitingsMax = EL.autoGetWaitingsMax > EL.autoGetWaitings ? EL.autoGetWaitingsMax : EL.autoGetWaitings;
 };
 
 
