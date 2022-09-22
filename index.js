@@ -250,6 +250,8 @@ EL.renewNICList = async function () {
 	interfaces = await EL.objectSort(interfaces);  // dev nameでsortすると仮想LAN候補を後ろに逃がせる（とみた）
 	// console.log('EL.renewNICList(): interfaces:', interfaces);
 
+	let macArray = [];
+
 	for (let name in interfaces) {
 		if( name == 'lo0') {continue;}
 		for( const details of interfaces[name] ) {
@@ -259,12 +261,14 @@ EL.renewNICList = async function () {
 					case "IPv4":  // mac
 					// await console.log( 'EL.renewNICList(): IPv4 details:', details );
 					EL.nicList.v4.push({name:name, address:details.address});
+					macArray = await EL.toHexArray( details.mac.replace(/:/g, '') ); // ここで見つけたmacを機器固有番号に転用
 					break;
 
 					case 6:  // win
 					case "IPv6":  // mac
 					// await console.log( 'EL.renewNICList(): IPv6 details:', details );
 					EL.nicList.v6.push({name:name, address:details.address});
+					macArray = await EL.toHexArray( details.mac.replace(/:/g, '') ); // ここで見つけたmacを機器固有番号に転用
 					break;
 
 					default:
@@ -278,19 +282,10 @@ EL.renewNICList = async function () {
 	// await console.log( 'EL.renewNICList(): nicList:', EL.nicList );
 
 	// macアドレスを識別番号に転用，localhost, lo0はmacを持たないので使えないから排除
-	for (let name in interfaces) {
-		if( name == 'lo0') {continue;}
-		await interfaces[name].some( async function(details) {
-			if ( !details.internal ) {
-				// ここで見つけたdetails.macを， Node_details["83"]の8--13 byteに当て込む（自分の識別番号）
-				let macArray = await EL.toHexArray( details.mac.replace(/:/g, '') );
-				EL.Node_details["83"] = [0xfe, 0x00, 0x00, 0x77, 0x00, 0x00, 0x02, macArray[0], macArray[1], macArray[2], macArray[3], macArray[4], macArray[5], 0x00, 0x00, 0x00, 0x01]; // identifier
-				// console.dir(EL.Node_details["83"]);
-				return true; // 一つ見つかればそれで良い
-			}
-		});
-		break;
-	}
+	// console.log('EL.renewNICList(): interfaces:', interfaces);
+	// console.log('EL.renewNICList(): macArray:', macArray);
+
+	EL.Node_details["83"] = [0xfe, 0x00, 0x00, 0x77, 0x00, 0x00, 0x02, macArray[0], macArray[1], macArray[2], macArray[3], macArray[4], macArray[5], 0x00, 0x00, 0x00, 0x01]; // identifier
 
 	// await console.log( 'EL.renewNICList(): nicList:', EL.nicList );
 	return EL.nicList;
@@ -306,7 +301,7 @@ EL.decreaseWaitings = function () {
 
 		// @@@debug 性能測定
 		// if( EL.autoGetWaitings == 1 ) {
-			// console.log( new Date().toFormat("YYYY-MM-DDTHH24:MI:SS"), '| autoGetWaitings < 2');
+		// console.log( new Date().toFormat("YYYY-MM-DDTHH24:MI:SS"), '| autoGetWaitings < 2');
 		// }
 	}
 };
@@ -318,7 +313,7 @@ EL.increaseWaitings = function () {
 
 	// @@@debug 性能測定
 	// if( EL.autoGetWaitings == 2 ) {
-		// console.log( new Date().toFormat("YYYY-MM-DDTHH24:MI:SS"), '| autoGetWaitings > 1');
+	// console.log( new Date().toFormat("YYYY-MM-DDTHH24:MI:SS"), '| autoGetWaitings > 1');
 	// }
 
 	// EL.autoGetWaitingsMax = EL.autoGetWaitingsMax > EL.autoGetWaitings ? EL.autoGetWaitingsMax : EL.autoGetWaitings;

@@ -105,6 +105,7 @@ let dev_details = {
 		"80": [0x30],  // 動作状態
 		"81": [0xff],  // 設置場所
 		"82": [0x00, 0x00, 0x66, 0x00], // EL version, 1.1
+		'83': [0xfe, 0x00, 0x00, 0x77, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02], // identifier, initialize時に、renewNICList()できちんとセットするとよい, get
 		"88": [0x42],  // 異常状態
 		"8a": [0x00, 0x00, 0x77], // maker code
 		"9d": [0x04, 0x80, 0x8f, 0xa0, 0xb0],        // inf map, 1 Byte目は個数
@@ -134,45 +135,57 @@ let dev_details = {
 };
 
 
-// ノードプロファイルに関しては内部処理するので，ユーザーはエアコンに関する受信処理だけを記述する．
-let elsocket = EL.initialize(objList, function (rinfo, els, e) {
-	if (e) {
-		console.error(e);
-		return;
-	}
-	if( els.DEOJ.substr(0,4) == '0ef0' ) {return;}  // Node profileに関しては何もしない
 
-	// ESVで振り分け，主に0x60系列に対応すればいい
-	switch (els.ESV) {
-		////////////////////////////////////////////////////////////////////////////////////
-		// 0x6x
-		case EL.SETI: // "60
-		case EL.SETC: // "61"，返信必要あり
-		EL.replySetDetail( rinfo, els, dev_details );
-		break;
+async function setup() {
+	// ノードプロファイルに関しては内部処理するので，ユーザーはエアコンに関する受信処理だけを記述する．
+	let elsocket = await EL.initialize(objList, function (rinfo, els, e) {
+		if (e) {
+			console.error(e);
+			return;
+		}
+		if( els.DEOJ.substr(0,4) == '0ef0' ) {return;}  // Node profileに関しては何もしない
 
-		case EL.GET: // 0x62，Get
-		EL.replyGetDetail( rinfo, els, dev_details );
-		break;
+		// ESVで振り分け，主に0x60系列に対応すればいい
+		switch (els.ESV) {
+			////////////////////////////////////////////////////////////////////////////////////
+			// 0x6x
+			case EL.SETI: // "60
+			case EL.SETC: // "61"，返信必要あり
+			EL.replySetDetail( rinfo, els, dev_details );
+			break;
 
-		case EL.INFREQ: // 0x63
-		break;
+			case EL.GET: // 0x62，Get
+			EL.replyGetDetail( rinfo, els, dev_details );
+			break;
 
-		case EL.SETGET: // "6e"
-		break;
+			case EL.INFREQ: // 0x63
+			break;
 
-		default:
-		break;
-	}
+			case EL.SETGET: // "6e"
+			break;
 
-}, 0, {ignoreMe: true, autoGetProperties: false, debugMode: false});
+			default:
+			break;
+		}
+
+	}, 0, {ignoreMe: true, autoGetProperties: false, debugMode: false});
+
+	dev_details['013001']['83'][7]  = dev_details['029001']['83'][7]  = EL.Node_details["83"][7];
+	dev_details['013001']['83'][8]  = dev_details['029001']['83'][8]  = EL.Node_details["83"][8];
+	dev_details['013001']['83'][9]  = dev_details['029001']['83'][9]  = EL.Node_details["83"][9];
+	dev_details['013001']['83'][10] = dev_details['029001']['83'][10] = EL.Node_details["83"][10];
+	dev_details['013001']['83'][11] = dev_details['029001']['83'][11] = EL.Node_details["83"][11];
+	dev_details['013001']['83'][12] = dev_details['029001']['83'][12] = EL.Node_details["83"][12];
+
+	//////////////////////////////////////////////////////////////////////
+	// 全て立ち上がったのでINFでエアコンONの宣言
+	EL.sendOPC1('224.0.23.0', [0x01, 0x30, 0x01], [0x0e, 0xf0, 0x01], 0x73, 0x80, 0x30);
+	// 全て立ち上がったのでINFで照明ONの宣言
+	EL.sendOPC1('224.0.23.0', [0x02, 0x90, 0x01], [0x0e, 0xf0, 0x01], 0x73, 0x80, 0x30);
+}
 
 
-//////////////////////////////////////////////////////////////////////
-// 全て立ち上がったのでINFでエアコンONの宣言
-EL.sendOPC1('224.0.23.0', [0x01, 0x30, 0x01], [0x0e, 0xf0, 0x01], 0x73, 0x80, 0x30);
-// 全て立ち上がったのでINFで照明ONの宣言
-EL.sendOPC1('224.0.23.0', [0x02, 0x90, 0x01], [0x0e, 0xf0, 0x01], 0x73, 0x80, 0x30);
+setup();
 
 
 //////////////////////////////////////////////////////////////////////
@@ -698,6 +711,7 @@ x Warranty
 
 ## Log
 
+- 2.9.1 EPC83, identifier のバグ修正
 - 2.9.0 OPC2以上に対応するべくSet/Getの関数を用意した
 - 2.8.1 node profile 8b = 02とした
 - 2.8.0 IPv6のignoreMeが効いてないバグを修正
