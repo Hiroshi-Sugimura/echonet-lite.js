@@ -86,33 +86,51 @@ This is a demo program for developping air conditioner object.
 
 ```JavaScript:Demo
 //////////////////////////////////////////////////////////////////////
-// ECHONET Lite
+//	Copyright (C) Hiroshi SUGIMURA 2022.09.22 - above.
+//////////////////////////////////////////////////////////////////////
 'use strict'
+
 
 //////////////////////////////////////////////////////////////////////
 // ECHONET Lite
 let EL = require('echonet-lite');
 
-// エアコンを例に
-let objList = ['013001'];
+// エアコンと照明があるとする
+let objList = ['013001','029001'];
 
 // 自分のエアコンのデータ，今回はこのデータをグローバル的に使用する方法で紹介する．
-let airconObj = {
-	// super
-	"80": [0x30],  // 動作状態
-	"81": [0xff],  // 設置場所
-	"82": [0x00, 0x00, 0x66, 0x00], // EL version, 1.1
-	"88": [0x42],  // 異常状態
-	"8a": [0x00, 0x00, 0x77], // maker code
-	"9d": [0x04, 0x80, 0x8f, 0xa0, 0xb0],        // inf map, 1 Byte目は個数
-	"9e": [0x04, 0x80, 0x8f, 0xa0, 0xb0],        // set map, 1 Byte目は個数
-	"9f": [0x0d, 0x80, 0x81, 0x82, 0x88, 0x8a, 0x8f, 0x9d, 0x9e, 0x9f, 0xa0, 0xb0, 0xb3, 0xbb], // get map, 1 Byte目は個数
-	// child
-	"8f": [0x41], // 節電動作設定
-	"a0": [0x31], // 風量設定
-	"b0": [0x41], // 運転モード設定
-	"b3": [0x19], // 温度設定値
-	"bb": [0x1a] // 室内温度計測値
+let dev_details = {
+	'013001': {
+		// super
+		"80": [0x30],  // 動作状態
+		"81": [0xff],  // 設置場所
+		"82": [0x00, 0x00, 0x66, 0x00], // EL version, 1.1
+		"88": [0x42],  // 異常状態
+		"8a": [0x00, 0x00, 0x77], // maker code
+		"9d": [0x04, 0x80, 0x8f, 0xa0, 0xb0],        // inf map, 1 Byte目は個数
+		"9e": [0x04, 0x80, 0x8f, 0xa0, 0xb0],        // set map, 1 Byte目は個数
+		"9f": [0x0d, 0x80, 0x81, 0x82, 0x88, 0x8a, 0x8f, 0x9d, 0x9e, 0x9f, 0xa0, 0xb0, 0xb3, 0xbb], // get map, 1 Byte目は個数
+		// child
+		"8f": [0x41], // 節電動作設定
+		"a0": [0x31], // 風量設定
+		"b0": [0x41], // 運転モード設定
+		"b3": [0x19], // 温度設定値
+		"bb": [0x1a] // 室内温度計測値
+	},
+	'029001': {  // lighting
+		// super
+		'80': [0x31], // 動作状態, set?, get, inf
+		'81': [0x0f], // 設置場所, set, get, inf
+		'82': [0x00, 0x00, 0x50, 0x01],  // spec version, P. rev1, get
+		'83': [0xfe, 0x00, 0x00, 0x77, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03], // identifier, initialize時に、renewNICList()できちんとセットするとよい, get
+		'88': [0x42], // 異常状態, 0x42 = 異常無, get
+		'8a': [0x00, 0x00, 0x77],  // maker code, kait, get
+		'9d': [0x04, 0x80, 0x81],  // inf map, 1 Byte目は個数, get
+		'9e': [0x04, 0x80, 0x81, 0xb6],  // set map, 1 Byte目は個数, get
+		'9f': [0x0a, 0x80, 0x81, 0x82, 0x83, 0x88, 0x8a, 0x9d, 0x9e, 0x9f, 0xb6], // get map, 1 Byte目は個数, get
+		// uniq
+		'b6': [0x42] // 点灯モード設定, set, get
+	}
 };
 
 
@@ -122,48 +140,44 @@ let elsocket = EL.initialize(objList, function (rinfo, els, e) {
 		console.error(e);
 		return;
 	}
-	// コントローラがGetしてくるので，対応してあげる
-	// エアコンを指定してきたかチェック
-	if (els.DEOJ == '013000' || els.DEOJ == '013001') {
-		console.dir( els );
+	if( els.DEOJ.substr(0,4) == '0ef0' ) {return;}  // Node profileに関しては何もしない
 
-		// ESVで振り分け，主に0x60系列に対応すればいい
-		switch (els.ESV) {
-			////////////////////////////////////////////////////////////////////////////////////
-			// 0x6x
-			case EL.SETI: // "60
-				break;
-			case EL.SETC: // "61"，返信必要あり
-				break;
+	// ESVで振り分け，主に0x60系列に対応すればいい
+	switch (els.ESV) {
+		////////////////////////////////////////////////////////////////////////////////////
+		// 0x6x
+		case EL.SETI: // "60
+		case EL.SETC: // "61"，返信必要あり
+		EL.replySetDetail( rinfo, els, dev_details );
+		break;
 
-			case EL.GET: // 0x62，Get
-				for (var epc in els.DETAILs) {
-					if (airconObj[epc]) { // 持ってるEPCのとき
-						EL.replyOPC1(rinfo.address, EL.toHexArray(els.TID), EL.toHexArray(els.DEOJ), EL.toHexArray(els.SEOJ), 0x72, EL.toHexArray(epc), airconObj[epc]);
-					} else { // 持っていないEPCのとき, SNA
-						EL.replyOPC1(rinfo.address, EL.toHexArray(els.TID), EL.toHexArray(els.DEOJ), EL.toHexArray(els.SEOJ), 0x52, EL.toHexArray(epc), [0x00]);
-					}
-				}
-				break;
+		case EL.GET: // 0x62，Get
+		EL.replyGetDetail( rinfo, els, dev_details );
+		break;
 
-			case EL.INFREQ: // 0x63
-				break;
+		case EL.INFREQ: // 0x63
+		break;
 
-			case EL.SETGET: // "6e"
-				break;
+		case EL.SETGET: // "6e"
+		break;
 
-			default:
-				// console.log( "???" );
-				// console.dir( els );
-				break;
-		}
+		default:
+		break;
 	}
+
 }, 0, {ignoreMe: true, autoGetProperties: false, debugMode: false});
 
 
 //////////////////////////////////////////////////////////////////////
 // 全て立ち上がったのでINFでエアコンONの宣言
 EL.sendOPC1('224.0.23.0', [0x01, 0x30, 0x01], [0x0e, 0xf0, 0x01], 0x73, 0x80, 0x30);
+// 全て立ち上がったのでINFで照明ONの宣言
+EL.sendOPC1('224.0.23.0', [0x02, 0x90, 0x01], [0x0e, 0xf0, 0x01], 0x73, 0x80, 0x30);
+
+
+//////////////////////////////////////////////////////////////////////
+// EOF
+//////////////////////////////////////////////////////////////////////
 ```
 
 
@@ -230,6 +244,47 @@ EL.identificationNumbers
     OBJ: '028701'
   }
 ]
+```
+
+## 自分がデバイス扱いしたい場合は下記の dev_details の形でEPC管理すると使える関数がある
+
+下記はエアコンと照明の詳細オブジェクトを持っている場合である。
+
+```
+// 自分のエアコンのデータ，今回はこのデータをグローバル的に使用する方法で紹介する．
+let dev_details = {
+	'013001': {
+		// super
+		"80": [0x30],  // 動作状態
+		"81": [0xff],  // 設置場所
+		"82": [0x00, 0x00, 0x66, 0x00], // EL version, 1.1
+		"88": [0x42],  // 異常状態
+		"8a": [0x00, 0x00, 0x77], // maker code
+		"9d": [0x04, 0x80, 0x8f, 0xa0, 0xb0],        // inf map, 1 Byte目は個数
+		"9e": [0x04, 0x80, 0x8f, 0xa0, 0xb0],        // set map, 1 Byte目は個数
+		"9f": [0x0d, 0x80, 0x81, 0x82, 0x88, 0x8a, 0x8f, 0x9d, 0x9e, 0x9f, 0xa0, 0xb0, 0xb3, 0xbb], // get map, 1 Byte目は個数
+		// child
+		"8f": [0x41], // 節電動作設定
+		"a0": [0x31], // 風量設定
+		"b0": [0x41], // 運転モード設定
+		"b3": [0x19], // 温度設定値
+		"bb": [0x1a] // 室内温度計測値
+	},
+	'029001': {  // lighting
+		// super
+		'80': [0x31], // 動作状態, set?, get, inf
+		'81': [0x0f], // 設置場所, set, get, inf
+		'82': [0x00, 0x00, 0x50, 0x01],  // spec version, P. rev1, get
+		'83': [0xfe, 0x00, 0x00, 0x77, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03], // identifier, initialize時に、renewNICList()できちんとセットする, get
+		'88': [0x42], // 異常状態, 0x42 = 異常無, get
+		'8a': [0x00, 0x00, 0x77],  // maker code, kait, get
+		'9d': [0x04, 0x80, 0x81],  // inf map, 1 Byte目は個数, get
+		'9e': [0x04, 0x80, 0x81, 0xb6],  // set map, 1 Byte目は個数, get
+		'9f': [0x0a, 0x80, 0x81, 0x82, 0x83, 0x88, 0x8a, 0x9d, 0x9e, 0x9f, 0xb6], // get map, 1 Byte目は個数, get
+		// uniq
+		'b6': [0x42] // 点灯モード設定, set, get
+	}
+};
 ```
 
 
@@ -487,14 +542,6 @@ EL.sendString = function( ip, string )
 ```
 
 
-* ELの返信用、典型的なOPC一個でやるタイプ．TIDをGetメッセージに合わせて返信しないといけないため
-
-```
-EL.replyOPC1 = function (ip, tid, seoj, deoj, esv, epc, edt)
-```
-
-
-
 * 機器検索
 
 ```
@@ -520,6 +567,54 @@ ex.
 EL.setObserveFacilities( 1000, function() {  // 1000 ms
 	console.log('EL.facilities are changed.');
 });
+```
+
+
+
+## OPC2以上対応, OPC managements for more than two
+
+![](img/multi.png)
+
+
+* ELの返信用、典型的なOPC一個でやるタイプ．TIDをGetメッセージに合わせて返信しないといけないため
+
+```
+EL.replyOPC1 = function (ip, tid, seoj, deoj, esv, epc, edt)
+```
+
+* OPC2以上にSet/Getで対応するための関数、自分で管理している機器の状態を dev_details の形式で作ってわたす
+
+```
+EL.replyGetDetail = async function(rinfo, els, dev_details)
+```
+
+```
+EL.replySetDetail = async function(rinfo, els, dev_details)
+```
+
+
+* dev_detailsの形式、エアコンの例
+
+```dev_details:json
+let dev_details = {
+	'013001': {
+		// super
+		"80": [0x30],  // 動作状態
+		"81": [0xff],  // 設置場所
+		"82": [0x00, 0x00, 0x66, 0x00], // EL version, 1.1
+		"88": [0x42],  // 異常状態
+		"8a": [0x00, 0x00, 0x77], // maker code
+		"9d": [0x04, 0x80, 0x8f, 0xa0, 0xb0],        // inf map, 1 Byte目は個数
+		"9e": [0x04, 0x80, 0x8f, 0xa0, 0xb0],        // set map, 1 Byte目は個数
+		"9f": [0x0d, 0x80, 0x81, 0x82, 0x88, 0x8a, 0x8f, 0x9d, 0x9e, 0x9f, 0xa0, 0xb0, 0xb3, 0xbb], // get map, 1 Byte目は個数
+		// child
+		"8f": [0x41], // 節電動作設定
+		"a0": [0x31], // 風量設定
+		"b0": [0x41], // 運転モード設定
+		"b3": [0x19], // 温度設定値
+		"bb": [0x1a] // 室内温度計測値
+	}
+};
 ```
 
 
@@ -603,6 +698,7 @@ x Warranty
 
 ## Log
 
+- 2.9.0 OPC2以上に対応するべくSet/Getの関数を用意した
 - 2.8.1 node profile 8b = 02とした
 - 2.8.0 IPv6のignoreMeが効いてないバグを修正
 - 2.7.1 NIC auto 対応、NIC list取得のバグ修正、WindowsによるIPv6 Multicastのして方法が不明(bug)

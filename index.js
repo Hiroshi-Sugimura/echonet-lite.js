@@ -58,21 +58,21 @@ let EL = {
 	sock6: null,
 	Node_details:	{
 		// super
-		"88": [0x42], // Fault status
-		"8a": [0x00, 0x00, 0x77], // maker code, manufacturer code, kait = 00 00 77
-		"8b": [0x00, 0x00, 0x02], // business facility code, homeele = 00 00 02
-		"9d": [0x02, 0x80, 0xd5],       // inf map, 1 Byte目は個数
-		"9e": [0x00],                 // set map, 1 Byte目は個数
-		"9f": [0x09, 0x80, 0x82, 0x83, 0x8a, 0xd3, 0xd4, 0xd5, 0xd6, 0xd7], // get map, 1 Byte目は個数
+		"88": [0x42], // Fault status, get
+		"8a": [0x00, 0x00, 0x77], // maker code, manufacturer code, kait = 00 00 77, get
+		"8b": [0x00, 0x00, 0x02], // business facility code, homeele = 00 00 02, get
+		"9d": [0x02, 0x80, 0xd5], // inf map, 1 Byte目は個数, get
+		"9e": [0x00],             // set map, 1 Byte目は個数, get
+		"9f": [0x0e, 0x80, 0x82, 0x83, 0x88, 0x8a, 0x8b, 0x9d, 0x9e, 0x9f, 0xd3, 0xd4, 0xd5, 0xd6, 0xd7], // get map, 1 Byte目は個数, get
 		// detail
-		"80": [0x30],
-		"82": [0x01, 0x0d, 0x01, 0x00], // EL version, 1.13
-		"83": [0xfe, 0x00, 0x00, 0x77, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01], // identifier, initialize時に、renewNICList()できちんとセットする
-		"d3": [0x00, 0x00, 0x01],  // 自ノードで保持するインスタンスリストの総数（ノードプロファイル含まない）, initialize時にuser項目から自動計算
-		"d4": [0x00, 0x02],        // 自ノードクラス数（ノードプロファイル含む）, initialize時にuser項目から自動計算
-		"d5": [],    // インスタンスリスト通知, 1Byte目はインスタンス数, initialize時にuser項目から自動計算
-		"d6": [],    // 自ノードインスタンスリストS, initialize時にuser項目から自動計算
-		"d7": []     // 自ノードクラスリストS, initialize時にuser項目から自動計算
+		"80": [0x30], // 動作状態, get, inf
+		"82": [0x01, 0x0d, 0x01, 0x00], // EL version, 1.13, get
+		"83": [0xfe, 0x00, 0x00, 0x77, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01], // identifier, initialize時に、renewNICList()できちんとセットする, get
+		"d3": [0x00, 0x00, 0x01],  // 自ノードで保持するインスタンスリストの総数（ノードプロファイル含まない）, initialize時にuser項目から自動計算, get
+		"d4": [0x00, 0x02],        // 自ノードクラス数（ノードプロファイル含む）, initialize時にuser項目から自動計算, get
+		"d5": [],    // インスタンスリスト通知, 1Byte目はインスタンス数, initialize時にuser項目から自動計算, anno
+		"d6": [],    // 自ノードインスタンスリストS, initialize時にuser項目から自動計算, get
+		"d7": []     // 自ノードクラスリストS, initialize時にuser項目から自動計算, get
 	},
 	ipVer: 4, // 0 = IPv4 & IPv6, 4 = IPv4, 6 = IPv6
 	nicList: {v4: [], v6: []},
@@ -668,24 +668,24 @@ EL.sendOPC1 = function (ip, seoj, deoj, esv, epc, edt) {
 
 	if (esv == 0x62) { // get
 		buffer = Buffer.from([
-			4x10, 0x81,
+			0x10, 0x81,
 			// 0x00, 0x00,
 			EL.tid[0], EL.tid[1],
 			seoj[0], seoj[1], seoj[2],
 			deoj[0], deoj[1], deoj[2],
 			esv,
-			5x01,
+			0x01,
 			epc,
-			6x00]);
+			0x00]);
 	} else {
 		buffer = Buffer.from([
-			7x10, 0x81,
+			0x10, 0x81,
 			// 0x00, 0x00,
 			EL.tid[0], EL.tid[1],
 			seoj[0], seoj[1], seoj[2],
 			deoj[0], deoj[1], deoj[2],
 			esv,
-			8x01,
+			0x01,
 			epc,
 			edt.length].concat(edt));
 	}
@@ -736,28 +736,232 @@ EL.replyOPC1 = function (ip, tid, seoj, deoj, esv, epc, edt) {
 
 	if (esv == 0x62) { // get
 		buffer = Buffer.from([
-			9x10, 0x81,
+			0x10, 0x81,
 			tid[0], tid[1],
 			seoj[0], seoj[1], seoj[2],
 			deoj[0], deoj[1], deoj[2],
 			esv,
-			10x01,
+			0x01,
 			epc,
-			11x00]);
+			0x00]);
 	} else {
 		buffer = Buffer.from([
-			12x10, 0x81,
+			0x10, 0x81,
 			tid[0], tid[1],
 			seoj[0], seoj[1], seoj[2],
 			deoj[0], deoj[1], deoj[2],
 			esv,
-			13x01,
+			0x01,
 			epc,
 			edt.length].concat(edt));
 	}
 
 	// データができたので送信する
 	return EL.sendBase(ip, buffer);
+};
+
+
+
+// dev_details の形式で自分のEPC状況を渡すと、その状況を返答する
+// 例えば下記に001101(温度センサ)の例を示す
+/*
+dev_details: {
+	'001101': {
+		// super
+		'80': [0x30], // 動作状態, on, get, inf
+		'81': [0x0f], // 設置場所, set, get, inf
+		'82': [0x00, 0x00, 0x50, 0x01],  // spec version, P. rev1, get
+		'83': [0xfe, 0x00, 0x00, 0x77, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06], // identifier, get
+		'88': [0x42], // 異常状態, 0x42 = 異常無, get
+		'8a': [0x00, 0x00, 0x77],  // maker code, kait, get
+		'9d': [0x02, 0x80, 0x81],  // inf map, 1 Byte目は個数, get
+		'9e': [0x01, 0x81],  // set map, 1 Byte目は個数, get
+		'9f': [0x0a, 0x80, 0x81, 0x82, 0x83, 0x88, 0x8a, 0x9d, 0x9e, 0x9f, 0xe0], // get map, 1 Byte目は個数, get
+		// detail
+		'e0': [0x00, 0xdc]  // 温度計測値, get
+	}
+}
+*/
+
+
+// dev_detailのGetに対して複数OPCにも対応して返答する
+EL.replyGetDetail = async function(rinfo, els, dev_details) {
+	let success = true;
+	let retDetails = [];
+	let ret_opc = 0;
+	// console.log( 'Recv DETAILs:', els.DETAILs );
+	for (let epc in els.DETAILs) {
+		if( await EL.replyGetDetail_sub( rinfo, els, dev_details, epc ) ) {
+			retDetails.push( parseInt(epc,16) );  // epcは文字列なので
+			retDetails.push( dev_details[els.DEOJ][epc].length );
+			retDetails.push( dev_details[els.DEOJ][epc] );
+			// console.log( 'retDetails:', retDetails );
+		}else{
+			// console.log( 'failed:', els.DEOJ, epc );
+			retDetails.push( parseInt(epc,16) );  // epcは文字列なので
+			retDetails.push( [0x00] );
+			success = false;
+		}
+		ret_opc += 1;
+	}
+
+	let ret_esv = success? 0x72: 0x52;  // 一つでも失敗したらGET_SNA
+
+	let arr = [0x10, 0x81, EL.toHexArray(els.TID), EL.toHexArray(els.DEOJ), EL.toHexArray(els.SEOJ), ret_esv, ret_opc, retDetails ];
+	EL.sendArray( rinfo.address, arr.flat(Infinity) );
+};
+
+// 上記のサブルーチン
+EL.replyGetDetail_sub = function(rinfo, els, dev_details, epc) {
+	if( !dev_details[els.DEOJ] ) { // EOJそのものがあるか？
+		return false
+	}
+
+	// console.log( dev_details[els.DEOJ], els.DEOJ, epc );
+	if (dev_details[els.DEOJ][epc]) { // EOJは存在し、EPCも持っている
+		return true;
+	}else{
+		return false;  // EOJはなある、EPCはない
+	}
+};
+
+
+// dev_detailのSetに対して複数OPCにも対応して返答する
+// ただしEPC毎の設定値に関して基本はノーチェックなので注意すべし
+// EPC毎の設定値チェックや、INF処理に関しては下記の replySetDetail_sub にて実施
+EL.replySetDetail = async function(rinfo, els, dev_details) {
+	let success = true;
+	let retDetails = [];
+	let ret_opc = 0;
+	// console.log( 'Recv DETAILs:', els.DETAILs );
+	for (let epc in els.DETAILs) {
+		if( await EL.replySetDetail_sub( rinfo, els, dev_details, epc ) ) {
+			retDetails.push( parseInt(epc,16) );  // epcは文字列なので
+			retDetails.push( dev_details[els.DEOJ][epc].length );
+			retDetails.push( dev_details[els.DEOJ][epc] );
+		}else{
+			retDetails.push( parseInt(epc,16) );  // epcは文字列なので
+			retDetails.push( [0x00] );
+			success = false;
+		}
+		ret_opc += 1;
+	}
+
+	let ret_esv = success? 0x71: 0x51;  // 一つでも失敗したらSET_SNA
+
+	let arr = [0x10, 0x81, EL.toHexArray(els.TID), EL.toHexArray(els.DEOJ), EL.toHexArray(els.SEOJ), ret_esv, ret_opc, retDetails ];
+	EL.sendArray( rinfo.address, arr.flat(Infinity) );
+};
+
+// 上記のサブルーチン
+EL.replySetDetail_sub = function(rinfo, els, dev_details, epc) {
+	if ( !dev_details[els.DEOJ] ) { // EOJそのものがあるか？
+		return false
+	}
+
+	let edt = els.DETAILs[epc];
+
+	switch( els.DEOJ.substr(0,4) ) {
+		case '0ef0': // ノードプロファイルはsetするものない
+		return false;
+		break;
+
+		case '0130': // エアコン
+		switch (epc) { // 持ってるEPCのとき
+			// super
+			case '80':  // 動作状態, set, get, inf
+			if( edt == '30' || edt == '31' ) {
+				dev_details[els.DEOJ][epc] = [parseInt(edt, 16)];
+				EL.sendOPC1( EL.EL_Multi, EL.toHexArray(els.DEOJ), EL.toHexArray(els.SEOJ), EL.INF, EL.toHexArray(epc), [parseInt(edt, 16)] );  // INF
+				return true;
+			}else{
+				return false;
+			}
+			break;
+
+			case '81':  // 設置場所, set, get, inf
+			dev_details[els.DEOJ][epc] = [parseInt(edt, 16)];
+			EL.sendOPC1( EL.EL_Multi, EL.toHexArray(els.DEOJ), EL.toHexArray(els.SEOJ), EL.INF, EL.toHexArray(epc), [parseInt(edt, 16)] );  // INF
+			return true;
+			break;
+
+			// detail
+			case '8f': // 節電動作設定, set, get, inf
+			if( edt == '41' || edt == '42' ) {
+				dev_details[els.DEOJ][epc] = [parseInt(edt, 16)];
+				EL.sendOPC1( EL.EL_Multi, EL.toHexArray(els.DEOJ), EL.toHexArray(els.SEOJ), EL.INF, EL.toHexArray(epc), [parseInt(edt, 16)] );  // INF
+				return true;
+			}else{
+				return false;
+			}
+			break;
+
+			case 'b0': // 運転モード設定, set, get, inf
+			switch( edt ) {
+				case '40': // その他
+				case '41': // 自動
+				case '42': // 冷房
+				case '43': // 暖房
+				case '44': // 除湿
+				case '45': // 送風
+				dev_details[els.DEOJ][epc] = [parseInt(edt, 16)];
+				EL.sendOPC1( EL.EL_Multi, EL.toHexArray(els.DEOJ), EL.toHexArray(els.SEOJ), EL.INF, EL.toHexArray(epc), [parseInt(edt, 16)] );  // INF
+				return true;
+				break;
+
+				default:
+				return false;
+			}
+			break;
+
+			case 'b3': // 温度設定, set, get
+			let temp = parseInt( edt, 16 );
+			if( -1 < temp && temp < 51 ) {
+				dev_details[els.DEOJ][epc] = [temp];
+				return true;
+			}else{
+				return false;
+			}
+			break;
+
+			case 'a0': // 風量設定, set, get, inf
+			switch( edt ) {
+				case '31': // 0x31..0x38の8段階
+				case '32': // 0x31..0x38の8段階
+				case '33': // 0x31..0x38の8段階
+				case '34': // 0x31..0x38の8段階
+				case '35': // 0x31..0x38の8段階
+				case '36': // 0x31..0x38の8段階
+				case '37': // 0x31..0x38の8段階
+				case '38': // 0x31..0x38の8段階
+				case '41': // 自動
+				dev_details[els.DEOJ][epc] = [parseInt(edt, 16)];
+				EL.sendOPC1( EL.EL_Multi, EL.toHexArray(els.DEOJ), EL.toHexArray(els.SEOJ), EL.INF, EL.toHexArray(epc), [parseInt(edt, 16)] );  // INF
+				return true;
+				break;
+				default:
+				// EDTがおかしい
+				return false;
+			}
+			break;
+
+			default: // 持っていないEPCやset不可能のとき
+			if (dev_details[els.DEOJ][epc]) { // EOJは存在し、EPCも持っている
+				return true;
+			}else{
+				return false;  // EOJはなある、EPCはない
+			}
+		}
+		break;
+
+
+		default:  // 詳細を作っていないオブジェクトの一律処理
+		if (dev_details[els.DEOJ][epc]) { // EOJは存在し、EPCも持っている
+			return true;
+		}else{
+			return false;  // EOJはなある、EPCはない
+		}
+	}
 };
 
 
@@ -815,10 +1019,12 @@ EL.returner = function (bytes, rinfo, userfunc) {
 				// 0x6x
 				case EL.SETI: // "60
 				case EL.SETC: // "61"
+				EL.replySetDetail( rinfo, els, {'0ef001': EL.Node_details} );
 				break;
 
 				case EL.GET: // 0x62
 				// console.log( "EL.returner: get prop. of Node profile.");
+				/*
 				for (let epc in els.DETAILs) {
 					if (EL.Node_details[epc]) { // 持ってるEPCのとき
 						EL.replyOPC1(rinfo.address, EL.toHexArray(els.TID), [0x0e, 0xf0, 0x01], EL.toHexArray(els.SEOJ), 0x72, EL.toHexArray(epc), EL.Node_details[epc]);
@@ -826,6 +1032,9 @@ EL.returner = function (bytes, rinfo, userfunc) {
 						EL.replyOPC1(rinfo.address, EL.toHexArray(els.TID), [0x0e, 0xf0, 0x01], EL.toHexArray(els.SEOJ), 0x52, EL.toHexArray(epc), [0x00]);
 					}
 				}
+				*/
+
+				EL.replyGetDetail( rinfo, els, {'0ef001': EL.Node_details} );
 				break;
 
 				case EL.INF_REQ: // 0x63
