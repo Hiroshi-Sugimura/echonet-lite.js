@@ -711,6 +711,7 @@ x Warranty
 
 ## Log
 
+- 2.9.3 EPC:bf, Set対応
 - 2.9.2 EPC:bf, 追加
 - 2.9.1 EPC:83, identifier のバグ修正
 - 2.9.0 OPC2以上に対応するべくSet/Getの関数を用意した

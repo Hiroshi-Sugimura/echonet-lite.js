@@ -859,8 +859,19 @@ EL.replySetDetail_sub = function(rinfo, els, dev_details, epc) {
 
 	switch( els.DEOJ.substr(0,4) ) {
 		case '0ef0': // ノードプロファイルはsetするものない
-		return false;
+		switch( epc ) {
+			case 'bf': // 個体識別番号, 最上位1bitは変化させてはいけない。
+			let ea = EL.toHexArray(edt);
+			dev_details[els.DEOJ][epc] = [ ((ea[0] & 0x7F) | (dev_details[els.DEOJ][epc][0] & 0x80)), ea[1] ];
+			return true;
+			break;
+
+			default:
+			return false;
+			break;
+		}
 		break;
+
 
 		case '0130': // エアコン
 		switch (epc) { // 持ってるEPCのとき
