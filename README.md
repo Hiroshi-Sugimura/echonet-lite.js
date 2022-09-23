@@ -711,7 +711,8 @@ x Warranty
 
 ## Log
 
-- 2.9.1 EPC83, identifier のバグ修正
+- 2.9.2 EPC:bf, 追加
+- 2.9.1 EPC:83, identifier のバグ修正
 - 2.9.0 OPC2以上に対応するべくSet/Getの関数を用意した
 - 2.8.1 node profile 8b = 02とした
 - 2.8.0 IPv6のignoreMeが効いてないバグを修正
