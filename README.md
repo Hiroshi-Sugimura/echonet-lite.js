@@ -711,6 +711,7 @@ x Warranty
 
 ## Log
 
+- 2.9.4 定数 EL_Multi, EL_Multi6 がEL.EL_Multiとなって冗長なので、同等内容のMulti、Multi6を追加した。
 - 2.9.3 EPC:bf, Set対応
 - 2.9.2 EPC:bf, 追加
 - 2.9.1 EPC:83, identifier のバグ修正

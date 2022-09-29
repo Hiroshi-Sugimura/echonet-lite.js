@@ -49,7 +49,9 @@ let EL = {
 	SETGET_RES: "7e",
 	EL_port: 3610,
 	EL_Multi: '224.0.23.0',
+	Multi: '224.0.23.0',
 	EL_Multi6: 'FF02::1',
+	Multi6: 'FF02::1',
 	EL_obj: null,
 	EL_cls: null,
 
@@ -1278,7 +1280,7 @@ EL.getPropertyMaps = function ( ip, eoj ) {
 	EL.increaseWaitings();
 
 	setTimeout(() => {
-		EL.sendOPC1( ip, [0x0e,0xf0,0x01], eoj, 0x62, 0x83, [0x00] );      // INF prop
+		EL.sendOPC1( ip, [0x0e,0xf0,0x01], eoj, 0x62, 0x83, [0x00] );      // identificationNumbers
 		EL.decreaseWaitings();
 	}, EL.autoGetDelay * (EL.autoGetWaitings+1));
 	EL.increaseWaitings();
