@@ -211,7 +211,7 @@ facilities: {}  // ネットワーク内の機器情報リスト; device and pro
 ELデータはこのモジュールで定義した構造で，下記のようになっています．
 ELDATA is ECHONET Lite data stracture, which conteints
 
-## 受信データ
+## 受信データ (=els, =el structure型とも)
 ```
 ELDATA {
   EHD : str.substr( 0, 4 ),
@@ -518,7 +518,7 @@ EL.toHexArray = function( string )
 
 APIは送信の成功失敗に関わらず，TIDをreturnすることにしました。
 送信TIDはEL.tid[]で管理しています。
-sendOPC1だけはEL.tidを自動的に+1します。
+sendOPC1とEL.sendEPCsはEL.tidを自動的に+1します。
 
 * EL送信のベース, base function
 
@@ -532,7 +532,7 @@ EL.sendBase = function( ip, buffer )
 EL.sendArray = function( ip, array )
 ```
 
-* ELの非常に典型的なOPC一個でやる方式, send EL-like
+* OPC一個でやる方式, send EL-like
 
 ```
 EL.sendOPC1 = function( ip, seoj, deoj, esv, epc, edt)
@@ -548,10 +548,40 @@ EL.sendOPC1( '192.168.2.150', "05ff01", "013501", EL.SETC, "80", "31");
 ```
 
 
-* ELの非常に典型的な送信3 文字列タイプ, send EL-like string
+* 文字列で送信, send EL-like string
 
 ```
 EL.sendString = function( ip, string )
+```
+
+
+* 複数のEPCで送信する
+	- seoj, deoj, esvはbyteでもstringでも受け付ける
+	- DETAILsは下記の構造
+	- DETAILs = {epc: edt, epc: edt, ...}
+	- ex. {'80':'31', '8a':'000077'}
+```
+EL.sendDetails = function (ip, seoj, deoj, esv, DETAILs)
+```
+
+* 省略したELDATA型で送信する
+	- ELDATA {
+	-   TID : String(4),      // 省略すると自動
+	-   SEOJ : String(6),
+	-   DEOJ : String(6),
+	-   ESV : String(2),
+	-   DETAILs: Object
+	- }
+	- ex.
+	- ELDATA {
+	-   TID : '0001',      // 省略すると自動
+	-   SEOJ : '05ff01',
+	-   DEOJ : '029001',
+	-   ESV : '61',
+	-   DETAILs:  {'80':'31', '8a':'000077'}
+	- }
+```
+EL.sendELDATA = function (ip, eldata)
 ```
 
 
@@ -711,6 +741,10 @@ x Warranty
 
 ## Log
 
+- 2.11.0 メソド追加（EL.sendELDATA）
+- 2.10.0 メソド追加（EL.sendDetails）
+- 2.9.6 parseDetail、OPCが10以上でバグがあったのを修正
+- 2.9.5 コメント修正
 - 2.9.4 定数 EL_Multi, EL_Multi6 がEL.EL_Multiとなって冗長なので、同等内容のMulti、Multi6を追加した。
 - 2.9.3 EPC:bf, Set対応
 - 2.9.2 EPC:bf, 追加

@@ -388,12 +388,14 @@ EL.bytesShow = function (bytes) {
 //////////////////////////////////////////////////////////////////////
 
 // Detailだけをparseする，内部で主に使う
-EL.parseDetail = function( opc, str ) {
+EL.parseDetail = function( _opc, str ) {
+	console.log('EL.parseDetail() opc:', _opc, 'str:', str);
 	let ret = {}; // 戻り値用，連想配列
 	str = str.toUpperCase();
 
 	try {
 		let array = EL.toHexArray( str );  // edts
+		let opc = EL.toHexArray(_opc)[0];
 		let epc = array[0]; // 最初は0
 		let pdc = array[1]; // 最初は1
 		let now = 0;  // 入力データの現在処理位置, Index
@@ -419,6 +421,8 @@ EL.parseDetail = function( opc, str ) {
 			// PDC（EDTのバイト数）
 			pdc = array[now];
 			now++;
+
+			console.log( 'opc:', opc, 'epc:', EL.toHexString(epc), 'pdc:', EL.toHexString(pdc));
 
 			// getの時は pdcが0なのでなにもしない，0でなければ値が入っている
 			if (pdc == 0) {
@@ -468,7 +472,7 @@ EL.parseBytes = function (bytes) {
 };
 
 
-// 1進数で表現された文字列をいれるとELDATA形式にする
+// 16進数で表現された文字列をいれるとELDATA形式にする
 EL.parseString = function (str) {
 	let eldata = {};
 	if( str.substr(0, 4) == '1082' ) {  // 任意電文形式, arbitrary message format
@@ -532,13 +536,13 @@ EL.ELDATA2Array = function (eldata) {
 	return ret;
 };
 
-// 2バイトを文字列の16進表現へ（1Byteは必ず2文字にする）
+// 1バイトを文字列の16進表現へ（1Byteは必ず2文字にする）
 EL.toHexString = function (byte) {
 	// 文字列0をつなげて，後ろから2文字分スライスする
 	return (("0" + byte.toString(16)).slice(-2));
 };
 
-// 3進表現の文字列を数値のバイト配列へ
+// 16進表現の文字列を数値のバイト配列へ
 EL.toHexArray = function (string) {
 	let ret = [];
 
@@ -622,6 +626,7 @@ EL.sendArray = function (ip, array) {
 
 
 // ELの非常に典型的なOPC一個でやる
+// TID自動インクリメント
 EL.sendOPC1 = function (ip, seoj, deoj, esv, epc, edt) {
 
 	// TIDの調整
@@ -699,6 +704,151 @@ EL.sendString = function (ip, string) {
 	// 送信する
 	return EL.sendBase(ip, Buffer.from(EL.toHexArray(string)));
 };
+
+
+// 複数のEPCで送信する
+// TID自動インクリメント
+// seoj, deoj, esvはbyteでもstringでも受け付ける
+// DETAILsは下記の構造
+// DETAILs = {epc: edt, epc: edt, ...}
+// ex. {'80':'31', '8a':'000077'}
+EL.sendDetails = function (ip, seoj, deoj, esv, DETAILs) {
+
+	// TIDの調整
+	let carry = 0; // 繰り上がり
+	if( EL.tid[1] == 0xff ) {
+		EL.tid[1] = 0;
+		carry = 1;
+	} else {
+		EL.tid[1] += 1;
+	}
+	if( carry == 1 ) {
+		if( EL.tid[0] == 0xff ) {
+			EL.tid[0] = 0;
+		} else {
+			EL.tid[0] += 1;
+		}
+	}
+
+	if (typeof (seoj) == "string") {
+		seoj = EL.toHexArray(seoj);
+	}
+
+	if (typeof (deoj) == "string") {
+		deoj = EL.toHexArray(deoj);
+	}
+
+	if (typeof (esv) == "string") {
+		esv = (EL.toHexArray(esv))[0];
+	}
+
+	let buffer;
+	let opc = 0;
+	let pdc = 0;
+	let detail = '';
+
+	for( let epc in DETAILs ) {
+		if( DETAILs[epc] == '' ) {  // '' の時は GetやGet_SNA等で存在する、この時はpdc省略
+			detail += epc + '00';
+		}else{
+			pdc = DETAILs[epc].length / 2;  // Byte数 = 文字数の半分
+			detail += epc + EL.toHexString(pdc) + DETAILs[epc];
+		}
+		opc += 1;
+	}
+
+	buffer = Buffer.from([
+		0x10, 0x81,
+		// 0x00, 0x00,
+		EL.tid[0], EL.tid[1],
+		seoj[0], seoj[1], seoj[2],
+		deoj[0], deoj[1], deoj[2],
+		esv,
+		opc,
+		EL.toHexArray(detail)].flat(Infinity));
+
+	// データができたので送信する
+	return EL.sendBase(ip, buffer);
+
+};
+
+
+// 省略したELDATAの形式で指定して送信する
+// ELDATA {
+//   TID : String(4),      // 省略すると自動
+//   SEOJ : String(6),
+//   DEOJ : String(6),
+//   ESV : String(2),
+//   DETAILs: Object
+// }
+// ex.
+// ELDATA {
+//   TID : '0001',      // 省略すると自動
+//   SEOJ : '05ff01',
+//   DEOJ : '029001',
+//   ESV : '61',
+//   DETAILs:  {'80':'31', '8a':'000077'}
+// }
+EL.sendELDATA = function (ip, eldata) {
+	let tid = [];
+	let seoj = [];
+	let deoj = [];
+
+	if( !eldata.TID || !eldata.TID == '') {		// TIDの指定がなければ自動
+		let carry = 0; // 繰り上がり
+		if( EL.tid[1] == 0xff ) {
+			EL.tid[1] = 0;
+			carry = 1;
+		} else {
+			EL.tid[1] += 1;
+		}
+		if( carry == 1 ) {
+			if( EL.tid[0] == 0xff ) {
+				EL.tid[0] = 0;
+			} else {
+				EL.tid[0] += 1;
+			}
+		}
+		tid[0] = EL.tid[0];
+		tid[1] = EL.tid[1];
+	}else{
+		tid = EL.toHexArray( eldata.TID );
+	}
+
+	seoj = EL.toHexArray(eldata.SEOJ);
+	deoj = EL.toHexArray(eldata.DEOJ);
+	esv  = EL.toHexArray(eldata.ESV);
+
+	let buffer;
+	let opc = 0;
+	let pdc = 0;
+	let detail = '';
+
+	for( let epc in eldata.DETAILs ) {
+		if( eldata.DETAILs[epc] == '' ) {  // '' の時は GetやGet_SNA等で存在する、この時はpdc省略
+			detail += epc + '00';
+		}else{
+			pdc = eldata.DETAILs[epc].length / 2;  // Byte数 = 文字数の半分
+			detail += epc + EL.toHexString(pdc) + eldata.DETAILs[epc];
+		}
+		opc += 1;
+	}
+
+	buffer = Buffer.from([
+		0x10, 0x81,
+		// 0x00, 0x00,
+		tid[0], tid[1],
+		seoj[0], seoj[1], seoj[2],
+		deoj[0], deoj[1], deoj[2],
+		esv,
+		opc,
+		EL.toHexArray(detail)].flat(Infinity));
+
+	// データができたので送信する
+	return EL.sendBase(ip, buffer);
+};
+
+
 
 
 // ELの返信用、典型的なOPC一個でやる．TIDを併せて返信しないといけないため
@@ -1310,7 +1460,7 @@ EL.getPropertyMaps = function ( ip, eoj ) {
 
 
 // parse Propaty Map Form 2
-// 14以上のプロパティ数の時，記述形式2，出力はForm1にすること, bitstr = EDT
+// 16以上のプロパティ数の時，記述形式2，出力はForm1にすること, bitstr = EDT
 EL.parseMapForm2 = function (bitstr) {
 	let ret = [];
 	let val = 0x80;
