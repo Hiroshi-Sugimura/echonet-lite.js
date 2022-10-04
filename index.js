@@ -393,7 +393,7 @@ EL.bytesShow = function (bytes) {
 EL.parseDetail = function( _opc, str ) {
 	// console.log('EL.parseDetail() opc:', _opc, 'str:', str);
 	let ret = {}; // 戻り値用，連想配列
-	str = str.toUpperCase();
+	// str = str.toUpperCase();
 
 	try {
 		let array = EL.toHexArray( str );  // edts
@@ -403,17 +403,7 @@ EL.parseDetail = function( _opc, str ) {
 		let now = 0;  // 入力データの現在処理位置, Index
 		let edt = [];  // 各edtをここに集めて，retに集約
 
-		// property mapだけEDT[0] != バイト数なので別処理
-		if( epc == 0x9d || epc == 0x9e || epc == 0x9f ) {
-			if( pdc >= 17) { // プロパティの数が16以上の場合（プロパティカウンタ含めてPDC17以上）は format 2
-				// 0byte=epc, 2byte=pdc, 4byte=edt
-				ret[ EL.toHexString(epc) ] = EL.bytesToString( EL.parseMapForm2( str.substr(4) ) );
-				return ret;
-			}
-			// format 2でなければ以下と同じ形式で解析可能
-		}
 
-		// それ以外はEDT[0] == byte数
 		// OPCループ
 		for (let i = 0; i < opc; i += 1) {
 			epc = array[now];  // EPC = 機能
@@ -424,12 +414,35 @@ EL.parseDetail = function( _opc, str ) {
 			pdc = array[now];
 			now++;
 
+			// それ以外はEDT[0] == byte数
 			// console.log( 'opc count:', i, 'epc:', EL.toHexString(epc), 'pdc:', EL.toHexString(pdc));
 
 			// getの時は pdcが0なのでなにもしない，0でなければ値が入っている
 			if (pdc == 0) {
 				ret[EL.toHexString(epc)] = "";
 			} else {
+				// property mapだけEDT[0] != バイト数なので別処理
+				if( epc == 0x9d || epc == 0x9e || epc == 0x9f ) {
+					if( pdc >= 17) { // プロパティの数が16以上の場合（プロパティカウンタ含めてPDC17以上）は format 2
+						// 0byte=epc, 2byte=pdc, 4byte=edt
+						for (let j = 0; j < pdc; j += 1) {
+							// 登録
+							edt.push(array[now]);
+							now++;
+						}
+						ret[ EL.toHexString(epc) ] = EL.bytesToString( EL.parseMapForm2(edt) );
+						// return ret;
+					}else{
+						// format 2でなければ以下と同じ形式で解析可能
+						for (let j = 0; j < pdc; j += 1) {
+							// 登録
+							edt.push(array[now]);
+							now++;
+						}
+						// console.log('epc:', EL.toHexString(epc), 'edt:', EL.bytesToString(edt) );
+						ret[EL.toHexString(epc)] = EL.bytesToString(edt);
+					}
+				}else{
 				// PDCループ
 				for (let j = 0; j < pdc; j += 1) {
 					// 登録
@@ -439,7 +452,7 @@ EL.parseDetail = function( _opc, str ) {
 				// console.log('epc:', EL.toHexString(epc), 'edt:', EL.bytesToString(edt) );
 				ret[EL.toHexString(epc)] = EL.bytesToString(edt);
 			}
-
+			}
 		}  // opcループ
 
 	} catch (e) {
@@ -1455,10 +1468,17 @@ EL.getPropertyMaps = function ( ip, eoj ) {
 
 // parse Propaty Map Form 2
 // 16以上のプロパティ数の時，記述形式2，出力はForm1にすること, bitstr = EDT
+// bitstrは 数値配列[0x01, 0x30]のようなやつ、か文字列"0130"のようなやつを受け付ける
 EL.parseMapForm2 = function (bitstr) {
 	let ret = [];
 	let val = 0x80;
-	let array = EL.toHexArray(bitstr);
+	let array = [];
+
+	if (typeof (bitstr) == "string") {
+		array = EL.toHexArray(bitstr);
+	}else{
+		array = bitstr;
+	}
 
 	// bit loop
 	for (let bit = 0; bit < 8; bit += 1) {

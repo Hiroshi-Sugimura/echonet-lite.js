@@ -741,6 +741,7 @@ x Warranty
 
 ## Log
 
+- 2.11.2 parseDetail bug fix, parseMapForm2がarray引数にとれるように修正
 - 2.11.1 Get bug fix
 - 2.11.0 メソド追加（EL.sendELDATA）
 - 2.10.0 メソド追加（EL.sendDetails）
