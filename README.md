@@ -741,6 +741,7 @@ x Warranty
 
 ## Log
 
+- 2.11.1 Get bug fix
 - 2.11.0 メソド追加（EL.sendELDATA）
 - 2.10.0 メソド追加（EL.sendDetails）
 - 2.9.6 parseDetail、OPCが10以上でバグがあったのを修正

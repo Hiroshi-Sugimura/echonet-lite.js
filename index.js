@@ -58,6 +58,8 @@ let EL = {
 	// member
 	sock4: null,
 	sock6: null,
+	NODE_PROFILE: '0ef0',
+	NODE_PROFILE_OBJECT: '0ef001',  // 送信専用ノードを作るときは0ef002に変更する
 	Node_details:	{
 		// super
 		"88": [0x42], // Fault status, get
@@ -389,7 +391,7 @@ EL.bytesShow = function (bytes) {
 
 // Detailだけをparseする，内部で主に使う
 EL.parseDetail = function( _opc, str ) {
-	console.log('EL.parseDetail() opc:', _opc, 'str:', str);
+	// console.log('EL.parseDetail() opc:', _opc, 'str:', str);
 	let ret = {}; // 戻り値用，連想配列
 	str = str.toUpperCase();
 
@@ -422,7 +424,7 @@ EL.parseDetail = function( _opc, str ) {
 			pdc = array[now];
 			now++;
 
-			console.log( 'opc:', opc, 'epc:', EL.toHexString(epc), 'pdc:', EL.toHexString(pdc));
+			// console.log( 'opc count:', i, 'epc:', EL.toHexString(epc), 'pdc:', EL.toHexString(pdc));
 
 			// getの時は pdcが0なのでなにもしない，0でなければ値が入っている
 			if (pdc == 0) {
@@ -434,6 +436,7 @@ EL.parseDetail = function( _opc, str ) {
 					edt.push(array[now]);
 					now++;
 				}
+				// console.log('epc:', EL.toHexString(epc), 'edt:', EL.bytesToString(edt) );
 				ret[EL.toHexString(epc)] = EL.bytesToString(edt);
 			}
 
@@ -939,7 +942,7 @@ EL.replyGetDetail = async function(rinfo, els, dev_details) {
 	let ret_opc = 0;
 	// console.log( 'Recv DETAILs:', els.DETAILs );
 	for (let epc in els.DETAILs) {
-		if( await EL.replyGetDetail_sub( rinfo, els, dev_details, epc ) ) {
+		if( await EL.replyGetDetail_sub( els, dev_details, epc ) ) {
 			retDetails.push( parseInt(epc,16) );  // epcは文字列なので
 			retDetails.push( dev_details[els.DEOJ][epc].length );
 			retDetails.push( dev_details[els.DEOJ][epc] );
@@ -960,7 +963,7 @@ EL.replyGetDetail = async function(rinfo, els, dev_details) {
 };
 
 // 上記のサブルーチン
-EL.replyGetDetail_sub = function(rinfo, els, dev_details, epc) {
+EL.replyGetDetail_sub = function( els, dev_details, epc) {
 	if( !dev_details[els.DEOJ] ) { // EOJそのものがあるか？
 		return false
 	}
@@ -1010,7 +1013,7 @@ EL.replySetDetail_sub = function(rinfo, els, dev_details, epc) {
 	let edt = els.DETAILs[epc];
 
 	switch( els.DEOJ.substr(0,4) ) {
-		case '0ef0': // ノードプロファイルはsetするものない
+		case EL.NODE_PROFILE: // ノードプロファイルはsetするものがbfだけ
 		switch( epc ) {
 			case 'bf': // 個体識別番号, 最上位1bitは変化させてはいけない。
 			let ea = EL.toHexArray(edt);
@@ -1158,7 +1161,8 @@ EL.returner = function (bytes, rinfo, userfunc) {
 		}
 
 		// Node profileに関してきちんと処理する
-		if (els.DEOJ.substr(0,4) == '0ef0' ) {
+		if ( els.DEOJ.substr(0,4) == EL.NODE_PROFILE ) {
+			els.DEOJ = EL.NODE_PROFILE_OBJECT;  // ここで0ef000, 0ef001, 0ef002の表記ゆれを統合する
 
 			switch (els.ESV) {
 				////////////////////////////////////////////////////////////////////////////////////
@@ -1178,22 +1182,12 @@ EL.returner = function (bytes, rinfo, userfunc) {
 				// 0x6x
 				case EL.SETI: // "60
 				case EL.SETC: // "61"
-				EL.replySetDetail( rinfo, els, {'0ef001': EL.Node_details} );
+				EL.replySetDetail( rinfo, els, { [EL.NODE_PROFILE_OBJECT]: EL.Node_details} );
 				break;
 
 				case EL.GET: // 0x62
-				// console.log( "EL.returner: get prop. of Node profile.");
-				/*
-				for (let epc in els.DETAILs) {
-					if (EL.Node_details[epc]) { // 持ってるEPCのとき
-						EL.replyOPC1(rinfo.address, EL.toHexArray(els.TID), [0x0e, 0xf0, 0x01], EL.toHexArray(els.SEOJ), 0x72, EL.toHexArray(epc), EL.Node_details[epc]);
-					} else { // 持っていないEPCのとき, SNA
-						EL.replyOPC1(rinfo.address, EL.toHexArray(els.TID), [0x0e, 0xf0, 0x01], EL.toHexArray(els.SEOJ), 0x52, EL.toHexArray(epc), [0x00]);
-					}
-				}
-				*/
-
-				EL.replyGetDetail( rinfo, els, {'0ef001': EL.Node_details} );
+				// console.log( "EL.returner: get prop. of Node profile els:", els);
+				EL.replyGetDetail( rinfo, els, { [EL.NODE_PROFILE_OBJECT]: EL.Node_details} );
 				break;
 
 				case EL.INF_REQ: // 0x63
@@ -1234,7 +1228,7 @@ EL.returner = function (bytes, rinfo, userfunc) {
 
 				// V1.1
 				// d6のEDT表現がとても特殊，EDT1バイト目がインスタンス数になっている
-				if( els.SEOJ.substr(0, 4) === '0ef0' && els.DETAILs.d6 != null && els.DETAILs.d6 != '' ) {
+				if( els.SEOJ.substr(0, 4) === EL.NODE_PROFILE && els.DETAILs.d6 != null && els.DETAILs.d6 != '' ) {
 					// console.log( "EL.returner: get object list! PropertyMap req V1.0.");
 					// 自ノードインスタンスリストSに書いてあるオブジェクトのプロパティマップをもらう
 					let array = EL.toHexArray( els.DETAILs.d6 );
