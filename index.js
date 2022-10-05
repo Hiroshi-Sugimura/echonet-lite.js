@@ -443,15 +443,15 @@ EL.parseDetail = function( _opc, str ) {
 						ret[EL.toHexString(epc)] = EL.bytesToString(edt);
 					}
 				}else{
-				// PDCループ
-				for (let j = 0; j < pdc; j += 1) {
-					// 登録
-					edt.push(array[now]);
-					now++;
+					// PDCループ
+					for (let j = 0; j < pdc; j += 1) {
+						// 登録
+						edt.push(array[now]);
+						now++;
+					}
+					// console.log('epc:', EL.toHexString(epc), 'edt:', EL.bytesToString(edt) );
+					ret[EL.toHexString(epc)] = EL.bytesToString(edt);
 				}
-				// console.log('epc:', EL.toHexString(epc), 'edt:', EL.bytesToString(edt) );
-				ret[EL.toHexString(epc)] = EL.bytesToString(edt);
-			}
 			}
 		}  // opcループ
 
@@ -995,6 +995,11 @@ EL.replyGetDetail_sub = function( els, dev_details, epc) {
 // EPC毎の設定値チェックや、INF処理に関しては下記の replySetDetail_sub にて実施
 // SET_RESはEDT入ってない
 EL.replySetDetail = async function(rinfo, els, dev_details) {
+	// DEOJが自分のオブジェクトでない場合は破棄
+	if ( !dev_details[els.DEOJ] ) { // EOJそのものがあるか？
+		return false;
+	}
+
 	let success = true;
 	let retDetails = [];
 	let ret_opc = 0;
@@ -1023,10 +1028,6 @@ EL.replySetDetail = async function(rinfo, els, dev_details) {
 
 // 上記のサブルーチン
 EL.replySetDetail_sub = function(rinfo, els, dev_details, epc) {
-	if ( !dev_details[els.DEOJ] ) { // EOJそのものがあるか？
-		return false
-	}
-
 	let edt = els.DETAILs[epc];
 
 	switch( els.DEOJ.substr(0,4) ) {
@@ -1186,7 +1187,24 @@ EL.returner = function (bytes, rinfo, userfunc) {
 				// 0x5x
 				// エラー受け取ったときの処理
 				case EL.SETI_SNA:   // "50"
+				break;
 				case EL.SETC_SNA:   // "51"
+				// SetCに対する返答のSetResは，EDT 0x00でOKの意味を受け取ることとなる．ゆえにその詳細な値をGetする必要がある
+				// OPCが2以上の時、全EPCがうまくいった時だけSET_RESが返却され、一部のEPCが失敗したらSETC_SNAになる
+				// 成功EPCにはPDC=0,EDTなし、失敗EPCにはオウム返しでくる
+				// つまりここではPDC=0のものを読みに行くのだが、一気に取得するとまた失敗するかもしれないのでひとつづつ取得する
+				// autoGetPropertiesがfalseなら自動取得しない
+				// epcひとつづつ取得する方式
+				if(  EL.autoGetProperties ) {
+					for( let epc in els.DETAILs ) {
+						setTimeout(() => {
+							EL.sendDetails( rinfo.address, EL.NODE_PROFILE_OBJECT, els.SEOJ, EL.GET, { [epc]:'' } );
+							EL.decreaseWaitings();
+						}, EL.autoGetDelay * (EL.autoGetWaitings+1));
+						EL.increaseWaitings();
+					}
+				}
+				break;
 				case EL.INF_SNA:    // "53"
 				case EL.SETGET_SNA: // "5e"
 				// console.log( "EL.returner: get error" );
@@ -1197,7 +1215,6 @@ EL.returner = function (bytes, rinfo, userfunc) {
 				// 0x6x
 				case EL.SETI: // "60
 				case EL.SETC: // "61"
-				// if( els.DEOJ in EL.Node_details['d6'] ) { return; }  // DEOJが自分のオブジェクトでない場合は破棄, developed
 				EL.replySetDetail( rinfo, els, { [EL.NODE_PROFILE_OBJECT]: EL.Node_details} );
 				break;
 
@@ -1225,6 +1242,8 @@ EL.returner = function (bytes, rinfo, userfunc) {
 				// 0x7x
 				case EL.SET_RES: // 71
 				// SetCに対する返答のSetResは，EDT 0x00でOKの意味を受け取ることとなる．ゆえにその詳細な値をGetする必要がある
+				// OPCが2以上の時、全EPCがうまくいった時だけSET_RESが返却される
+				// 一部のEPCが失敗したらSETC_SNAになる
 				// autoGetPropertiesがfalseなら自動取得しない
 
 				// epcひとつづつ取得する方式
