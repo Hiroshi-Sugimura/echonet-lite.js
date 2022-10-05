@@ -993,6 +993,7 @@ EL.replyGetDetail_sub = function( els, dev_details, epc) {
 // dev_detailのSetに対して複数OPCにも対応して返答する
 // ただしEPC毎の設定値に関して基本はノーチェックなので注意すべし
 // EPC毎の設定値チェックや、INF処理に関しては下記の replySetDetail_sub にて実施
+// SET_RESはEDT入ってない
 EL.replySetDetail = async function(rinfo, els, dev_details) {
 	let success = true;
 	let retDetails = [];
@@ -1000,18 +1001,21 @@ EL.replySetDetail = async function(rinfo, els, dev_details) {
 	// console.log( 'Recv DETAILs:', els.DETAILs );
 	for (let epc in els.DETAILs) {
 		if( await EL.replySetDetail_sub( rinfo, els, dev_details, epc ) ) {
-			retDetails.push( parseInt(epc,16) );  // epcは文字列なので
-			retDetails.push( dev_details[els.DEOJ][epc].length );
-			retDetails.push( dev_details[els.DEOJ][epc] );
+			retDetails.push( parseInt(epc,16) );  // epcは文字列
+			retDetails.push( [0x00] );  // 処理できた分は0を返す
 		}else{
 			retDetails.push( parseInt(epc,16) );  // epcは文字列なので
-			retDetails.push( [0x00] );
+			retDetails.push( parseInt(els.DETAILs[epc].length/2, 16) );  // 処理できなかった部分は要求と同じ値を返却
+			retDetails.push( parseInt(els.DETAILs[epc], 16) );
 			success = false;
 		}
 		ret_opc += 1;
 	}
 
-	let ret_esv = success? 0x71: 0x51;  // 一つでも失敗したらSET_SNA
+	if( els.ESV == EL.SETI ) { return; }  // SetIなら返却なし
+
+	// SetCは SetC_ResかSetC_SNAを返す
+	let ret_esv = success? 0x71: 0x51;  // 一つでも失敗したらSETC_SNA
 
 	let arr = [0x10, 0x81, EL.toHexArray(els.TID), EL.toHexArray(els.DEOJ), EL.toHexArray(els.SEOJ), ret_esv, ret_opc, retDetails ];
 	EL.sendArray( rinfo.address, arr.flat(Infinity) );
@@ -1193,6 +1197,7 @@ EL.returner = function (bytes, rinfo, userfunc) {
 				// 0x6x
 				case EL.SETI: // "60
 				case EL.SETC: // "61"
+				// if( els.DEOJ in EL.Node_details['d6'] ) { return; }  // DEOJが自分のオブジェクトでない場合は破棄, developed
 				EL.replySetDetail( rinfo, els, { [EL.NODE_PROFILE_OBJECT]: EL.Node_details} );
 				break;
 
