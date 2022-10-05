@@ -1398,9 +1398,9 @@ EL.renewFacilities = function (ip, els) {
 			// 新規オブジェクトのとき，プロパティリストもらおう
 			// console.log('new facilities');
 			// 自動取得フラグがfalseならやらない
-			// if( EL.autoGetProperties ) {
-			// EL.getPropertyMaps(ip, EL.toHexArray(els.SEOJ));
-			// }
+			if( EL.autoGetProperties ) {
+				EL.getPropertyMaps(ip, EL.toHexArray(els.SEOJ));
+			}
 		}
 
 		for (let epc in epcList) {

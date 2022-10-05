@@ -741,6 +741,7 @@ x Warranty
 
 ## Log
 
+- 2.12.3 autoGetPropertiesの発見をnew objの時も動くように
 - 2.12.2 SetC_SNA受信対応
 - 2.12.1 SetC_SNA送信対応
 - 2.12.0 Search、autoGetPropertiesの処理を一気にGetするように変更、ただし、うまくいくか調査が足りていない。
