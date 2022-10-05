@@ -741,6 +741,8 @@ x Warranty
 
 ## Log
 
+- 2.12.0 Search、autoGetPropertiesの処理を一気にGetするように変更、ただし、うまくいくか調査が足りていない。
+- 2.11.3 Get_SNAの対応をもう少しまともに
 - 2.11.2 parseDetail bug fix, parseMapForm2がarray引数にとれるように修正
 - 2.11.1 Get bug fix
 - 2.11.0 メソド追加（EL.sendELDATA）

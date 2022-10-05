@@ -800,7 +800,7 @@ EL.sendDetails = function (ip, seoj, deoj, esv, DETAILs) {
 // ex.
 // ELDATA {
 //   TID : '0001',      // 省略すると自動
-//   SEOJ : '05ff01',
+//   SEOJ : '0ef001',
 //   DEOJ : '029001',
 //   ESV : '61',
 //   DETAILs:  {'80':'31', '8a':'000077'}
@@ -1183,12 +1183,10 @@ EL.returner = function (bytes, rinfo, userfunc) {
 				// エラー受け取ったときの処理
 				case EL.SETI_SNA:   // "50"
 				case EL.SETC_SNA:   // "51"
-				case EL.GET_SNA:    // "52"
 				case EL.INF_SNA:    // "53"
 				case EL.SETGET_SNA: // "5e"
 				// console.log( "EL.returner: get error" );
 				// console.dir( els );
-				return;
 				break;
 
 				////////////////////////////////////////////////////////////////////////////////////
@@ -1212,7 +1210,6 @@ EL.returner = function (bytes, rinfo, userfunc) {
 					if( EL.ipVer == 0 || EL.ipVer == 6) { // ipv6
 						EL.sendOPC1( EL.EL_Multi6, [0x0e, 0xf0, 0x01], EL.toHexArray(els.SEOJ), 0x73, 0xd5, EL.Node_details["d5"]);
 					}
-
 				}
 				break;
 
@@ -1224,20 +1221,42 @@ EL.returner = function (bytes, rinfo, userfunc) {
 				case EL.SET_RES: // 71
 				// SetCに対する返答のSetResは，EDT 0x00でOKの意味を受け取ることとなる．ゆえにその詳細な値をGetする必要がある
 				// autoGetPropertiesがfalseなら自動取得しない
-				if( els.DETAIL.substr(0,2) == '00' && EL.autoGetProperties ) {
+
+				// epcひとつづつ取得する方式
+				/*
+				if(  EL.autoGetProperties ) {
+					for( let epc in els.DETAILs ) {
+						// console.log('EL.SET_RES: autoGetProperties');
+						setTimeout(() => {
+							EL.sendDetails( rinfo.address, EL.NODE_PROFILE_OBJECT, els.SEOJ, EL.GET, { [epc]:'' } );
+							EL.decreaseWaitings();
+						}, EL.autoGetDelay * (EL.autoGetWaitings+1));
+						EL.increaseWaitings();
+					}
+				}
+				*/
+				// epc一気に取得する方法
+				if(  EL.autoGetProperties ) {
+					let details = {};
+					for( let epc in els.DETAILs ) {
+						details[epc] = '';
+					}
 					// console.log('EL.SET_RES: autoGetProperties');
 					setTimeout(() => {
-						let msg = "1081000005ff01" + els.SEOJ + "6201" + els.DETAIL.substr(0,2) + "00";
-						EL.sendString( rinfo.address, msg );
+						EL.sendDetails( rinfo.address, EL.NODE_PROFILE_OBJECT, els.SEOJ, EL.GET, details );
 						EL.decreaseWaitings();
 					}, EL.autoGetDelay * (EL.autoGetWaitings+1));
 					EL.increaseWaitings();
 				}
 				break;
 
+				case EL.GET_SNA:   // 52
+				// GET_SNAは複数EPC取得時に、一つでもエラーしたらSNAになるので、他EPCが取得成功している場合があるため無視してはいけない。
+				// ここでは通常のGET_RESのシーケンスを通すこととする。
+				// 具体的な処理としては、PDCが0の時に設定値を取得できていないこととすればよい。
 				case EL.GET_RES: // 72
 				// autoGetPropertiesがfalseなら自動取得しない
-				if( EL.autoGetProperties == false ) { return; }
+				if( EL.autoGetProperties == false ) { break; }
 
 				// V1.1
 				// d6のEDT表現がとても特殊，EDT1バイト目がインスタンス数になっている
@@ -1250,8 +1269,10 @@ EL.returner = function (bytes, rinfo, userfunc) {
 						EL.getPropertyMaps( rinfo.address, array.slice( (instNum - 1)*3 +1, (instNum - 1)*3 +4 ) );
 						instNum -= 1;
 					}
-				}else if( els.DETAILs["9f"] != null ) {  // 自動プロパティ取得は初期化フラグ, 9fはGetProps. 基本的に9fは9d, 9eの和集合になる。(そのような決まりはないが)
+				}else if( els.DETAILs["9f"] ) {  // 自動プロパティ取得は初期化フラグ, 9fはGetProps. 基本的に9fは9d, 9eの和集合になる。(そのような決まりはないが)
 					// DETAILsは解析後なので，format 1も2も関係なく処理する
+					/*
+					// EPCひとつづつ取りに行く方式
 					let array = EL.toHexArray( els.DETAILs["9f"] );
 					let num = array[0];
 					for( let i=0; i<num; i++ ) {
@@ -1266,11 +1287,29 @@ EL.returner = function (bytes, rinfo, userfunc) {
 							EL.increaseWaitings();
 						}
 					}
+					*/
+					// EPC取れるだけ一気にとる方式
+					let array =  els.DETAILs["9f"].match(/.{2}/g);
+					let details = {};
+					let num = EL.toHexArray( array[0] )[0];
+					for( let i=0; i<num; i++ ) {
+						// d6, 9d, 9e, 9fはサーチの時点で取得しているはず
+						// 特にd6と9fは取り直すと無限ループするので注意
+						if( array[i+1] != 'd6' && array[i+1] != '9d' && array[i+1] != '9e' && array[i+1] != '9f' ) {
+							details[ array[i+1] ] = '';
+						}
+					}
+
+					setTimeout(() => {
+						EL.sendDetails( rinfo.address, EL.NODE_PROFILE_OBJECT, els.SEOJ, EL.GET, details);
+						EL.decreaseWaitings();
+					}, EL.autoGetDelay * (EL.autoGetWaitings+1));
+					EL.increaseWaitings();
 				}
 				break;
 
 				case EL.INF:  // 0x73
-				// V1.0 オブジェクトリストをもらったらそのオブジェクトのPropertyMapをもらいに行く, デバイスが後で起動した
+				// ECHONETネットワークで、新規デバイスが起動したのでプロパティもらいに行く
 				// autoGetPropertiesがfalseならやらない
 				if( els.DETAILs.d5 != null && els.DETAILs.d5 != ""  && EL.autoGetProperties) {
 					// ノードプロファイルオブジェクトのプロパティマップをもらう
@@ -1279,7 +1318,8 @@ EL.returner = function (bytes, rinfo, userfunc) {
 				break;
 
 				case EL.INFC: // "74"
-				// V1.0 オブジェクトリストをもらったらそのオブジェクトのPropertyMapをもらいに行く
+				// ECHONET Lite Ver. 1.0以前の処理で利用していたフロー
+				// オブジェクトリストをもらったらそのオブジェクトのPropertyMapをもらいに行く
 				// autoGetPropertiesがfalseならやらない
 				if( els.DETAILs.d5 != null && els.DETAILs.d5  && EL.autoGetProperties) {
 					// ノードプロファイルオブジェクトのプロパティマップをもらう
@@ -1334,9 +1374,9 @@ EL.renewFacilities = function (ip, els) {
 			// 新規オブジェクトのとき，プロパティリストもらおう
 			// console.log('new facilities');
 			// 自動取得フラグがfalseならやらない
-			if( EL.autoGetProperties ) {
-				EL.getPropertyMaps(ip, EL.toHexArray(els.SEOJ));
-			}
+			// if( EL.autoGetProperties ) {
+			// EL.getPropertyMaps(ip, EL.toHexArray(els.SEOJ));
+			// }
 		}
 
 		for (let epc in epcList) {
@@ -1412,15 +1452,30 @@ EL.objectSort = function (obj) {
 
 // 機器検索
 EL.search = function () {
+	/*
+	 // シンプルサーチ
 	// ipv4
 	if( EL.ipVer == 0 || EL.ipVer == 4 ) {
-		EL.sendOPC1( EL.EL_Multi, [0x0e, 0xf0, 0x01], [0x0e, 0xf0, 0x00], 0x62, 0xD6, [0x00]);  // すべてノードに対して，すべてのEOJをGetする
+		EL.sendOPC1( EL.EL_Multi, EL.NODE_PROFILE_OBJECT, [0x0e, 0xf0, 0x00], 0x62, 0xD6, [0x00]);  // すべてノードに対して，すべてのEOJをGetする
 	}
 
 	// ipv6
 	if( EL.ipVer == 0 || EL.ipVer == 6 ) {
-		EL.sendOPC1( EL.EL_Multi6, [0x0e, 0xf0, 0x01], [0x0e, 0xf0, 0x00], 0x62, 0xD6, [0x00]);  // すべてノードに対して，すべてのEOJをGetする
+		EL.sendOPC1( EL.EL_Multi6, EL.NODE_PROFILE_OBJECT, [0x0e, 0xf0, 0x00], 0x62, 0xD6, [0x00]);  // すべてノードに対して，すべてのEOJをGetする
 	}
+	*/
+
+	// 複合サーチ
+	// ipv4
+	if( EL.ipVer == 0 || EL.ipVer == 4 ) {
+		EL.sendDetails( EL.EL_Multi, EL.NODE_PROFILE_OBJECT, [0x0e, 0xf0, 0x00], EL.GET, {'d6':'', '83':'', '9d':'', '9e':'', '9f':''});
+	}
+
+	// ipv6
+	if( EL.ipVer == 0 || EL.ipVer == 6 ) {
+		EL.sendDetails( EL.EL_Multi6, EL.NODE_PROFILE_OBJECT, [0x0e, 0xf0, 0x00], EL.GET, {'d6':'', '83':'', '9d':'', '9e':'', '9f':''});
+	}
+
 };
 
 
@@ -1429,39 +1484,57 @@ EL.search = function () {
 EL.getPropertyMaps = function ( ip, eoj ) {
 	// console.log('EL.getPropertyMaps');
 
+	// プロファイルオブジェクト
 	// プロパティマップももらうけど，まずは識別番号をもらう
+	/*
 	setTimeout(() => {
-		EL.sendOPC1( ip, [0x0e,0xf0,0x01], [0x0e, 0xf0, 0x00], 0x62, 0x83, [0x00] );      // identificationNumbers
+		EL.sendOPC1( ip, EL.NODE_PROFILE_OBJECT, [0x0e, 0xf0, 0x00], 0x62, 0x83, [0x00] );      // identificationNumbers
 		EL.decreaseWaitings();
 	}, EL.autoGetDelay * (EL.autoGetWaitings+1));
 	EL.increaseWaitings();
-
+	*/
 	setTimeout(() => {
-		EL.sendOPC1( ip, [0x0e,0xf0,0x01], eoj, 0x62, 0x83, [0x00] );      // identificationNumbers
-		EL.decreaseWaitings();
-	}, EL.autoGetDelay * (EL.autoGetWaitings+1));
-	EL.increaseWaitings();
-
-
-	setTimeout(() => {
-		EL.sendOPC1( ip, [0x0e,0xf0,0x01], eoj, 0x62, 0x9D, [0x00] );      // INF prop
+		EL.sendDetails( ip, EL.NODE_PROFILE_OBJECT, [0x0e, 0xf0, 0x00], EL.GET, {'83':'', '9d':'', '9e':'', '9f':''});
 		EL.decreaseWaitings();
 	}, EL.autoGetDelay * (EL.autoGetWaitings+1));
 	EL.increaseWaitings();
 
 
+	// デバイスオブジェクト
 	setTimeout(() => {
-		EL.sendOPC1( ip, [0x0e,0xf0,0x01], eoj, 0x62, 0x9E, [0x00] );  // SET prop, after 1s
+		EL.sendDetails( ip, EL.NODE_PROFILE_OBJECT, eoj, EL.GET, {'9d':'', '9e':'', '9f':''});
+		EL.decreaseWaitings();
+	}, EL.autoGetDelay * (EL.autoGetWaitings+1));
+	EL.increaseWaitings();
+
+	/*
+   // デバイスオブジェクト
+	setTimeout(() => {
+		EL.sendOPC1( ip, EL.NODE_PROFILE_OBJECT, eoj, 0x62, 0x83, [0x00] );      // identificationNumbers
+		EL.decreaseWaitings();
+	}, EL.autoGetDelay * (EL.autoGetWaitings+1));
+	EL.increaseWaitings();
+
+	setTimeout(() => {
+		EL.sendOPC1( ip, EL.NODE_PROFILE_OBJECT, eoj, 0x62, 0x9D, [0x00] );      // INF prop
 		EL.decreaseWaitings();
 	}, EL.autoGetDelay * (EL.autoGetWaitings+1));
 	EL.increaseWaitings();
 
 
 	setTimeout(() => {
-		EL.sendOPC1( ip, [0x0e,0xf0,0x01], eoj, 0x62, 0x9F, [0x00] );  // GET prop, after more 1s
+		EL.sendOPC1( ip, EL.NODE_PROFILE_OBJECT, eoj, 0x62, 0x9E, [0x00] );  // SET prop, after 1s
 		EL.decreaseWaitings();
 	}, EL.autoGetDelay * (EL.autoGetWaitings+1));
 	EL.increaseWaitings();
+
+
+	setTimeout(() => {
+		EL.sendOPC1( ip, EL.NODE_PROFILE_OBJECT, eoj, 0x62, 0x9F, [0x00] );  // GET prop, after more 1s
+		EL.decreaseWaitings();
+	}, EL.autoGetDelay * (EL.autoGetWaitings+1));
+	EL.increaseWaitings();
+*/
 
 };
 
