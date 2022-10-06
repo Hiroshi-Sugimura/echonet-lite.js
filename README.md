@@ -557,9 +557,11 @@ EL.sendString = function( ip, string )
 
 * 複数のEPCで送信する
 	- seoj, deoj, esvはbyteでもstringでも受け付ける
-	- DETAILsは下記の構造
+	- DETAILsは下記の構造で、オブジェクト指定かArray指定でよい。Arrayの場合には送信の際のEPC出現順序が守られる
 	- DETAILs = {epc: edt, epc: edt, ...}
 	- ex. {'80':'31', '8a':'000077'}
+	- DETAILs = [{epc: edt}, {epc: edt}, ...]
+	- ex. [{'80':'31'}, {'8a':'000077'}]
 ```
 EL.sendDetails = function (ip, seoj, deoj, esv, DETAILs)
 ```
@@ -741,6 +743,8 @@ x Warranty
 
 ## Log
 
+- 2.12.5 無駄なログ削除
+- 2.12.4 sendDetailsのDETAILs指定に配列を受けるようにした。配列の場合にはEPC送信順序を守る
 - 2.12.3 autoGetPropertiesの発見をnew objの時も動くように
 - 2.12.2 SetC_SNA受信対応
 - 2.12.1 SetC_SNA送信対応
