@@ -1402,7 +1402,7 @@ EL.renewFacilities = function (ip, els) {
 EL.complementFacilities = function () {
 	// EL.autoGetWaitings が多すぎるときにはネットワーク負荷がありすぎるので実施しないほうがよい
 	if( EL.autoGetWaitings > 10 ) {
-		// console.log( 'EL.complementFacilities() skipped, for EL.autoGetWaitings:', EL.autoGetWaitings );
+		console.log( 'EL.complementFacilities() skipped, for EL.autoGetWaitings:', EL.autoGetWaitings );
 		return;
 	}
 
@@ -1435,10 +1435,10 @@ EL.complementFacilities_sub = function ( ip, eoj, props ) {  // サブルーチ�
 		// to be developing.
 		let array = props[getMap].match(/.{2}/g);
 		let pdc = EL.toHexArray( array[0] )[0];
-		let details = {};
+		let details = [];
 		for( let i=0; i<pdc; i++ ) {
-			if( props[array[i+1]] == null || props[array[i+1]] == '' ) {  // propsにそのEPC
-				details[ array[i+1] ] = '';
+			if( props[ array[i+1] ] == null || props[ array[i+1] ] == '' ) {  // propsにそのEPC
+				details.push( { [array[i+1]]: ''} );
 			}
 		}
 
