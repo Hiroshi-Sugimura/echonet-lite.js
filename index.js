@@ -296,18 +296,11 @@ EL.renewNICList = async function () {
 	return EL.nicList;
 };
 
-// EL.autoGetWaitingsMax = 0;  // @@@debug 性能測定
-
 // 自動取得待ちの個数管理
 EL.decreaseWaitings = function () {
 	if( EL.autoGetWaitings != 0 ) {
 		// console.log( 'decrease:', 'waitings: ', EL.autoGetWaitings );
 		EL.autoGetWaitings -= 1;
-
-		// @@@debug 性能測定
-		// if( EL.autoGetWaitings == 1 ) {
-		// console.log( new Date().toFormat("YYYY-MM-DDTHH24:MI:SS"), '| autoGetWaitings < 2');
-		// }
 	}
 };
 
@@ -315,13 +308,6 @@ EL.decreaseWaitings = function () {
 EL.increaseWaitings = function () {
 	// console.log( 'increase:', 'waitings: ', EL.autoGetWaitings, 'delay: ', EL.autoGetDelay * (EL.autoGetWaitings+1) );
 	EL.autoGetWaitings += 1;
-
-	// @@@debug 性能測定
-	// if( EL.autoGetWaitings == 2 ) {
-	// console.log( new Date().toFormat("YYYY-MM-DDTHH24:MI:SS"), '| autoGetWaitings > 1');
-	// }
-
-	// EL.autoGetWaitingsMax = EL.autoGetWaitingsMax > EL.autoGetWaitings ? EL.autoGetWaitingsMax : EL.autoGetWaitings;
 };
 
 
@@ -352,6 +338,11 @@ EL.myIPaddress = function(rinfo) {
 	// console.log( 'rinfo.address:', rinfo.address, 'is ignoreIP:', ignoreIP );  // @@@debug
 	return ignoreIP;
 };
+
+
+function isObjEmpty(obj) {
+	return Object.keys(obj).length === 0;
+}
 
 
 //////////////////////////////////////////////////////////////////////
@@ -1408,20 +1399,6 @@ EL.renewFacilities = function (ip, els) {
 // ネットワーク内のEL機器全体情報のEPCを取得したか確認する
 // 取得漏れがあれば取得する
 // あまり実施するとネットワーク負荷がすごくなるので注意
-EL.complementFacilities_sub = function ( ip, eoj, props ) {
-	let epcs = Object.keys( props );
-	let getMap = epcs.filter( (v) => { return v.substr(0.4) == '9f'; } );
-
-	if( !getMap ) {
-		// get prop. mapがなければ取りに行く。そのあとは自動で取得すると期待
-		EL.sendDetails( ip, EL.NODE_PROFILE_OBJECT, eoj, EL.GET, [{'d6':''}, {'83':''}, {'9d':''}, {'9e':''}, {'9f':''}]);
-	}else{
-		// get prop. mapにあるEPCに関してすべて値を持っているかチェックして、持っていないEPCをリストして取得しにいく
-		// to be developing.
-	}
-};
-
-
 EL.complementFacilities = function () {
 	// EL.autoGetWaitings が多すぎるときにはネットワーク負荷がありすぎるので実施しないほうがよい
 	if( EL.autoGetWaitings > 10 ) {
@@ -1444,7 +1421,36 @@ EL.complementFacilities = function () {
 			})
 		}
 	});
+};
 
+EL.complementFacilities_sub = function ( ip, eoj, props ) {  // サブルーチン
+	let epcs = Object.keys( props );
+	let getMap = epcs.filter( (v) => { return v.substr(0.4) == '9f'; } );
+
+	if( !getMap ) {
+		// get prop. mapがなければ取りに行く。そのあとは自動で取得すると期待
+		EL.sendDetails( ip, EL.NODE_PROFILE_OBJECT, eoj, EL.GET, [{'9d':''}, {'9e':''}, {'9f':''}]);
+	}else{
+		// get prop. mapにあるEPCに関してすべて値を持っているかチェックして、持っていないEPCをリストして取得しにいく
+		// to be developing.
+		let array = props[getMap].match(/.{2}/g);
+		let pdc = EL.toHexArray( array[0] )[0];
+		let details = {};
+		for( let i=0; i<pdc; i++ ) {
+			if( props[array[i+1]] == null || props[array[i+1]] == '' ) {  // propsにそのEPC
+				details[ array[i+1] ] = '';
+			}
+		}
+
+		if( !isObjEmpty(details) ) {
+			console.log( 'ip:', ip, 'props:', props, 'details:', details );
+			setTimeout(() => {
+				EL.sendDetails( ip, EL.NODE_PROFILE_OBJECT, eoj, EL.GET, details);
+				EL.decreaseWaitings();
+			}, EL.autoGetDelay * (EL.autoGetWaitings+1));
+			EL.increaseWaitings();
+		}
+	}
 };
 
 

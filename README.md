@@ -743,6 +743,7 @@ x Warranty
 
 ## Log
 
+- 2.13.0 complement系method追加
 - 2.12.5 無駄なログ削除
 - 2.12.4 sendDetailsのDETAILs指定に配列を受けるようにした。配列の場合にはEPC送信順序を守る
 - 2.12.3 autoGetPropertiesの発見をnew objの時も動くように
