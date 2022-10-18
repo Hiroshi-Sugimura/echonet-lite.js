@@ -614,6 +614,20 @@ EL.setObserveFacilities( 1000, function() {  // 1000 ms
 });
 ```
 
+* 機器情報の未取得EPCを補完する
+```
+EL.complementFacilities = function ();
+```
+
+ex.
+
+```
+const cron = require('node-cron');
+cron.schedule( '*/3 * * * *', () => {
+	EL.complementFacilities();
+})
+```
+
 
 
 ## OPC2以上対応, OPC managements for more than two
@@ -743,6 +757,7 @@ x Warranty
 
 ## Log
 
+- 2.14.0 メーカ独自EPCの未保持無視、IPv4とIPv6の処理をもう少し真面目に、ipをrinfoのような形でも受付可能にした
 - 2.13.1 complement系微修正
 - 2.13.0 complement系method追加
 - 2.12.5 無駄なログ削除

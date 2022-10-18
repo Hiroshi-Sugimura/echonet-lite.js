@@ -579,8 +579,25 @@ EL.bytesToString = function (bytes) {
 //////////////////////////////////////////////////////////////////////
 
 // EL送信のベース
-EL.sendBase = function (ip, buffer) {
-	EL.debugMode ? console.log( "======== sendBase:", ip ) :0;
+EL.sendBase = function ( ip, buffer) {
+	let address = '';
+	let family = '';  // IPv4 IPv6
+
+	if( typeof ip == 'object' ) {
+		address = ip.address;
+		family  = ip.family;
+	}else if( typeof ip == 'string' ) {
+		address = ip;
+		// family不明なので自動判定
+		if( address.indexOf(':') != -1 ) {  // IPにコロンが使われているかどうかで判定する
+			family = 'IPv6';
+		}else{
+			family = 'IPv4';
+		}
+	}
+
+
+	EL.debugMode ? console.log( "======== sendBase:", address ) :0;
 	EL.debugMode ? console.log( buffer ) :0;
 	let tid = [ buffer[2], buffer[3] ];
 
@@ -588,19 +605,19 @@ EL.sendBase = function (ip, buffer) {
 	// ipv4
 	if( EL.ipVer == 0 || EL.ipVer == 4 ) {
 		// 送信先がipv4ならやる，'.'が使われているかどうかで判定しちゃう
-		if( ip.indexOf('.') != -1 ) {
+		if( family == 'IPv4' ) {
 			let client = dgram.createSocket({type:"udp4",reuseAddr:true});
 
 			if( EL.usingIF.v4 != '' ) {
 				client.bind( EL.EL_port + 20000, EL.usingIF.v4, () => {
 					client.setMulticastInterface( EL.usingIF.v4 );
-					client.send(buffer, 0, buffer.length, EL.EL_port, ip, function (err, bytes) {
+					client.send(buffer, 0, buffer.length, EL.EL_port, address, function (err, bytes) {
 						if( err ) { console.error('TID:', tid[0], tid[1], err); }
 						client.close();
 					});
 				});
 			}else{
-				client.send(buffer, 0, buffer.length, EL.EL_port, ip, function (err, bytes) {
+				client.send(buffer, 0, buffer.length, EL.EL_port, address, function (err, bytes) {
 					if( err ) { console.error('TID:', tid[0], tid[1], err); }
 					client.close();
 				});
@@ -611,11 +628,10 @@ EL.sendBase = function (ip, buffer) {
 
 	// ipv6
 	if( EL.ipVer == 0 || EL.ipVer == 6 ) {
-		// 送信先がipv6ならやる，':'が使われているかどうかで判定しちゃう
-		if( ip.indexOf(':') != -1 ) {
+		if( family == 'IPv6' ) {
 			let client = dgram.createSocket({type:"udp6",reuseAddr:true});
-			ip += EL.usingIF.v6;
-			client.send(buffer, 0, buffer.length, EL.EL_port, ip, function (err, bytes) {
+			address += EL.usingIF.v6;
+			client.send(buffer, 0, buffer.length, EL.EL_port, address, function (err, bytes) {
 				if( err ) { console.error('TID:', tid[0], tid[1], err); }
 				client.close();
 			});
@@ -1378,10 +1394,13 @@ EL.renewFacilities = function (ip, els) {
 		for (let epc in epcList) {
 			// 新規epc
 			if (EL.facilities[ip][els.SEOJ][epc] == null) {
-				EL.facilities[ip][els.SEOJ][epc] = {};
+				EL.facilities[ip][els.SEOJ][epc] = '';
 			}
 
-			EL.facilities[ip][els.SEOJ][epc] = epcList[epc];
+			// GET_SNAの時のNULL {EDT:''} を入れてしまうのを避ける
+			if( epcList[epc] != '' ) {
+				EL.facilities[ip][els.SEOJ][epc] = epcList[epc];
+			}
 
 			// もしEPC = 0x83の時は識別番号なので，識別番号リストに確保
 			if( epc === '83' ) {
@@ -1401,8 +1420,8 @@ EL.renewFacilities = function (ip, els) {
 // あまり実施するとネットワーク負荷がすごくなるので注意
 EL.complementFacilities = function () {
 	// EL.autoGetWaitings が多すぎるときにはネットワーク負荷がありすぎるので実施しないほうがよい
-	if( EL.autoGetWaitings > 10 ) {
-		console.log( 'EL.complementFacilities() skipped, for EL.autoGetWaitings:', EL.autoGetWaitings );
+	if( EL.autoGetWaitings > 10 ) {  // 10という数値は経験則、とくに論理無し
+		// console.log( 'EL.complementFacilities() skipped, for EL.autoGetWaitings:', EL.autoGetWaitings );
 		return;
 	}
 
@@ -1437,13 +1456,15 @@ EL.complementFacilities_sub = function ( ip, eoj, props ) {  // サブルーチ�
 		let pdc = EL.toHexArray( array[0] )[0];
 		let details = [];
 		for( let i=0; i<pdc; i++ ) {
-			if( props[ array[i+1] ] == null || props[ array[i+1] ] == '' ) {  // propsにそのEPC
+			if( array[i+1].substr(0,1) == 'f'  ) {  			// EPCがF0..FFはメーカオリジナルなので無視する
+				// nop.
+			}else if( props[ array[i+1] ] == null || props[ array[i+1] ] == '' ) {  // propsにそのEPCのEDTがなければ聞く
 				details.push( { [array[i+1]]: ''} );
 			}
 		}
 
 		if( !isObjEmpty(details) ) {
-			console.log( 'ip:', ip, 'props:', props, 'details:', details );
+			// console.log( 'ip:', ip, 'obj:',eoj, 'props:', props, 'req details:', details );
 			setTimeout(() => {
 				EL.sendDetails( ip, EL.NODE_PROFILE_OBJECT, eoj, EL.GET, details);
 				EL.decreaseWaitings();
