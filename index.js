@@ -993,7 +993,7 @@ EL.replyGetDetail = async function(rinfo, els, dev_details) {
 	let ret_esv = success? 0x72: 0x52;  // 一つでも失敗したらGET_SNA
 
 	let arr = [0x10, 0x81, EL.toHexArray(els.TID), EL.toHexArray(els.DEOJ), EL.toHexArray(els.SEOJ), ret_esv, ret_opc, retDetails ];
-	EL.sendArray( rinfo.address, arr.flat(Infinity) );
+	EL.sendArray( rinfo, arr.flat(Infinity) );
 };
 
 // 上記のサブルーチン
@@ -1044,7 +1044,7 @@ EL.replySetDetail = async function(rinfo, els, dev_details) {
 	let ret_esv = success? 0x71: 0x51;  // 一つでも失敗したらSETC_SNA
 
 	let arr = [0x10, 0x81, EL.toHexArray(els.TID), EL.toHexArray(els.DEOJ), EL.toHexArray(els.SEOJ), ret_esv, ret_opc, retDetails ];
-	EL.sendArray( rinfo.address, arr.flat(Infinity) );
+	EL.sendArray( rinfo, arr.flat(Infinity) );
 };
 
 // 上記のサブルーチン
@@ -1219,7 +1219,7 @@ EL.returner = function (bytes, rinfo, userfunc) {
 				if(  EL.autoGetProperties ) {
 					for( let epc in els.DETAILs ) {
 						setTimeout(() => {
-							EL.sendDetails( rinfo.address, EL.NODE_PROFILE_OBJECT, els.SEOJ, EL.GET, { [epc]:'' } );
+							EL.sendDetails( rinfo, EL.NODE_PROFILE_OBJECT, els.SEOJ, EL.GET, { [epc]:'' } );
 							EL.decreaseWaitings();
 						}, EL.autoGetDelay * (EL.autoGetWaitings+1));
 						EL.increaseWaitings();
@@ -1274,7 +1274,7 @@ EL.returner = function (bytes, rinfo, userfunc) {
 					}
 					// console.log('EL.SET_RES: autoGetProperties');
 					setTimeout(() => {
-						EL.sendDetails( rinfo.address, EL.NODE_PROFILE_OBJECT, els.SEOJ, EL.GET, details );
+						EL.sendDetails( rinfo, EL.NODE_PROFILE_OBJECT, els.SEOJ, EL.GET, details );
 						EL.decreaseWaitings();
 					}, EL.autoGetDelay * (EL.autoGetWaitings+1));
 					EL.increaseWaitings();
@@ -1298,7 +1298,7 @@ EL.returner = function (bytes, rinfo, userfunc) {
 					let array = EL.toHexArray( els.DETAILs.d6 );
 					let instNum = array[0];
 					while( 0 < instNum ) {
-						EL.getPropertyMaps( rinfo.address, array.slice( (instNum - 1)*3 +1, (instNum - 1)*3 +4 ) );
+						EL.getPropertyMaps( rinfo, array.slice( (instNum - 1)*3 +1, (instNum - 1)*3 +4 ) );
 						instNum -= 1;
 					}
 				}
@@ -1318,7 +1318,7 @@ EL.returner = function (bytes, rinfo, userfunc) {
 					}
 
 					setTimeout(() => {
-						EL.sendDetails( rinfo.address, EL.NODE_PROFILE_OBJECT, els.SEOJ, EL.GET, details);
+						EL.sendDetails( rinfo, EL.NODE_PROFILE_OBJECT, els.SEOJ, EL.GET, details);
 						EL.decreaseWaitings();
 					}, EL.autoGetDelay * (EL.autoGetWaitings+1));
 					EL.increaseWaitings();
@@ -1330,7 +1330,7 @@ EL.returner = function (bytes, rinfo, userfunc) {
 				// autoGetPropertiesがfalseならやらない
 				if( els.DETAILs.d5 != null && els.DETAILs.d5 != ""  && EL.autoGetProperties) {
 					// ノードプロファイルオブジェクトのプロパティマップをもらう
-					EL.getPropertyMaps( rinfo.address, [0x0e, 0xf0, 0x00] );
+					EL.getPropertyMaps( rinfo, [0x0e, 0xf0, 0x00] );
 				}
 				break;
 
@@ -1340,13 +1340,13 @@ EL.returner = function (bytes, rinfo, userfunc) {
 				// autoGetPropertiesがfalseならやらない
 				if( els.DETAILs.d5 != null && els.DETAILs.d5  && EL.autoGetProperties) {
 					// ノードプロファイルオブジェクトのプロパティマップをもらう
-					EL.getPropertyMaps( rinfo.address, [0x0e, 0xf0, 0x00] );
+					EL.getPropertyMaps( rinfo, [0x0e, 0xf0, 0x00] );
 
 					// console.log( "EL.returner: get object list! PropertyMap req.");
 					let array = EL.toHexArray( els.DETAILs.d5 );
 					let instNum = array[0];
 					while( 0 < instNum ) {
-						EL.getPropertyMaps( rinfo.address, array.slice( (instNum - 1)*3 +1, (instNum - 1)*3 +4 ) );
+						EL.getPropertyMaps( rinfo, array.slice( (instNum - 1)*3 +1, (instNum - 1)*3 +4 ) );
 						instNum -= 1;
 					}
 				}
@@ -1375,36 +1375,36 @@ EL.returner = function (bytes, rinfo, userfunc) {
 
 
 // ネットワーク内のEL機器全体情報を更新する，受信したら勝手に実行される
-EL.renewFacilities = function (ip, els) {
+EL.renewFacilities = function (address, els) {
 	let epcList;
 	try {
 		epcList = EL.parseDetail(els.OPC, els.DETAIL);
 
 		// 新規IP
-		if (EL.facilities[ip] == null) { //見つからない
-			EL.facilities[ip] = {};
+		if (EL.facilities[address] == null) { //見つからない
+			EL.facilities[address] = {};
 		}
 
 		// 新規obj
-		if (EL.facilities[ip][els.SEOJ] == null) {
-			EL.facilities[ip][els.SEOJ] = {};
+		if (EL.facilities[address][els.SEOJ] == null) {
+			EL.facilities[address][els.SEOJ] = {};
 			// 新規オブジェクトのとき，プロパティリストもらうと取りきるまでループしちゃうのでやめた
 		}
 
 		for (let epc in epcList) {
 			// 新規epc
-			if (EL.facilities[ip][els.SEOJ][epc] == null) {
-				EL.facilities[ip][els.SEOJ][epc] = '';
+			if (EL.facilities[address][els.SEOJ][epc] == null) {
+				EL.facilities[address][els.SEOJ][epc] = '';
 			}
 
 			// GET_SNAの時のNULL {EDT:''} を入れてしまうのを避ける
 			if( epcList[epc] != '' ) {
-				EL.facilities[ip][els.SEOJ][epc] = epcList[epc];
+				EL.facilities[address][els.SEOJ][epc] = epcList[epc];
 			}
 
 			// もしEPC = 0x83の時は識別番号なので，識別番号リストに確保
 			if( epc === '83' ) {
-				EL.identificationNumbers.push( {id: epcList[epc], ip: ip, OBJ: els.SEOJ } );
+				EL.identificationNumbers.push( {id: epcList[epc], ip: address, OBJ: els.SEOJ } );
 			}
 		}
 	} catch (e) {

@@ -359,14 +359,8 @@ let elsocket = EL.initialize( objList, function( rinfo, els, err ) {
 		console.log('rinfo is '); console.dir(rinfo);
 		console.log('els is ');   console.dir(els);
 	}
-} );  // ipv4 (default)
-// }, 4 );  // ipv4 only
-// }, 6 );  // ipv6 only
-// }, 4, {v4: '10.211.55.2'} ); // ipv4 only and using NIC address
-// }, 6, {v6: 'en0'} );  // ipv6 only and using NIC name
-// }, 4, {ignoreMe: true} );  // ipv4 and ingnoreMe
-// }, 0 );  // ipv4 and ipv6 dualstack
-// }, 0, {v4: '10.211.55.2', v6: 'en0'});  // ipv4 and ipv6 dualstack, and these NIC are specified.
+}, 0, { 'v4': '', 'v6': '', ignoreMe:true, autoGetProperties: true, autoGetDelay: 1000, debugMode: false});  // Recommendation for a controller
+// }, 0, { 'v4': '', 'v6': '', ignoreMe:true, autoGetProperties: false, debugMode: false});  // Recommendation for a device
 ```
 
 
@@ -515,10 +509,13 @@ EL.toHexArray = function( string )
 
 ![](img/send.png)
 
-
 APIは送信の成功失敗に関わらず，TIDをreturnすることにしました。
 送信TIDはEL.tid[]で管理しています。
 sendOPC1とEL.sendEPCsはEL.tidを自動的に+1します。
+
+ipの指定方法は、
+- 文字列で '192.168.10.3' のように記述する方法
+- rinfoオブジェクトのように {address:'192.168.10.3', family:'IPv4'} のように記述する方法の両方使えます
 
 * EL送信のベース, base function
 
@@ -757,6 +754,7 @@ x Warranty
 
 ## Log
 
+- 2.14.1 内部的にipをrinfoのまま扱うこととした
 - 2.14.0 メーカ独自EPCの未保持無視、IPv4とIPv6の処理をもう少し真面目に、ipをrinfoのような形でも受付可能にした
 - 2.13.1 complement系微修正
 - 2.13.0 complement系method追加
