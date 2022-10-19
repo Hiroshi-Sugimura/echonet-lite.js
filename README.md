@@ -754,6 +754,7 @@ x Warranty
 
 ## Log
 
+- 2.14.2 Node-profile-objectへのアクセスを0ef000だったのを0ef001に戻した
 - 2.14.1 内部的にipをrinfoのまま扱うこととした
 - 2.14.0 メーカ独自EPCの未保持無視、IPv4とIPv6の処理をもう少し真面目に、ipをrinfoのような形でも受付可能にした
 - 2.13.1 complement系微修正

@@ -12,22 +12,6 @@ require('date-utils'); // for log
 //////////////////////////////////////////////////////////////////////
 // ECHONET Lite
 
-/*
-  データ構造
-ELSTRUCTURE {
-  EHD : str.substr( 0, 4 ),
-  TID : str.substr( 4, 4 ),
-  SEOJ : str.substr( 8, 6 ),
-  DEOJ : str.substr( 14, 6 ),
-  EDATA: str.substr( 20 ),    // 下記はEDATAの詳細
-  ESV : str.substr( 20, 2 ),
-  OPC : str.substr( 22, 2 ),
-  DETAIL: str.substr( 24 ),
-  DETAILs: EL.parseDetail( str.substr( 22, 2 ), str.substr( 24 ) )
-}
-*/
-
-
 // クラス変数
 let EL = {
 	// define
@@ -215,10 +199,10 @@ EL.initialize = async function (objList, userfunc, ipVer = 4, Options = {v4: '',
 
 	// 初期化終わったのでノードのINFをだす, IPv4, IPv6ともに出す
 	if( EL.ipVer == 0 || EL.ipVer == 4) {
-		EL.sendOPC1( EL.EL_Multi, [0x0e, 0xf0, 0x01], [0x0e, 0xf0, 0x01], EL.INF, 0xd5, EL.Node_details["d5"]);
+		EL.sendOPC1( EL.Multi,  EL.NODE_PROFILE_OBJECT, EL.NODE_PROFILE_OBJECT, EL.INF, 0xd5, EL.Node_details["d5"]);
 	}
 	if( EL.ipVer == 0 || EL.ipVer == 6) {
-		EL.sendOPC1( EL.EL_Multi6, [0x0e, 0xf0, 0x01], [0x0e, 0xf0, 0x01], EL.INF, 0xd5, EL.Node_details["d5"]);
+		EL.sendOPC1( EL.Multi6, EL.NODE_PROFILE_OBJECT, EL.NODE_PROFILE_OBJECT, EL.INF, 0xd5, EL.Node_details["d5"]);
 	}
 
 	if( EL.ipVer == 4) {
@@ -1248,10 +1232,10 @@ EL.returner = function (bytes, rinfo, userfunc) {
 				if (els.DETAILs["d5"] == "00") {  // EL ver. 1.0以前のコントローラからサーチされた場合のレスポンス
 					// console.log( "EL.returner: Ver1.0 INF_REQ.");
 					if( EL.ipVer == 0 || EL.ipVer == 4) { // ipv4
-						EL.sendOPC1( EL.EL_Multi, [0x0e, 0xf0, 0x01], EL.toHexArray(els.SEOJ), 0x73, 0xd5, EL.Node_details["d5"]);
+						EL.sendOPC1( EL.EL_Multi, EL.NODE_PROFILE_OBJECT, EL.toHexArray(els.SEOJ), 0x73, 0xd5, EL.Node_details["d5"]);
 					}
 					if( EL.ipVer == 0 || EL.ipVer == 6) { // ipv6
-						EL.sendOPC1( EL.EL_Multi6, [0x0e, 0xf0, 0x01], EL.toHexArray(els.SEOJ), 0x73, 0xd5, EL.Node_details["d5"]);
+						EL.sendOPC1( EL.EL_Multi6, EL.NODE_PROFILE_OBJECT, EL.toHexArray(els.SEOJ), 0x73, 0xd5, EL.Node_details["d5"]);
 					}
 				}
 				break;
@@ -1330,7 +1314,7 @@ EL.returner = function (bytes, rinfo, userfunc) {
 				// autoGetPropertiesがfalseならやらない
 				if( els.DETAILs.d5 != null && els.DETAILs.d5 != ""  && EL.autoGetProperties) {
 					// ノードプロファイルオブジェクトのプロパティマップをもらう
-					EL.getPropertyMaps( rinfo, [0x0e, 0xf0, 0x00] );
+					EL.getPropertyMaps( rinfo, EL.NODE_PROFILE_OBJECT );
 				}
 				break;
 
@@ -1340,7 +1324,7 @@ EL.returner = function (bytes, rinfo, userfunc) {
 				// autoGetPropertiesがfalseならやらない
 				if( els.DETAILs.d5 != null && els.DETAILs.d5  && EL.autoGetProperties) {
 					// ノードプロファイルオブジェクトのプロパティマップをもらう
-					EL.getPropertyMaps( rinfo, [0x0e, 0xf0, 0x00] );
+					EL.getPropertyMaps( rinfo, EL.NODE_PROFILE_OBJECT );
 
 					// console.log( "EL.returner: get object list! PropertyMap req.");
 					let array = EL.toHexArray( els.DETAILs.d5 );
@@ -1432,7 +1416,7 @@ EL.complementFacilities = function () {
 		let node_prof = eojs.filter( (v) => { return v.substr(0.4) == '0ef0'; } );
 		if( !node_prof ) {  // Node Profileがない
 			// node_profを取りに行く、node_profがとれればその先は自動でとれると期待
-			EL.sendDetails( ip, EL.NODE_PROFILE_OBJECT, [0x0e, 0xf0, 0x00], EL.GET, [{'d6':''}, {'83':''}, {'9d':''}, {'9e':''}, {'9f':''}]);
+			EL.sendDetails( ip, EL.NODE_PROFILE_OBJECT, EL.NODE_PROFILE_OBJECT, EL.GET, [{'d6':''}, {'83':''}, {'9d':''}, {'9e':''}, {'9f':''}]);
 		}else{
 			// node_profはある
 			eojs.forEach( (eoj) => {
@@ -1529,12 +1513,12 @@ EL.search = function () {
 	// 複合サーチ
 	// ipv4
 	if( EL.ipVer == 0 || EL.ipVer == 4 ) {
-		EL.sendDetails( EL.EL_Multi, EL.NODE_PROFILE_OBJECT, [0x0e, 0xf0, 0x00], EL.GET, [{'d6':''}, {'83':''}, {'9d':''}, {'9e':''}, {'9f':''}]);
+		EL.sendDetails( EL.EL_Multi, EL.NODE_PROFILE_OBJECT, EL.NODE_PROFILE_OBJECT, EL.GET, [{'d6':''}, {'83':''}, {'9d':''}, {'9e':''}, {'9f':''}]);
 	}
 
 	// ipv6
 	if( EL.ipVer == 0 || EL.ipVer == 6 ) {
-		EL.sendDetails( EL.EL_Multi6, EL.NODE_PROFILE_OBJECT, [0x0e, 0xf0, 0x00], EL.GET, [{'d6':''}, {'83':''}, {'9d':''}, {'9e':''}, {'9f':''}]);
+		EL.sendDetails( EL.EL_Multi6, EL.NODE_PROFILE_OBJECT, EL.NODE_PROFILE_OBJECT, EL.GET, [{'d6':''}, {'83':''}, {'9d':''}, {'9e':''}, {'9f':''}]);
 	}
 
 };
