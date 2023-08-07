@@ -6,6 +6,9 @@ ECHONET Liteプロトコルはスマートハウス機器の通信プロトコ�
 This module provides **ECHONET Lite protocol**.
 The ECHONET Lite protocol is a communication protocol for smart home devices.
 
+**注意：本モジュールによるECHONET Lite通信規格上の保証はなく、SDKとしてもECHONET Liteの認証を受けておりません。
+また、製品化の場合には各社・各自がECHONET Lite認証を取得する必要があります。**
+
 
 # Install
 
@@ -23,7 +26,12 @@ npm i echonet-lite
 
 ## Controller demo
 
-デモプログラムはこんな感じです。動作させるためにはECHONET Lite対応デバイスが必要です。もしお持ちでない場合には**[MoekadenRoom](https://github.com/SonyCSL/MoekadenRoom)**というシミュレータがおすすめです。Here is a demonstration script.For test exectuion, some devices with ECHONET Lite is required.If you do not have any device, we recommend the **[MoekadenRoom](https://github.com/SonyCSL/MoekadenRoom)** as a simulator.
+デモプログラムはこんな感じです。動作させるためにはECHONET Lite対応デバイスが必要です。もしお持ちでない場合には**[MoekadenRoom](https://github.com/SonyCSL/MoekadenRoom)**というシミュレータがおすすめです。
+
+
+Here is a demonstration script.
+For test exectuion, some devices with ECHONET Lite is required.
+If you do not have any device, we recommend the **[MoekadenRoom](https://github.com/SonyCSL/MoekadenRoom)** as a simulator.
 
 ```JavaScript:Demo
 // モジュールの機能をELとして使う
@@ -754,6 +762,7 @@ x Warranty
 
 ## Log
 
+- 2.15.0 renewFacilitiesの格納条件を見直しした
 - 2.14.2 Node-profile-objectへのアクセスを0ef000だったのを0ef001に戻した
 - 2.14.1 内部的にipをrinfoのまま扱うこととした
 - 2.14.0 メーカ独自EPCの未保持無視、IPv4とIPv6の処理をもう少し真面目に、ipをrinfoのような形でも受付可能にした

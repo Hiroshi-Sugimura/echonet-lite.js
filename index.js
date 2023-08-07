@@ -458,6 +458,7 @@ EL.parseBytes = function (bytes) {
 		// 文字列にしたので，parseStringで何とかする
 		return (EL.parseString(str));
 	} catch (e) {
+		console.error('EL.parseBytes: ', bytes);
 		throw e;
 	}
 };
@@ -1345,9 +1346,16 @@ EL.returner = function (bytes, rinfo, userfunc) {
 			}
 		}
 
-		// 受信状態から機器情報修正, GETとINFREQ，SET_RESは除く
-		if (els.ESV != "62" && els.ESV != "63" && els.ESV != '71') {
-			EL.renewFacilities(rinfo.address, els);
+		// 受信状態から機器情報修正
+		// GET_SNA, SETGET_SNA, GET_RES, INF, SETGET_RES のみEDT確保
+		// ifで書くと読みにくいのでswitch
+		switch (els.ESV) {
+			case EL.GET_SNA:
+			case EL.SETGET_SNA:
+			case EL.GET_RES:
+			case EL.INF:
+			case EL.SETGET_RES:
+				EL.renewFacilities(rinfo.address, els);
 		}
 
 		// 機器オブジェクトに関してはユーザー関数に任す
