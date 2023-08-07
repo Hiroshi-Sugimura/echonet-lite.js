@@ -1384,13 +1384,8 @@ EL.renewFacilities = function (address, els) {
 		}
 
 		for (let epc in epcList) {
-			// 新規epc
-			if (EL.facilities[address][els.SEOJ][epc] == null) {
-				EL.facilities[address][els.SEOJ][epc] = '';
-			}
-
 			// GET_SNAの時のNULL {EDT:''} を入れてしまうのを避ける
-			if( epcList[epc] != '' ) {
+			if ( epcList[epc] != '' ) {
 				EL.facilities[address][els.SEOJ][epc] = epcList[epc];
 			}
 

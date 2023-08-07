@@ -762,6 +762,8 @@ x Warranty
 
 ## Log
 
+- 2.15.2 renewFacilitiesの格納条件詳細を見直しした
+- 2.15.1 renewFacilitiesの格納条件詳細を見直しした
 - 2.15.0 renewFacilitiesの格納条件を見直しした
 - 2.14.2 Node-profile-objectへのアクセスを0ef000だったのを0ef001に戻した
 - 2.14.1 内部的にipをrinfoのまま扱うこととした
