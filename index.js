@@ -607,13 +607,13 @@ EL.sendBase = function ( ip, buffer) {
 				client.bind( EL.EL_port + 20000, EL.usingIF.v4, () => {
 					client.setMulticastInterface( EL.usingIF.v4 );
 					client.send(buffer, 0, buffer.length, EL.EL_port, address, function (err, bytes) {
-						if( err ) { console.error('TID:', tid[0], tid[1], err); }
+						if( err ) { console.error('EL.sendBase().v4.multi TID:', tid[0], tid[1], err); }
 						client.close();
 					});
 				});
 			}else{
 				client.send(buffer, 0, buffer.length, EL.EL_port, address, function (err, bytes) {
-					if( err ) { console.error('TID:', tid[0], tid[1], err); }
+					if( err ) { console.error('EL.sendBase().v4.uni TID:', tid[0], tid[1], err); }
 					client.close();
 				});
 			}
@@ -625,9 +625,12 @@ EL.sendBase = function ( ip, buffer) {
 	if( EL.ipVer == 0 || EL.ipVer == 6 ) {
 		if( family == 'IPv6' ) {
 			let client = dgram.createSocket({type:"udp6",reuseAddr:true});
-			address += EL.usingIF.v6;
+
+			if( address.split('%').length != 2 ) {  // IF指定（%以下）がない時は指定する
+				address += EL.usingIF.v6;
+			}
 			client.send(buffer, 0, buffer.length, EL.EL_port, address, function (err, bytes) {
-				if( err ) { console.error('TID:', tid[0], tid[1], err); }
+				if( err ) { console.error('EL.sendBase().v6 TID:', tid[0], tid[1], err); }
 				client.close();
 			});
 		}

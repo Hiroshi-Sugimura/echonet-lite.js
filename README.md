@@ -762,6 +762,7 @@ x Warranty
 
 ## Log
 
+- 2.16.1 IPv6の時に、送信でIF重複指定になる時があったバグを修正
 - 2.16.0 getClassListメソド追加
 - 2.15.2 renewFacilitiesの格納条件詳細を見直しした
 - 2.15.1 renewFacilitiesの格納条件詳細を見直しした
