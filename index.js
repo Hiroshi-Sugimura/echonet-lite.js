@@ -141,13 +141,7 @@ EL.initialize = async function (objList, userfunc, ipVer = 4, Options = {v4: '',
 	EL.EL_obj = objList;
 
 	// クラスリストにする
-	let classes = objList.map(function (e) {	// クラスだけにかえる
-		return e.substr(0, 4);
-	});
-	let classList = classes.filter(function (x, i, self) {		// 重複削除
-		return self.indexOf(x) === i;
-	});
-	EL.EL_cls = classList;
+	EL.EL_cls = EL.getClassList(objList);
 
 	// インスタンス情報
 	EL.Node_details["d3"] = [0x00, 0x00, EL.EL_obj.length]; // D3はノードプロファイル入らない，最大253では？なぜ3Byteなのか？
@@ -558,6 +552,22 @@ EL.bytesToString = function (bytes) {
 	return ret;
 };
 
+// インスタンスリストからクラスリストを作る
+EL.getClassList = function( objList ) {
+	let ret;
+
+	// クラスリストにする
+	let classes = objList.map(function (e) {	// クラスだけにかえる
+		return e.substr(0, 4);
+	});
+
+	let classList = classes.filter(function (x, i, self) {		// 重複削除
+		return self.indexOf(x) === i;
+	});
+	ret = classList;
+
+	return ret;
+};
 
 //////////////////////////////////////////////////////////////////////
 // 送信
