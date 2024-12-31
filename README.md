@@ -434,14 +434,14 @@ EL.bytesShow = function( bytes )
 
 ![](img/convert.png)
 
-| from              |    to             |   function                         |
-|:-----------------:|:-----------------:|:----------------------------------:|
-| String            | ELDATA(EDT)       | parseDetail(opc,str)                  |
-| Bytes(=Integer[]) | ELDATA            | parseBytes(bytes)                  |
-| String            | ELDATA            | parseString(str)                   |
-| String            | String (like EL)  | getSeparatedString_String(str)     |
-| ELDATA            | String (like EL)  | getSeparatedString_ELDATA(eldata)  |
-| ELDATA            | Bytes(=Integer[]) | ELDATA2Array(eldata)               |
+|       from        |        to         |             function              |
+| :---------------: | :---------------: | :-------------------------------: |
+|      String       |    ELDATA(EDT)    |       parseDetail(opc,str)        |
+| Bytes(=Integer[]) |      ELDATA       |         parseBytes(bytes)         |
+|      String       |      ELDATA       |         parseString(str)          |
+|      String       | String (like EL)  |  getSeparatedString_String(str)   |
+|      ELDATA       | String (like EL)  | getSeparatedString_ELDATA(eldata) |
+|      ELDATA       | Bytes(=Integer[]) |       ELDATA2Array(eldata)        |
 
 
 * DetailだけをParseする，内部でよく使うけど外部で使うかわかりません．
@@ -492,10 +492,10 @@ EL.ELDATA2Array = function( eldata )
 
 * 変換表, convert pair of datas
 
-| from              |    to          |   function                         |
-|:-----------------:|:--------------:|:----------------------------------:|
-| Byte              | 16進表現String | toHexString(byte)                  |
-| 16進表現String    |  Integer[]     | toHexArray(str)                    |
+|      from      |       to       |     function      |
+| :------------: | :------------: | :---------------: |
+|      Byte      | 16進表現String | toHexString(byte) |
+| 16進表現String |   Integer[]    |  toHexArray(str)  |
 
 
 * 1バイトを文字列の16進表現へ（1Byteは必ず2文字にする）
@@ -761,7 +761,7 @@ x Warranty
 
 
 ## Log
-
+- 2.16.2 EL.sendELDATAのesvが宣言されていない を直していただいた
 - 2.16.1 IPv6の時に、送信でIF重複指定になる時があったバグを修正
 - 2.16.0 getClassListメソド追加
 - 2.15.2 renewFacilitiesの格納条件詳細を見直しした
