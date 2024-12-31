@@ -828,6 +828,7 @@ EL.sendELDATA = function (ip, eldata) {
 	let tid = [];
 	let seoj = [];
 	let deoj = [];
+	let esv = [];
 
 	if( !eldata.TID || !eldata.TID == '') {		// TIDの指定がなければ自動
 		let carry = 0; // 繰り上がり
