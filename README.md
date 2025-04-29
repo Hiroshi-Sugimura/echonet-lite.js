@@ -761,6 +761,7 @@ x Warranty
 
 
 ## Log
+- 2.16.3 EL.SearchをEL.Initializeを完了する前に呼んでしまい情報取得がスタックしてしまう場合があることを解消
 - 2.16.2 EL.sendELDATAのesvが宣言されていない を直していただいた
 - 2.16.1 IPv6の時に、送信でIF重複指定になる時があったバグを修正
 - 2.16.0 getClassListメソド追加
