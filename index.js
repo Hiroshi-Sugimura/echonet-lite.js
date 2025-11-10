@@ -476,6 +476,15 @@ EL.parseBytes = function (bytes) {
 			return null;
 		}
 
+		// ECHONET Liteヘッダ検証（EHD1とEHD2）
+		// 有効な値: 0x1081（規定電文形式）または 0x1082（任意電文形式）
+		// ヘッダが異なる場合はECHONET Liteパケットではないため無視
+		if (bytes[0] !== 0x10 || (bytes[1] !== 0x81 && bytes[1] !== 0x82)) {
+			EL.debugMode ? console.log("EL.parseBytes: Not an ECHONET Lite packet (invalid header). EHD: " +
+				EL.toHexString(bytes[0]) + EL.toHexString(bytes[1])) : 0;
+			return null;
+		}
+
 		// 数値だったら文字列にして
 		let str = "";
 		if (bytes[0] != 'string') {
