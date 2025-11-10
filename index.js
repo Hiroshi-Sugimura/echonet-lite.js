@@ -206,7 +206,7 @@ EL.initialize = function (objList, userfunc, ipVer = 4, Options = {v4: '', v6: '
 	}else{
 		return {sock4: EL.sock4, sock6: EL.sock6};
 	}
-};;
+};
 
 
 // release
