@@ -367,6 +367,18 @@ EL.parseDetail = function( _opc, str ) {
 	try {
 		let array = EL.toHexArray( str );  // edts
 		let opc = EL.toHexArray(_opc)[0];
+
+		// OPC妥当性チェック（0-255の範囲内である必要がある）
+		if (opc == null || opc === undefined || opc < 0 || opc > 255) {
+			throw new Error('EL.parseDetail(): Invalid OPC value: ' + opc);
+		}
+
+		// OPCで指定されたプロパティ数に対してデータが十分にあるかチェック
+		// 各プロパティには最低でも2バイト（EPC + PDC）が必要
+		if (array.length < opc * 2) {
+			throw new Error('EL.parseDetail(): Insufficient data for OPC count. OPC: ' + opc + ', Data length: ' + array.length);
+		}
+
 		let epc = array[0]; // 最初は0
 		let pdc = array[1]; // 最初は1
 		let now = 0;  // 入力データの現在処理位置, Index
@@ -375,13 +387,33 @@ EL.parseDetail = function( _opc, str ) {
 
 		// OPCループ
 		for (let i = 0; i < opc; i += 1) {
+			// 配列アクセス前の境界チェック
+			if (now >= array.length) {
+				throw new Error('EL.parseDetail(): Data overflow at OPC index ' + i + '. Position: ' + now + ', Array length: ' + array.length);
+			}
+
 			epc = array[now];  // EPC = 機能
 			edt = []; // EDT = データのバイト数
 			now++;
 
+			// PDCの境界チェック
+			if (now >= array.length) {
+				throw new Error('EL.parseDetail(): No PDC available for EPC: ' + EL.toHexString(epc) + ' at OPC index ' + i);
+			}
+
 			// PDC（EDTのバイト数）
 			pdc = array[now];
 			now++;
+
+			// PDC妥当性チェック
+			if (pdc < 0 || pdc > 255) {
+				throw new Error('EL.parseDetail(): Invalid PDC value: ' + pdc + ' for EPC: ' + EL.toHexString(epc));
+			}
+
+			// PDCで指定されたバイト数分のデータが存在するかチェック
+			if (now + pdc > array.length) {
+				throw new Error('EL.parseDetail(): Insufficient EDT data. PDC: ' + pdc + ', Required: ' + (now + pdc) + ', Available: ' + array.length);
+			}
 
 			// それ以外はEDT[0] == byte数
 			// console.log( 'opc count:', i, 'epc:', EL.toHexString(epc), 'pdc:', EL.toHexString(pdc));
@@ -425,7 +457,9 @@ EL.parseDetail = function( _opc, str ) {
 		}  // opcループ
 
 	} catch (e) {
-		throw new Error('EL.parseDetail(): detail error. opc: ' + opc + ' str: ' + str);
+		// ENLパケットとして不正な場合は例外を投げる
+		// userfuncで第3引数としてエラーを受け取れる
+		throw new Error('EL.parseDetail(): Parse error. OPC: ' + _opc + ', Error: ' + e.message);
 	}
 
 	return ret;
@@ -439,6 +473,15 @@ EL.parseBytes = function (bytes) {
 		if (bytes.length < 14) {
 			console.error("## EL.parseBytes error. bytes is less then 14 bytes. bytes.length is " + bytes.length);
 			console.error(bytes);
+			return null;
+		}
+
+		// ECHONET Liteヘッダ検証（EHD1とEHD2）
+		// 有効な値: 0x1081（規定電文形式）または 0x1082（任意電文形式）
+		// ヘッダが異なる場合はECHONET Liteパケットではないため無視
+		if (bytes[0] !== 0x10 || (bytes[1] !== 0x81 && bytes[1] !== 0x82)) {
+			EL.debugMode ? console.log("EL.parseBytes: Not an ECHONET Lite packet (invalid header). EHD: " +
+				EL.toHexString(bytes[0]) + EL.toHexString(bytes[1])) : 0;
 			return null;
 		}
 
@@ -1373,7 +1416,7 @@ EL.returner = function (bytes, rinfo, userfunc) {
 		}
 
 		// 機器オブジェクトに関してはユーザー関数に任す
-		userfunc(rinfo, els);
+		userfunc(rinfo, els, null);
 	} catch (e) {
 		userfunc(rinfo, els, e);
 	}
