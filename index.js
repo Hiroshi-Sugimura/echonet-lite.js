@@ -1416,7 +1416,7 @@ EL.returner = function (bytes, rinfo, userfunc) {
 		}
 
 		// 機器オブジェクトに関してはユーザー関数に任す
-		userfunc(rinfo, els);
+		userfunc(rinfo, els, null);
 	} catch (e) {
 		userfunc(rinfo, els, e);
 	}
