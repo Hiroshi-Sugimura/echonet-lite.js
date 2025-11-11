@@ -823,43 +823,96 @@ EL.sendBase = function ( ip, buffer) {
 	EL.debugMode ? console.log( buffer ) :0;
 	let tid = [ buffer[2], buffer[3] ];
 
-	// console.log(ip, buffer);
+	// ソケットを安全にクローズするヘルパー関数
+	const safeCloseSocket = (socket) => {
+		if (!socket) return;
+		try {
+			socket.close();
+		} catch (e) {
+			EL.debugMode ? console.error('Socket close error:', e) : 0;
+		}
+	};
+
 	// ipv4
-	if( EL.ipVer == 0 || EL.ipVer == 4 ) {
-		// 送信先がipv4ならやる，'.'が使われているかどうかで判定しちゃう
-		if( family == 'IPv4' ) {
-			let client = dgram.createSocket({type:"udp4",reuseAddr:true});
+	if( EL.ipVer === 0 || EL.ipVer === 4 ) {
+		// 送信先がipv4ならやる
+		if( family === 'IPv4' ) {
+			let client = null;
 
-			if( EL.usingIF.v4 != '' ) {
-				client.bind( EL.EL_port + 20000, EL.usingIF.v4, () => {
-					client.setMulticastInterface( EL.usingIF.v4 );
-					client.send(buffer, 0, buffer.length, EL.EL_port, address, function (err, bytes) {
-						if( err ) { console.error('EL.sendBase().v4.multi TID:', tid[0], tid[1], err); }
-						client.close();
+			try {
+				client = dgram.createSocket({type:"udp4",reuseAddr:true});
+
+				// エラーハンドラを先に設定（メモリリーク防止）
+				client.on('error', (err) => {
+					console.error('EL.sendBase().v4 socket error TID:', tid[0], tid[1], err);
+					safeCloseSocket(client);
+				});
+
+				if( EL.usingIF.v4 !== '' ) {
+					// bind失敗時のタイムアウト設定
+					const bindTimeout = setTimeout(() => {
+						console.error('EL.sendBase().v4 bind timeout TID:', tid[0], tid[1]);
+						safeCloseSocket(client);
+					}, 3000);
+
+					client.bind( EL.EL_port + 20000, EL.usingIF.v4, () => {
+						clearTimeout(bindTimeout);
+						try {
+							client.setMulticastInterface( EL.usingIF.v4 );
+							client.send(buffer, 0, buffer.length, EL.EL_port, address, function (err, bytes) {
+								if( err ) {
+									console.error('EL.sendBase().v4.multi send error TID:', tid[0], tid[1], err);
+								}
+								safeCloseSocket(client);
+							});
+						} catch (e) {
+							console.error('EL.sendBase().v4.multi error TID:', tid[0], tid[1], e);
+							safeCloseSocket(client);
+						}
 					});
-				});
-			}else{
-				client.send(buffer, 0, buffer.length, EL.EL_port, address, function (err, bytes) {
-					if( err ) { console.error('EL.sendBase().v4.uni TID:', tid[0], tid[1], err); }
-					client.close();
-				});
+				} else {
+					client.send(buffer, 0, buffer.length, EL.EL_port, address, function (err, bytes) {
+						if( err ) {
+							console.error('EL.sendBase().v4.uni send error TID:', tid[0], tid[1], err);
+						}
+						safeCloseSocket(client);
+					});
+				}
+			} catch (e) {
+				console.error('EL.sendBase().v4 creation error TID:', tid[0], tid[1], e);
+				safeCloseSocket(client);
 			}
-
 		}
 	}
 
 	// ipv6
-	if( EL.ipVer == 0 || EL.ipVer == 6 ) {
-		if( family == 'IPv6' ) {
-			let client = dgram.createSocket({type:"udp6",reuseAddr:true});
+	if( EL.ipVer === 0 || EL.ipVer === 6 ) {
+		if( family === 'IPv6' ) {
+			let client = null;
 
-			if( address.split('%').length != 2 ) {  // IF指定（%以下）がない時は指定する
-				address += EL.usingIF.v6;
+			try {
+				client = dgram.createSocket({type:"udp6",reuseAddr:true});
+
+				// エラーハンドラを先に設定（メモリリーク防止）
+				client.on('error', (err) => {
+					console.error('EL.sendBase().v6 socket error TID:', tid[0], tid[1], err);
+					safeCloseSocket(client);
+				});
+
+				if( address.split('%').length !== 2 ) {  // IF指定（%以下）がない時は指定する
+					address += EL.usingIF.v6;
+				}
+
+				client.send(buffer, 0, buffer.length, EL.EL_port, address, function (err, bytes) {
+					if( err ) {
+						console.error('EL.sendBase().v6 send error TID:', tid[0], tid[1], err);
+					}
+					safeCloseSocket(client);
+				});
+			} catch (e) {
+				console.error('EL.sendBase().v6 creation error TID:', tid[0], tid[1], e);
+				safeCloseSocket(client);
 			}
-			client.send(buffer, 0, buffer.length, EL.EL_port, address, function (err, bytes) {
-				if( err ) { console.error('EL.sendBase().v6 TID:', tid[0], tid[1], err); }
-				client.close();
-			});
 		}
 	}
 

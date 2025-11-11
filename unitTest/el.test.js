@@ -6,6 +6,19 @@ const EL = require('../index.js');
 
 describe('EL - ECHONET Lite プロトコル', () => {
 
+  // console.errorをモック化してログを抑制
+  let consoleErrorSpy;
+
+  beforeAll(() => {
+    // console.errorをモック化
+    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterAll(() => {
+    // console.errorのモックを解除
+    consoleErrorSpy.mockRestore();
+  });
+
   describe('変換系関数', () => {
 
     test('toHexString: バイトを16進数文字列に変換', () => {
