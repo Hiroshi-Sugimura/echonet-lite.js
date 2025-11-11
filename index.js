@@ -13,6 +13,10 @@ require('date-utils'); // for log
 //////////////////////////////////////////////////////////////////////
 // ECHONET Lite
 
+/**
+ * ECHONET Lite プロトコルのメインオブジェクト
+ * @namespace EL
+ */
 // クラス変数
 let EL = {
 	// define
@@ -82,6 +86,21 @@ let EL = {
 };
 
 
+/**
+ * ECHONET Lite通信の初期化とソケットのバインド
+ * @memberof EL
+ * @param {string[]} objList - ECHONET Liteオブジェクトリスト（例: ['05ff01', '0ef001']）
+ * @param {Function} userfunc - 受信時のコールバック関数 (rinfo, els, error) => {}
+ * @param {number} [ipVer=4] - IPバージョン (4: IPv4のみ, 6: IPv6のみ, 0: 両方)
+ * @param {Object} [Options] - オプション設定
+ * @param {string} [Options.v4=''] - IPv4インターフェースのIPアドレス
+ * @param {string} [Options.v6=''] - IPv6インターフェース名またはアドレス
+ * @param {boolean} [Options.ignoreMe=true] - 自IPからの送信データを無視するか
+ * @param {boolean} [Options.autoGetProperties=true] - プロパティの自動取得を行うか
+ * @param {number} [Options.autoGetDelay=1000] - 自動取得時の遅延時間(ms)
+ * @param {boolean} [Options.debugMode=false] - デバッグモードの有効化
+ * @returns {Object} 作成されたソケット（ipVerに応じてsock4, sock6, または両方）
+ */
 // 初期化，バインド
 // defaultでIPversionは4, 取りうる値は4, 6, 0 = both
 // Nodejsの対応が遅れていてまだうまく動かないみたい，しばらくipVer = 4でやる。
@@ -210,6 +229,10 @@ EL.initialize = function (objList, userfunc, ipVer = 4, Options = {v4: '', v6: '
 };
 
 
+/**
+ * ECHONET Liteのリソースを解放し、ソケットを閉じる
+ * @memberof EL
+ */
 // release
 EL.release = function () {
 	EL.clearObserveFacilities();
@@ -225,6 +248,12 @@ EL.release = function () {
 	}
 };
 
+/**
+ * ネットワークインターフェースカード(NIC)のリストを更新
+ * ループバックアドレスは無視される
+ * @memberof EL
+ * @returns {Object} NICリスト {v4: [{name, address}], v6: [{name, address}]}
+ */
 // NICリスト更新
 // loopback無視
 EL.renewNICList = function () {
@@ -288,6 +317,10 @@ EL.renewNICList = function () {
 	return EL.nicList;
 };
 
+/**
+ * 自動取得待ちの個数を減らす
+ * @memberof EL
+ */
 // 自動取得待ちの個数管理
 EL.decreaseWaitings = function () {
 	if( EL.autoGetWaitings != 0 ) {
@@ -297,12 +330,22 @@ EL.decreaseWaitings = function () {
 };
 
 
+/**
+ * 自動取得待ちの個数を増やす
+ * @memberof EL
+ */
 EL.increaseWaitings = function () {
 	// console.log( 'increase:', 'waitings: ', EL.autoGetWaitings, 'delay: ', EL.autoGetDelay * (EL.autoGetWaitings+1) );
 	EL.autoGetWaitings += 1;
 };
 
 
+/**
+ * 受信したデータが自分のIPアドレスから送信されたものか判定
+ * @memberof EL
+ * @param {Object} rinfo - 受信情報 {address, family, port, size}
+ * @returns {boolean} 自IPアドレスの場合true
+ */
 // 自分からの送信データを無視するために
 EL.myIPaddress = function(rinfo) {
 	let ignoreIP = false;
@@ -341,6 +384,11 @@ function isObjEmpty(obj) {
 // eldata を見る，表示関係
 //////////////////////////////////////////////////////////////////////
 
+/**
+ * ELDATA形式のデータをコンソールに表示
+ * @memberof EL
+ * @param {Object} eldata - パース済みのELDATAオブジェクト
+ */
 // ELDATA形式
 EL.eldataShow = function (eldata) {
 	if (eldata != null) {
@@ -351,6 +399,11 @@ EL.eldataShow = function (eldata) {
 };
 
 
+/**
+ * 16進数文字列をパースしてコンソールに表示
+ * @memberof EL
+ * @param {string} str - 16進数文字列（例: '1081000101...'）
+ */
 // 文字列
 EL.stringShow = function (str) {
 	try {
@@ -361,6 +414,11 @@ EL.stringShow = function (str) {
 	}
 };
 
+/**
+ * バイト配列をパースしてコンソールに表示
+ * @memberof EL
+ * @param {Array<number>|Buffer} bytes - バイト配列
+ */
 // バイトデータ
 EL.bytesShow = function (bytes) {
 	const eld = EL.parseBytes(bytes);
@@ -372,6 +430,14 @@ EL.bytesShow = function (bytes) {
 // 変換系
 //////////////////////////////////////////////////////////////////////
 
+/**
+ * ECHONET Lite電文の詳細部分（EPC, PDC, EDT）をパース
+ * @memberof EL
+ * @param {string} _opc - OPC（プロパティ数）の16進数文字列
+ * @param {string} str - 詳細部分の16進数文字列
+ * @returns {Object} EPCをキーとしたEDTの連想配列 {epc: edt, ...}
+ * @throws {Error} パースエラー時
+ */
 // Detailだけをparseする，内部で主に使う
 EL.parseDetail = function( _opc, str ) {
 	// console.log('EL.parseDetail() opc:', _opc, 'str:', str);
@@ -476,6 +542,12 @@ EL.parseDetail = function( _opc, str ) {
 };
 
 
+/**
+ * バイト配列またはBufferをELDATA形式にパース
+ * @memberof EL
+ * @param {Array<number>|Buffer|string} bytes - バイト配列、Buffer、または16進数文字列
+ * @returns {Object|null} パース済みELDATAオブジェクト、無効な場合はnull
+ */
 // バイトデータをいれるとELDATA形式にする
 EL.parseBytes = function (bytes) {
 	try {
@@ -513,6 +585,13 @@ EL.parseBytes = function (bytes) {
 };
 
 
+/**
+ * 16進数文字列をELDATA形式にパース
+ * @memberof EL
+ * @param {string} str - 16進数文字列（例: '1081000101ef00110ef00162010a00'）
+ * @returns {Object} パース済みELDATAオブジェクト {EHD, TID, SEOJ, DEOJ, EDATA, ESV, OPC, DETAIL, DETAILs}
+ * @throws {Error} 不正な形式の場合
+ */
 // 16進数で表現された文字列をいれるとELDATA形式にする
 EL.parseString = function (str) {
 	// 前処理: 受け付けるのは16進文字列。空白は除去し、小文字に統一
@@ -588,6 +667,13 @@ EL.parseString = function (str) {
 };
 
 
+/**
+ * 16進数文字列をECHONET Lite形式で区切られた文字列に変換
+ * @memberof EL
+ * @param {string} str - 16進数文字列
+ * @returns {string} スペース区切りの文字列（EHD TID SEOJ DEOJ ESV ...）
+ * @throws {Error} 文字列でない場合
+ */
 // 文字列をいれるとELらしい切り方のStringを得る
 EL.getSeparatedString_String = function (str) {
 	try {
@@ -608,24 +694,48 @@ EL.getSeparatedString_String = function (str) {
 };
 
 
+/**
+ * ELDATAオブジェクトをスペース区切りの文字列に変換
+ * @memberof EL
+ * @param {Object} eldata - ELDATAオブジェクト
+ * @returns {string} スペース区切りの文字列
+ */
 // ELDATAをいれるとELらしい切り方のStringを得る
 EL.getSeparatedString_ELDATA = function (eldata) {
 	return (eldata.EHD + ' ' + eldata.TID + ' ' + eldata.SEOJ + ' ' + eldata.DEOJ + ' ' + eldata.EDATA);
 };
 
 
+/**
+ * ELDATAオブジェクトをバイト配列に変換
+ * @memberof EL
+ * @param {Object} eldata - ELDATAオブジェクト
+ * @returns {Array<number>} バイト配列
+ */
 // ELDATA形式から配列へ
 EL.ELDATA2Array = function (eldata) {
 	let ret = EL.toHexArray(eldata.EHD + eldata.TID + eldata.SEOJ + eldata.DEOJ + eldata.EDATA);
 	return ret;
 };
 
+/**
+ * 1バイトを2桁の16進数文字列に変換
+ * @memberof EL
+ * @param {number} byte - バイト値（0-255）
+ * @returns {string} 2桁の16進数文字列（例: 'ff', '0a'）
+ */
 // 1バイトを文字列の16進表現へ（1Byteは必ず2文字にする）
 EL.toHexString = function (byte) {
 	// 文字列0をつなげて，後ろから2文字分スライスする
 	return (("0" + byte.toString(16)).slice(-2));
 };
 
+/**
+ * 16進数文字列をバイト配列に変換
+ * @memberof EL
+ * @param {string} string - 16進数文字列（例: 'ff0a30'）
+ * @returns {Array<number>} バイト配列
+ */
 // 16進表現の文字列を数値のバイト配列へ
 EL.toHexArray = function (string) {
 	let ret = [];
@@ -640,6 +750,12 @@ EL.toHexArray = function (string) {
 };
 
 
+/**
+ * バイト配列を16進数文字列に変換
+ * @memberof EL
+ * @param {Array<number>} bytes - バイト配列
+ * @returns {string} 16進数文字列
+ */
 // バイト配列を文字列にかえる
 EL.bytesToString = function (bytes) {
 	let ret = "";
@@ -650,6 +766,12 @@ EL.bytesToString = function (bytes) {
 	return ret;
 };
 
+/**
+ * インスタンスリストからクラスリストを作成（重複削除）
+ * @memberof EL
+ * @param {Array<string>} objList - オブジェクトリスト（例: ['05ff01', '013001']）
+ * @returns {Array<string>} クラスリスト（例: ['05ff', '0130']）
+ */
 // インスタンスリストからクラスリストを作る
 EL.getClassList = function( objList ) {
 	let ret;
@@ -671,6 +793,13 @@ EL.getClassList = function( objList ) {
 // 送信
 //////////////////////////////////////////////////////////////////////
 
+/**
+ * ECHONET Lite電文の送信基本関数
+ * @memberof EL
+ * @param {string|Object} ip - 送信先IPアドレス（文字列）またはrinfoオブジェクト {address, family}
+ * @param {Buffer} buffer - 送信するバッファ
+ * @returns {Array<number>} 使用したトランザクションID [tid[0], tid[1]]
+ */
 // EL送信のベース
 EL.sendBase = function ( ip, buffer) {
 	let address = '';
@@ -738,12 +867,31 @@ EL.sendBase = function ( ip, buffer) {
 };
 
 
+/**
+ * バイト配列を送信
+ * @memberof EL
+ * @param {string|Object} ip - 送信先IPアドレス
+ * @param {Array<number>} array - 送信するバイト配列
+ * @returns {Array<number>} トランザクションID
+ */
 // 配列の時
 EL.sendArray = function (ip, array) {
 	return EL.sendBase(ip, Buffer.from(array));
 };
 
 
+/**
+ * OPC=1（プロパティ1個）のECHONET Lite電文を送信
+ * トランザクションIDは自動インクリメント
+ * @memberof EL
+ * @param {string|Object} ip - 送信先IPアドレス
+ * @param {string|Array<number>} seoj - 送信元ECHONET Liteオブジェクト（6桁の16進数文字列または3バイト配列）
+ * @param {string|Array<number>} deoj - 送信先ECHONET Liteオブジェクト
+ * @param {string|number} esv - ECHONET Liteサービス（例: 0x62=GET, 0x61=SetC）
+ * @param {string|number} epc - ECHONET Liteプロパティコード
+ * @param {string|number|Array<number>} edt - プロパティ値データ
+ * @returns {Array<number>} トランザクションID
+ */
 // ELの非常に典型的なOPC一個でやる
 // TID自動インクリメント
 EL.sendOPC1 = function (ip, seoj, deoj, esv, epc, edt) {
@@ -818,6 +966,13 @@ EL.sendOPC1 = function (ip, seoj, deoj, esv, epc, edt) {
 
 
 
+/**
+ * 16進数文字列をそのまま送信
+ * @memberof EL
+ * @param {string|Object} ip - 送信先IPアドレス
+ * @param {string} string - 16進数文字列
+ * @returns {Array<number>} トランザクションID
+ */
 // ELの非常に典型的な送信3 文字列タイプ
 EL.sendString = function (ip, string) {
 	// 送信する
@@ -825,6 +980,19 @@ EL.sendString = function (ip, string) {
 };
 
 
+/**
+ * 複数プロパティを含むECHONET Lite電文を送信
+ * トランザクションIDは自動インクリメント
+ * @memberof EL
+ * @param {string|Object} ip - 送信先IPアドレス
+ * @param {string|Array<number>} seoj - 送信元ECHONET Liteオブジェクト
+ * @param {string|Array<number>} deoj - 送信先ECHONET Liteオブジェクト
+ * @param {string|number} esv - ECHONET Liteサービス
+ * @param {Object|Array<Object>} DETAILs - プロパティの詳細
+ *   - オブジェクト形式: {epc: edt, ...} 例: {'80':'31', '8a':'000077'}
+ *   - 配列形式: [{epc: edt}, ...] 順序が保証される
+ * @returns {Array<number>} トランザクションID
+ */
 // 複数のEPCで送信する
 // TID自動インクリメント
 // seoj, deoj, esvはbyteでもstringでも受け付ける
@@ -906,6 +1074,25 @@ EL.sendDetails = async function (ip, seoj, deoj, esv, DETAILs) {
 };
 
 
+/**
+ * ELDATAオブジェクト形式で電文を送信
+ * @memberof EL
+ * @param {string|Object} ip - 送信先IPアドレス
+ * @param {Object} eldata - ELDATA形式のオブジェクト
+ * @param {string} [eldata.TID] - トランザクションID（省略時は自動採番）
+ * @param {string} eldata.SEOJ - 送信元ECHONET Liteオブジェクト（6桁）
+ * @param {string} eldata.DEOJ - 送信先ECHONET Liteオブジェクト（6桁）
+ * @param {string} eldata.ESV - ECHONET Liteサービス（2桁）
+ * @param {Object} eldata.DETAILs - プロパティ詳細 {epc: edt, ...}
+ * @returns {Array<number>} トランザクションID
+ * @example
+ * EL.sendELDATA(ip, {
+ *   SEOJ: '0ef001',
+ *   DEOJ: '029001',
+ *   ESV: '61',
+ *   DETAILs: {'80':'31', '8a':'000077'}
+ * })
+ */
 // 省略したELDATAの形式で指定して送信する
 // ELDATA {
 //   TID : String(4),      // 省略すると自動
@@ -986,6 +1173,19 @@ EL.sendELDATA = function (ip, eldata) {
 
 
 
+/**
+ * 受信した電文への返信（OPC=1）
+ * 受信したトランザクションIDを使用して返信
+ * @memberof EL
+ * @param {string|Object} ip - 返信先IPアドレス
+ * @param {string|Array<number>} tid - トランザクションID（受信したものを使用）
+ * @param {string|Array<number>} seoj - 送信元ECHONET Liteオブジェクト
+ * @param {string|Array<number>} deoj - 送信先ECHONET Liteオブジェクト
+ * @param {string|number} esv - ECHONET Liteサービス
+ * @param {string|number} epc - ECHONET Liteプロパティコード
+ * @param {string|number|Array<number>} edt - プロパティ値データ
+ * @returns {Array<number>} トランザクションID
+ */
 // ELの返信用、典型的なOPC一個でやる．TIDを併せて返信しないといけないため
 EL.replyOPC1 = function (ip, tid, seoj, deoj, esv, epc, edt) {
 
@@ -1045,6 +1245,22 @@ EL.replyOPC1 = function (ip, tid, seoj, deoj, esv, epc, edt) {
 
 
 
+/**
+ * dev_details形式で機器の状態を管理し、GET要求に自動応答
+ * 複数プロパティ（OPC）に対応
+ * @memberof EL
+ * @param {Object} rinfo - 受信情報
+ * @param {Object} els - パース済みELDATA
+ * @param {Object} dev_details - 機器詳細情報
+ * @example
+ * dev_details = {
+ *   '001101': {  // 温度センサ
+ *     '80': [0x30],  // 動作状態
+ *     '81': [0x0f],  // 設置場所
+ *     'e0': [0x00, 0xdc]  // 温度計測値
+ *   }
+ * }
+ */
 // dev_details の形式で自分のEPC状況を渡すと、その状況を返答する
 // 例えば下記に001101(温度センサ)の例を示す
 /*
@@ -1094,6 +1310,14 @@ EL.replyGetDetail = async function(rinfo, els, dev_details) {
 	EL.sendArray( rinfo, arr.flat(Infinity) );
 };
 
+/**
+ * replyGetDetailのサブルーチン - 指定EPCが存在するか確認
+ * @memberof EL
+ * @param {Object} els - パース済みELDATA
+ * @param {Object} dev_details - 機器詳細情報
+ * @param {string} epc - 確認するプロパティコード
+ * @returns {boolean} プロパティが存在する場合true
+ */
 // 上記のサブルーチン
 EL.replyGetDetail_sub = function( els, dev_details, epc) {
 	if( !dev_details[els.DEOJ] ) { // EOJそのものがあるか？
@@ -1109,6 +1333,15 @@ EL.replyGetDetail_sub = function( els, dev_details, epc) {
 };
 
 
+/**
+ * SET要求に対する自動応答（複数プロパティ対応）
+ * 値の妥当性チェックとINF処理はreplySetDetail_subで実施
+ * SET_RESの応答にはEDTが含まれない（仕様）
+ * @memberof EL
+ * @param {Object} rinfo - 受信情報
+ * @param {Object} els - パース済みELDATA
+ * @param {Object} dev_details - 機器詳細情報
+ */
 // dev_detailのSetに対して複数OPCにも対応して返答する
 // ただしEPC毎の設定値に関して基本はノーチェックなので注意すべし
 // EPC毎の設定値チェックや、INF処理に関しては下記の replySetDetail_sub にて実施
@@ -1148,6 +1381,16 @@ EL.replySetDetail = async function(rinfo, els, dev_details) {
 	EL.sendArray( rinfo, arr.flat(Infinity) );
 };
 
+/**
+ * replySetDetailのサブルーチン - プロパティ設定の妥当性チェックとINF送信
+ * 機器種別とEPCに応じた個別処理を実施
+ * @memberof EL
+ * @param {Object} rinfo - 受信情報
+ * @param {Object} els - パース済みELDATA
+ * @param {Object} dev_details - 機器詳細情報
+ * @param {string} epc - 設定するプロパティコード
+ * @returns {boolean} 設定成功時true、失敗時false
+ */
 // 上記のサブルーチン
 EL.replySetDetail_sub = function(rinfo, els, dev_details, epc) {
 	let edt = els.DETAILs[epc];
@@ -1273,6 +1516,13 @@ EL.replySetDetail_sub = function(rinfo, els, dev_details, epc) {
 // EL受信
 //////////////////////////////////////////////////////////////////////
 
+/**
+ * ECHONET Lite電文の受信処理と振り分け
+ * @memberof EL
+ * @param {Buffer|Array<number>} bytes - 受信したバイトデータ
+ * @param {Object} rinfo - 受信情報 {address, family, port, size}
+ * @param {Function} userfunc - ユーザー定義のコールバック関数 (rinfo, els, error) => {}
+ */
 // ELの受信データを振り分ける
 EL.returner = function (bytes, rinfo, userfunc) {
 	EL.debugMode ? console.log( "======== returner:", rinfo.address ) :0;
@@ -1482,6 +1732,13 @@ EL.returner = function (bytes, rinfo, userfunc) {
 };
 
 
+/**
+ * ネットワーク内の機器情報を更新（受信時に自動実行）
+ * @memberof EL
+ * @param {string} address - 機器のIPアドレス
+ * @param {Object} els - パース済みELDATA
+ * @throws {Error} パースエラー時
+ */
 // ネットワーク内のEL機器全体情報を更新する，受信したら勝手に実行される
 EL.renewFacilities = function (address, els) {
 	let epcList;
@@ -1518,6 +1775,11 @@ EL.renewFacilities = function (address, els) {
 };
 
 
+/**
+ * 機器情報の不足プロパティを補完取得
+ * ネットワーク負荷に注意（頻繁な実行は避ける）
+ * @memberof EL
+ */
 // ネットワーク内のEL機器全体情報のEPCを取得したか確認する
 // 取得漏れがあれば取得する
 // あまり実施するとネットワーク負荷がすごくなるので注意
@@ -1545,6 +1807,13 @@ EL.complementFacilities = function () {
 	});
 };
 
+/**
+ * complementFacilitiesのサブルーチン - 個別機器のプロパティ補完
+ * @memberof EL
+ * @param {string} ip - 機器のIPアドレス
+ * @param {string} eoj - ECHONET Liteオブジェクト
+ * @param {Object} props - 現在保持しているプロパティ情報
+ */
 EL.complementFacilities_sub = function ( ip, eoj, props ) {  // サブルーチン
 	let epcs = Object.keys( props );
 	// '9f' (Get Property Map) が存在しない/空ならマップ取得を要求
@@ -1581,6 +1850,12 @@ EL.complementFacilities_sub = function ( ip, eoj, props ) {  // サブルーチ�
 //--------------------------------------------------------------------
 // facilitiesの定期的な監視
 
+/**
+ * 機器情報の変化を監視し、変化時にコールバックを実行
+ * @memberof EL
+ * @param {number} interval - 監視間隔(ミリ秒)
+ * @param {Function} onChanged - 変化検出時のコールバック関数
+ */
 // ネットワーク内のEL機器全体情報を更新したらユーザの関数を呼び出す
 EL.setObserveFacilities = function ( interval, onChanged ) {
 	if ( EL.observeFacilitiesTimerId ) return;  // 多重呼び出し排除
@@ -1596,6 +1871,10 @@ EL.setObserveFacilities = function ( interval, onChanged ) {
 	EL.observeFacilitiesTimerId = setInterval( onObserve, interval );
 };
 
+/**
+ * 機器情報の監視を終了
+ * @memberof EL
+ */
 // 監視終了
 EL.clearObserveFacilities = function() {
 	if ( EL.observeFacilitiesTimerId ) {
@@ -1605,6 +1884,13 @@ EL.clearObserveFacilities = function() {
 };
 
 
+/**
+ * オブジェクトをキーでソート（JSON比較用）
+ * オブジェクトの格納順序の違いによる比較エラーを防ぐ
+ * @memberof EL
+ * @param {Object} obj - ソート対象のオブジェクト
+ * @returns {Object} キーでソート済みのオブジェクト
+ */
 // キーでソートしてからJSONにする
 // 単純にJSONで比較するとオブジェクトの格納順序の違いだけで比較結果がイコールにならない
 EL.objectSort = function (obj) {
@@ -1627,6 +1913,11 @@ EL.objectSort = function (obj) {
 // EL，上位の通信手続き
 //////////////////////////////////////////////////////////////////////
 
+/**
+ * ネットワーク内のECHONET Lite機器を検索
+ * マルチキャストで機器情報を要求
+ * @memberof EL
+ */
 // 機器検索
 EL.search = function () {
 	// 複合サーチ
@@ -1643,6 +1934,13 @@ EL.search = function () {
 };
 
 
+/**
+ * 機器のプロパティマップをすべて取得
+ * デバイス負荷を考慮して遅延を入れる
+ * @memberof EL
+ * @param {string|Object} ip - 機器のIPアドレス
+ * @param {string|Array<number>} _eoj - ECHONET Liteオブジェクト（6桁の16進数文字列または3バイト配列）
+ */
 // プロパティマップをすべて取得する
 // 一度に一気に取得するとデバイス側が対応できないタイミングもあるようで，適当にwaitする。
 EL.getPropertyMaps = function ( ip, _eoj ) {
@@ -1675,6 +1973,13 @@ EL.getPropertyMaps = function ( ip, _eoj ) {
 };
 
 
+/**
+ * プロパティマップ形式2をパース（形式1に変換）
+ * プロパティ数が16以上の場合に使用される記述形式2を形式1に変換
+ * @memberof EL
+ * @param {string|Array<number>} bitstr - EDT部分（数値配列[0x01, 0x30]または16進数文字列"0130"）
+ * @returns {Array<number>} 形式1のバイト配列（先頭バイトはプロパティ数）
+ */
 // parse Propaty Map Form 2
 // 16以上のプロパティ数の時，記述形式2，出力はForm1にすること, bitstr = EDT
 // bitstrは 数値配列[0x01, 0x30]のようなやつ、か文字列"0130"のようなやつを受け付ける
