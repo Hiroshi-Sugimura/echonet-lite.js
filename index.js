@@ -177,7 +177,7 @@ EL.initialize = function (objList, userfunc, ipVer = 4, Options = {v4: '', v6: '
 	if( EL.ipVer == 0 || EL.ipVer == 4) {
 		EL.sock4.bind( {'address': '0.0.0.0', 'port': EL.EL_port}, function () {
 			EL.sock4.setMulticastLoopback(true);
-			EL.sock4.addMembership(EL.EL_Multi);
+			EL.sock4.addMembership(EL.EL_Multi, EL.usingIF.v4);
 		});
 	}
 	if( EL.ipVer == 0 || EL.ipVer == 6) {
