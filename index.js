@@ -1473,7 +1473,7 @@ EL.complementFacilities = function () {
 		let node = EL.facilities[ip];
 		let eojs = Object.keys( node );  // 保持するEOJについて全チェック
 
-		let node_prof = eojs.filter( (v) => { return v.substr(0.4) == '0ef0'; } );
+		let node_prof = eojs.filter( (v) => { return v.substr(0, 4) == '0ef0'; } );
 		if( !node_prof ) {  // Node Profileがない
 			// node_profを取りに行く、node_profがとれればその先は自動でとれると期待
 			EL.sendDetails( ip, EL.NODE_PROFILE_OBJECT, EL.NODE_PROFILE_OBJECT, EL.GET, [{'d6':''}, {'83':''}, {'9d':''}, {'9e':''}, {'9f':''}]);
@@ -1488,7 +1488,7 @@ EL.complementFacilities = function () {
 
 EL.complementFacilities_sub = function ( ip, eoj, props ) {  // サブルーチン
 	let epcs = Object.keys( props );
-	let getMap = epcs.filter( (v) => { return v.substr(0.4) == '9f'; } );
+	let getMap = epcs.filter( (v) => { return v.substr(0, 4) == '9f'; } );
 
 	if( !getMap ) {
 		// get prop. mapがなければ取りに行く。そのあとは自動で取得すると期待
