@@ -1073,8 +1073,11 @@ EL.replySetDetail = async function(rinfo, els, dev_details) {
 			retDetails.push( [0x00] );  // 処理できた分は0を返す
 		}else{
 			retDetails.push( parseInt(epc,16) );  // epcは文字列なので
-			retDetails.push( parseInt(els.DETAILs[epc].length/2, 16) );  // 処理できなかった部分は要求と同じ値を返却
-			retDetails.push( parseInt(els.DETAILs[epc], 16) );
+			// PDCはEDTのバイト数そのまま
+			const pdc = els.DETAILs[epc].length / 2;  // hex文字列長÷2
+			retDetails.push( pdc );  // 処理できなかった部分は要求と同じ値を返却
+			// EDTは数値全体にparseせずバイト配列を積む
+			retDetails.push( EL.toHexArray(els.DETAILs[epc]) );
 			success = false;
 		}
 		ret_opc += 1;
