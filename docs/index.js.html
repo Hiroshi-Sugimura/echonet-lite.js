@@ -152,7 +152,7 @@ let EL = {
 // defaultでIPversionは4, 取りうる値は4, 6, 0 = both
 // Nodejsの対応が遅れていてまだうまく動かないみたい，しばらくipVer = 4でやる。
 // 複数NICがあるときにNICを指定できるようにした。NICの設定はmulticastAddrに出力したいインタフェースのIPを指定する。
-// ipVer == 0の時はsocketが4と6の2個手に入れることに注意
+// ipVer === 0の時はsocketが4と6の2個手に入れることに注意
 EL.initialize = function (objList, userfunc, ipVer = 4, Options = {v4: '', v6: '', ignoreMe: true, autoGetProperties: true, autoGetDelay: 1000, debugMode: false}) {
 
 	EL.debugMode = Options.debugMode; // true: show debug log
@@ -169,35 +169,35 @@ EL.initialize = function (objList, userfunc, ipVer = 4, Options = {v4: '', v6: '
 	EL.debugMode ? console.log('EL.initialize() NIC list:', EL.nicList) : 0;
 
 	// 複数NIC対策
-	EL.usingIF.v4 = (Options.v4 != undefined &amp;&amp; Options.v4 != '' &amp;&amp; Options.v4 != 'auto') ? Options.v4 : '0.0.0.0';
+	EL.usingIF.v4 = (Options.v4 !== undefined &amp;&amp; Options.v4 !== '' &amp;&amp; Options.v4 !== 'auto') ? Options.v4 : '0.0.0.0';
 	if( EL.nicList.v6.length > 1 ) {  // v6が選択可能
-		if( process.platform == 'win32' ) {  // windows
+		if( process.platform === 'win32' ) {  // windows
 			let nic = EL.nicList.v6.find( (dev) => {
-				if( dev.name == Options.v6 || dev.address == Options.v6 ) {
+				if( dev.name === Options.v6 || dev.address === Options.v6 ) {
 					return true;
 				}
 			});
 
-			if( Options.v6 == undefined || Options.v6 =="" || Options.v6 =="auto" || !nic ) { // なんでもいい場合や、指定のnicがない場合
+			if( Options.v6 === undefined || Options.v6 ==="" || Options.v6 ==="auto" || !nic ) { // なんでもいい場合や、指定のnicがない場合
 				EL.usingIF.v6 = '';
 			}else if( nic ) {  // 指定があって、nicが見つかった場合
 				EL.usingIF.v6 = nic.address;
 				// EL.usingIF.v6 = '%' + nic.name;
 			}
 		}else{  // mac or linux
-			EL.usingIF.v6 = (Options.v6 != undefined &amp;&amp; Options.v6 !="") ? '%' + Options.v6 : '%' + EL.nicList.v6[0].name;
+			EL.usingIF.v6 = (Options.v6 !== undefined &amp;&amp; Options.v6 !=="") ? '%' + Options.v6 : '%' + EL.nicList.v6[0].name;
 		}
 	}else{
 		EL.usingIF.v6 = '';  // v6が無い、または一つしか無い場合は選択しない = default = ''
 	}
 
-	EL.ignoreMe = Options.ignoreMe != false ? true : false;	// 自IPから送信されたデータ受信を無視, default true, 微妙な条件の書き方はundef対策
-	EL.autoGetProperties = Options.autoGetProperties != false ? true : false;	// 自動的なデータ送信の有無
-	EL.autoGetDelay = Options.autoGetDelay != undefined ? Options.autoGetDelay : 1000;	// 自動GetのDelay
+	EL.ignoreMe = Options.ignoreMe !== false ? true : false;	// 自IPから送信されたデータ受信を無視, default true, 微妙な条件の書き方はundef対策
+	EL.autoGetProperties = Options.autoGetProperties !== false ? true : false;	// 自動的なデータ送信の有無
+	EL.autoGetDelay = Options.autoGetDelay !== undefined ? Options.autoGetDelay : 1000;	// 自動GetのDelay
 	EL.autoGetWaitings = 0;   // 自動取得の待ち処理個数
 
 	// 邪魔なので
-	if( EL.debugMode == true ) {
+	if( EL.debugMode === true ) {
 		console.log('==== echonet-lite.js ====');
 		console.log('ipVer:', EL.ipVer, ', v4:', EL.usingIF.v4, ', v6:', EL.usingIF.v6);
 		console.log('autoGetProperties:', EL.autoGetProperties, ', autoGetDelay: ', EL.autoGetDelay );
@@ -229,28 +229,28 @@ EL.initialize = function (objList, userfunc, ipVer = 4, Options = {v4: '', v6: '
 
 	// EL受信のUDP socket作成
 	// 両方対応
-	if( EL.ipVer == 0 || EL.ipVer == 4) {
+	if( EL.ipVer === 0 || EL.ipVer === 4) {
 		EL.sock4 = dgram.createSocket({type:"udp4",reuseAddr:true}, (msg, rinfo) => {
 			EL.returner(msg, rinfo, userfunc);
 		});
 	}
-	if( EL.ipVer == 0 || EL.ipVer == 6) {
+	if( EL.ipVer === 0 || EL.ipVer === 6) {
 		EL.sock6 = dgram.createSocket({type:"udp6",reuseAddr:true}, (msg, rinfo) => {
 			EL.returner(msg, rinfo, userfunc);
 		});
 	}
 
 	// マルチキャスト設定，ネットワークに繋がっていない（IPが一つもない）と例外がでる。
-	if( EL.ipVer == 0 || EL.ipVer == 4) {
+	if( EL.ipVer === 0 || EL.ipVer === 4) {
 		EL.sock4.bind( {'address': '0.0.0.0', 'port': EL.EL_port}, function () {
 			EL.sock4.setMulticastLoopback(true);
 			EL.sock4.addMembership(EL.EL_Multi, EL.usingIF.v4);
 		});
 	}
-	if( EL.ipVer == 0 || EL.ipVer == 6) {
+	if( EL.ipVer === 0 || EL.ipVer === 6) {
 		EL.sock6.bind({'address': '::', 'port': EL.EL_port}, function () {
 			EL.sock6.setMulticastLoopback(true);
-			if( process.platform == 'win32' ) {  // windows
+			if( process.platform === 'win32' ) {  // windows
 				EL.sock6.addMembership(EL.EL_Multi6, '::' + EL.usingIF.v6);  // bug fixのために分けたけど今は意味はなし
 			}else{
 				EL.sock6.addMembership(EL.EL_Multi6, '::' + EL.usingIF.v6);
@@ -259,16 +259,16 @@ EL.initialize = function (objList, userfunc, ipVer = 4, Options = {v4: '', v6: '
 	}
 
 	// 初期化終わったのでノードのINFをだす, IPv4, IPv6ともに出す
-	if( EL.ipVer == 0 || EL.ipVer == 4) {
+	if( EL.ipVer === 0 || EL.ipVer === 4) {
 		EL.sendOPC1( EL.Multi,  EL.NODE_PROFILE_OBJECT, EL.NODE_PROFILE_OBJECT, EL.INF, 0xd5, EL.Node_details["d5"]);
 	}
-	if( EL.ipVer == 0 || EL.ipVer == 6) {
+	if( EL.ipVer === 0 || EL.ipVer === 6) {
 		EL.sendOPC1( EL.Multi6, EL.NODE_PROFILE_OBJECT, EL.NODE_PROFILE_OBJECT, EL.INF, 0xd5, EL.Node_details["d5"]);
 	}
 
-	if( EL.ipVer == 4) {
+	if( EL.ipVer === 4) {
 		return EL.sock4;
-	}else if( EL.ipVer == 6 ) {
+	}else if( EL.ipVer === 6 ) {
 		return EL.sock6;
 	}else{
 		return {sock4: EL.sock4, sock6: EL.sock6};
@@ -313,7 +313,7 @@ EL.renewNICList = function () {
 	let macArray = [];
 
 	for (let name in interfaces) {
-		if( name == 'lo0') {continue;}
+		if( name === 'lo0') {continue;}
 		for( const details of interfaces[name] ) {
 			if ( !details.internal ) {
 				switch(details.family) {
@@ -370,7 +370,7 @@ EL.renewNICList = function () {
  */
 // 自動取得待ちの個数管理
 EL.decreaseWaitings = function () {
-	if( EL.autoGetWaitings != 0 ) {
+	if( EL.autoGetWaitings !== 0 ) {
 		// console.log( 'decrease:', 'waitings: ', EL.autoGetWaitings );
 		EL.autoGetWaitings -= 1;
 	}
@@ -396,7 +396,7 @@ EL.increaseWaitings = function () {
 // 自分からの送信データを無視するために
 EL.myIPaddress = function(rinfo) {
 	let ignoreIP = false;
-	if( EL.ignoreMe == true ) {
+	if( EL.ignoreMe === true ) {
 		// loop back
 		if( rinfo.address === '127.0.0.1' || rinfo.address === '::1') {
 			ignoreIP = true;
@@ -438,7 +438,7 @@ function isObjEmpty(obj) {
  */
 // ELDATA形式
 EL.eldataShow = function (eldata) {
-	if (eldata != null) {
+	if (eldata !== null) {
 		console.log('EHD: ' + eldata.EHD + 'TID: ' + eldata.TID + 'SEOJ: ' + eldata.SEOJ + 'DEOJ: ' + eldata.DEOJ + '\nEDATA: ' + eldata.EDATA);
 	} else {
 		console.error("EL.eldataShow error. eldata is not EL data.");
@@ -496,7 +496,7 @@ EL.parseDetail = function( _opc, str ) {
 		let opc = EL.toHexArray(_opc)[0];
 
 		// OPC妥当性チェック（0-255の範囲内である必要がある）
-		if (opc == null || opc === undefined || opc &lt; 0 || opc > 255) {
+		if (opc === null || opc === undefined || opc &lt; 0 || opc > 255) {
 			throw new Error('EL.parseDetail(): Invalid OPC value: ' + opc);
 		}
 
@@ -535,15 +535,15 @@ EL.parseDetail = function( _opc, str ) {
 				throw new Error('EL.parseDetail(): Invalid PDC value: ' + pdc + ' for EPC: ' + EL.toHexString(epc));
 			}
 
-			// それ以外はEDT[0] == byte数
+			// それ以外はEDT[0] === byte数
 			// console.log( 'opc count:', i, 'epc:', EL.toHexString(epc), 'pdc:', EL.toHexString(pdc));
 
 			// getの時は pdcが0なのでなにもしない，0でなければ値が入っている
-			if (pdc == 0) {
+			if (pdc === 0) {
 				ret[EL.toHexString(epc)] = "";
 			} else {
-				// property mapだけEDT[0] != バイト数なので別処理
-				if( epc == 0x9d || epc == 0x9e || epc == 0x9f ) {
+				// property mapだけEDT[0] !== バイト数なので別処理
+				if( epc === 0x9d || epc === 0x9e || epc === 0x9f ) {
 					// プロパティマップは一部機器でPDCが不正確なため、利用可能バイト数で読む
 					const availableBytes = array.length - now;
 					const readLen = Math.min(pdc, availableBytes);
@@ -724,7 +724,7 @@ EL.parseString = function (str) {
 // 文字列をいれるとELらしい切り方のStringを得る
 EL.getSeparatedString_String = function (str) {
 	try {
-		if (typeof str == 'string') {
+		if (typeof str === 'string') {
 			return (str.substr(0, 4) + " " +
 					str.substr(4, 4) + " " +
 					str.substr(8, 6) + " " +
@@ -852,13 +852,13 @@ EL.sendBase = function ( ip, buffer) {
 	let address = '';
 	let family = '';  // IPv4 IPv6
 
-	if( typeof ip == 'object' ) {
+	if( typeof ip === 'object' ) {
 		address = ip.address;
 		family  = ip.family;
-	}else if( typeof ip == 'string' ) {
+	}else if( typeof ip === 'string' ) {
 		address = ip;
 		// family不明なので自動判定
-		if( address.indexOf(':') != -1 ) {  // IPにコロンが使われているかどうかで判定する
+		if( address.indexOf(':') !== -1 ) {  // IPにコロンが使われているかどうかで判定する
 			family = 'IPv6';
 		}else{
 			family = 'IPv4';
@@ -870,43 +870,96 @@ EL.sendBase = function ( ip, buffer) {
 	EL.debugMode ? console.log( buffer ) :0;
 	let tid = [ buffer[2], buffer[3] ];
 
-	// console.log(ip, buffer);
+	// ソケットを安全にクローズするヘルパー関数
+	const safeCloseSocket = (socket) => {
+		if (!socket) return;
+		try {
+			socket.close();
+		} catch (e) {
+			EL.debugMode ? console.error('Socket close error:', e) : 0;
+		}
+	};
+
 	// ipv4
-	if( EL.ipVer == 0 || EL.ipVer == 4 ) {
-		// 送信先がipv4ならやる，'.'が使われているかどうかで判定しちゃう
-		if( family == 'IPv4' ) {
-			let client = dgram.createSocket({type:"udp4",reuseAddr:true});
+	if( EL.ipVer === 0 || EL.ipVer === 4 ) {
+		// 送信先がipv4ならやる
+		if( family === 'IPv4' ) {
+			let client = null;
 
-			if( EL.usingIF.v4 != '' ) {
-				client.bind( EL.EL_port + 20000, EL.usingIF.v4, () => {
-					client.setMulticastInterface( EL.usingIF.v4 );
-					client.send(buffer, 0, buffer.length, EL.EL_port, address, function (err, bytes) {
-						if( err ) { console.error('EL.sendBase().v4.multi TID:', tid[0], tid[1], err); }
-						client.close();
+			try {
+				client = dgram.createSocket({type:"udp4",reuseAddr:true});
+
+				// エラーハンドラを先に設定（メモリリーク防止）
+				client.on('error', (err) => {
+					console.error('EL.sendBase().v4 socket error TID:', tid[0], tid[1], err);
+					safeCloseSocket(client);
+				});
+
+				if( EL.usingIF.v4 !== '' ) {
+					// bind失敗時のタイムアウト設定
+					const bindTimeout = setTimeout(() => {
+						console.error('EL.sendBase().v4 bind timeout TID:', tid[0], tid[1]);
+						safeCloseSocket(client);
+					}, 3000);
+
+					client.bind( EL.EL_port + 20000, EL.usingIF.v4, () => {
+						clearTimeout(bindTimeout);
+						try {
+							client.setMulticastInterface( EL.usingIF.v4 );
+							client.send(buffer, 0, buffer.length, EL.EL_port, address, function (err, bytes) {
+								if( err ) {
+									console.error('EL.sendBase().v4.multi send error TID:', tid[0], tid[1], err);
+								}
+								safeCloseSocket(client);
+							});
+						} catch (e) {
+							console.error('EL.sendBase().v4.multi error TID:', tid[0], tid[1], e);
+							safeCloseSocket(client);
+						}
 					});
-				});
-			}else{
-				client.send(buffer, 0, buffer.length, EL.EL_port, address, function (err, bytes) {
-					if( err ) { console.error('EL.sendBase().v4.uni TID:', tid[0], tid[1], err); }
-					client.close();
-				});
+				} else {
+					client.send(buffer, 0, buffer.length, EL.EL_port, address, function (err, bytes) {
+						if( err ) {
+							console.error('EL.sendBase().v4.uni send error TID:', tid[0], tid[1], err);
+						}
+						safeCloseSocket(client);
+					});
+				}
+			} catch (e) {
+				console.error('EL.sendBase().v4 creation error TID:', tid[0], tid[1], e);
+				safeCloseSocket(client);
 			}
-
 		}
 	}
 
 	// ipv6
-	if( EL.ipVer == 0 || EL.ipVer == 6 ) {
-		if( family == 'IPv6' ) {
-			let client = dgram.createSocket({type:"udp6",reuseAddr:true});
+	if( EL.ipVer === 0 || EL.ipVer === 6 ) {
+		if( family === 'IPv6' ) {
+			let client = null;
 
-			if( address.split('%').length != 2 ) {  // IF指定（%以下）がない時は指定する
-				address += EL.usingIF.v6;
+			try {
+				client = dgram.createSocket({type:"udp6",reuseAddr:true});
+
+				// エラーハンドラを先に設定（メモリリーク防止）
+				client.on('error', (err) => {
+					console.error('EL.sendBase().v6 socket error TID:', tid[0], tid[1], err);
+					safeCloseSocket(client);
+				});
+
+				if( address.split('%').length !== 2 ) {  // IF指定（%以下）がない時は指定する
+					address += EL.usingIF.v6;
+				}
+
+				client.send(buffer, 0, buffer.length, EL.EL_port, address, function (err, bytes) {
+					if( err ) {
+						console.error('EL.sendBase().v6 send error TID:', tid[0], tid[1], err);
+					}
+					safeCloseSocket(client);
+				});
+			} catch (e) {
+				console.error('EL.sendBase().v6 creation error TID:', tid[0], tid[1], e);
+				safeCloseSocket(client);
 			}
-			client.send(buffer, 0, buffer.length, EL.EL_port, address, function (err, bytes) {
-				if( err ) { console.error('EL.sendBase().v6 TID:', tid[0], tid[1], err); }
-				client.close();
-			});
 		}
 	}
 
@@ -945,45 +998,45 @@ EL.sendOPC1 = function (ip, seoj, deoj, esv, epc, edt) {
 
 	// TIDの調整
 	let carry = 0; // 繰り上がり
-	if( EL.tid[1] == 0xff ) {
+	if( EL.tid[1] === 0xff ) {
 		EL.tid[1] = 0;
 		carry = 1;
 	} else {
 		EL.tid[1] += 1;
 	}
-	if( carry == 1 ) {
-		if( EL.tid[0] == 0xff ) {
+	if( carry === 1 ) {
+		if( EL.tid[0] === 0xff ) {
 			EL.tid[0] = 0;
 		} else {
 			EL.tid[0] += 1;
 		}
 	}
 
-	if (typeof (seoj) == "string") {
+	if (typeof (seoj) === "string") {
 		seoj = EL.toHexArray(seoj);
 	}
 
-	if (typeof (deoj) == "string") {
+	if (typeof (deoj) === "string") {
 		deoj = EL.toHexArray(deoj);
 	}
 
-	if (typeof (esv) == "string") {
+	if (typeof (esv) === "string") {
 		esv = (EL.toHexArray(esv))[0];
 	}
 
-	if (typeof (epc) == "string") {
+	if (typeof (epc) === "string") {
 		epc = (EL.toHexArray(epc))[0]
 	}
 
-	if (typeof (edt) == "number") {
+	if (typeof (edt) === "number") {
 		edt = [edt];
-	} else if (typeof (edt) == "string") {
+	} else if (typeof (edt) === "string") {
 		edt = EL.toHexArray(edt);
 	}
 
 	let buffer;
 
-	if (esv == 0x62) { // get
+	if (esv === 0x62) { // get
 		buffer = Buffer.from([
 			0x10, 0x81,
 			// 0x00, 0x00,
@@ -1048,33 +1101,33 @@ EL.sendString = function (ip, string) {
 // DETAILs = [{epc: edt}, {epc: edt}, ...]
 // ex. {'80':'31', '8a':'000077'}
 
-EL.sendDetails = async function (ip, seoj, deoj, esv, DETAILs) {
+EL.sendDetails = function (ip, seoj, deoj, esv, DETAILs) {
 
 	// TIDの調整
 	let carry = 0; // 繰り上がり
-	if( EL.tid[1] == 0xff ) {
+	if( EL.tid[1] === 0xff ) {
 		EL.tid[1] = 0;
 		carry = 1;
 	} else {
 		EL.tid[1] += 1;
 	}
-	if( carry == 1 ) {
-		if( EL.tid[0] == 0xff ) {
+	if( carry === 1 ) {
+		if( EL.tid[0] === 0xff ) {
 			EL.tid[0] = 0;
 		} else {
 			EL.tid[0] += 1;
 		}
 	}
 
-	if (typeof (seoj) == "string") {
+	if (typeof (seoj) === "string") {
 		seoj = EL.toHexArray(seoj);
 	}
 
-	if (typeof (deoj) == "string") {
+	if (typeof (deoj) === "string") {
 		deoj = EL.toHexArray(deoj);
 	}
 
-	if (typeof (esv) == "string") {
+	if (typeof (esv) === "string") {
 		esv = (EL.toHexArray(esv))[0];
 	}
 
@@ -1096,7 +1149,7 @@ EL.sendDetails = async function (ip, seoj, deoj, esv, DETAILs) {
 		}
 	}else{
 		for( let epc in DETAILs ) {
-			if( DETAILs[epc] == '' ) {  // '' の時は GetやGet_SNA等で存在する、この時はpdc省略
+			if( DETAILs[epc] === '' ) {  // '' の時は GetやGet_SNA等で存在する、この時はpdc省略
 				detail += epc + '00';
 			}else{
 				pdc = DETAILs[epc].length / 2;  // Byte数 = 文字数の半分
@@ -1165,14 +1218,14 @@ EL.sendELDATA = function (ip, eldata) {
 	// TID未指定(undefined/null/empty)なら自動採番
 	if (eldata.TID === undefined || eldata.TID === null || eldata.TID === '') {
 		let carry = 0; // 繰り上がり
-		if (EL.tid[1] == 0xff) {
+		if (EL.tid[1] === 0xff) {
 			EL.tid[1] = 0;
 			carry = 1;
 		} else {
 			EL.tid[1] += 1;
 		}
-		if (carry == 1) {
-			if (EL.tid[0] == 0xff) {
+		if (carry === 1) {
+			if (EL.tid[0] === 0xff) {
 				EL.tid[0] = 0;
 			} else {
 				EL.tid[0] += 1;
@@ -1194,7 +1247,7 @@ EL.sendELDATA = function (ip, eldata) {
 	let detail = '';
 
 	for( let epc in eldata.DETAILs ) {
-		if( eldata.DETAILs[epc] == '' ) {  // '' の時は GetやGet_SNA等で存在する、この時はpdc省略
+		if( eldata.DETAILs[epc] === '' ) {  // '' の時は GetやGet_SNA等で存在する、この時はpdc省略
 			detail += epc + '00';
 		}else{
 			pdc = eldata.DETAILs[epc].length / 2;  // Byte数 = 文字数の半分
@@ -1236,35 +1289,35 @@ EL.sendELDATA = function (ip, eldata) {
 // ELの返信用、典型的なOPC一個でやる．TIDを併せて返信しないといけないため
 EL.replyOPC1 = function (ip, tid, seoj, deoj, esv, epc, edt) {
 
-	if (typeof (tid) == "string") {
+	if (typeof (tid) === "string") {
 		tid = EL.toHexArray(tid);
 	}
 
-	if (typeof (seoj) == "string") {
+	if (typeof (seoj) === "string") {
 		seoj = EL.toHexArray(seoj);
 	}
 
-	if (typeof (deoj) == "string") {
+	if (typeof (deoj) === "string") {
 		deoj = EL.toHexArray(deoj);
 	}
 
-	if (typeof (esv) == "string") {
+	if (typeof (esv) === "string") {
 		esv = (EL.toHexArray(esv))[0];
 	}
 
-	if (typeof (epc) == "string") {
+	if (typeof (epc) === "string") {
 		epc = (EL.toHexArray(epc))[0]
 	}
 
-	if (typeof (edt) == "number") {
+	if (typeof (edt) === "number") {
 		edt = [edt];
-	} else if (typeof (edt) == "string") {
+	} else if (typeof (edt) === "string") {
 		edt = EL.toHexArray(edt);
 	}
 
 	let buffer;
 
-	if (esv == 0x62) { // get
+	if (esv === 0x62) { // get
 		buffer = Buffer.from([
 			0x10, 0x81,
 			tid[0], tid[1],
@@ -1331,13 +1384,13 @@ dev_details: {
 
 
 // dev_detailのGetに対して複数OPCにも対応して返答する
-EL.replyGetDetail = async function(rinfo, els, dev_details) {
+EL.replyGetDetail = function(rinfo, els, dev_details) {
 	let success = true;
 	let retDetails = [];
 	let ret_opc = 0;
 	// console.log( 'Recv DETAILs:', els.DETAILs );
 	for (let epc in els.DETAILs) {
-		if( await EL.replyGetDetail_sub( els, dev_details, epc ) ) {
+		if( EL.replyGetDetail_sub( els, dev_details, epc ) ) {
 			retDetails.push( parseInt(epc,16) );  // epcは文字列なので
 			retDetails.push( dev_details[els.DEOJ][epc].length );
 			retDetails.push( dev_details[els.DEOJ][epc] );
@@ -1393,7 +1446,7 @@ EL.replyGetDetail_sub = function( els, dev_details, epc) {
 // ただしEPC毎の設定値に関して基本はノーチェックなので注意すべし
 // EPC毎の設定値チェックや、INF処理に関しては下記の replySetDetail_sub にて実施
 // SET_RESはEDT入ってない
-EL.replySetDetail = async function(rinfo, els, dev_details) {
+EL.replySetDetail = function(rinfo, els, dev_details) {
 	// DEOJが自分のオブジェクトでない場合は破棄
 	if ( !dev_details[els.DEOJ] ) { // EOJそのものがあるか？
 		return false;
@@ -1404,7 +1457,7 @@ EL.replySetDetail = async function(rinfo, els, dev_details) {
 	let ret_opc = 0;
 	// console.log( 'Recv DETAILs:', els.DETAILs );
 	for (let epc in els.DETAILs) {
-		if( await EL.replySetDetail_sub( rinfo, els, dev_details, epc ) ) {
+		if( EL.replySetDetail_sub( rinfo, els, dev_details, epc ) ) {
 			retDetails.push( parseInt(epc,16) );  // epcは文字列
 			retDetails.push( [0x00] );  // 処理できた分は0を返す
 		}else{
@@ -1419,7 +1472,7 @@ EL.replySetDetail = async function(rinfo, els, dev_details) {
 		ret_opc += 1;
 	}
 
-	if( els.ESV == EL.SETI ) { return; }  // SetIなら返却なし
+	if( els.ESV === EL.SETI ) { return; }  // SetIなら返却なし
 
 	// SetCは SetC_ResかSetC_SNAを返す
 	let ret_esv = success? 0x71: 0x51;  // 一つでも失敗したらSETC_SNA
@@ -1462,7 +1515,7 @@ EL.replySetDetail_sub = function(rinfo, els, dev_details, epc) {
 		switch (epc) { // 持ってるEPCのとき
 			// super
 			case '80':  // 動作状態, set, get, inf
-			if( edt == '30' || edt == '31' ) {
+			if( edt === '30' || edt === '31' ) {
 				dev_details[els.DEOJ][epc] = [parseInt(edt, 16)];
 				EL.sendOPC1( EL.EL_Multi, EL.toHexArray(els.DEOJ), EL.toHexArray(els.SEOJ), EL.INF, EL.toHexArray(epc), [parseInt(edt, 16)] );  // INF
 				return true;
@@ -1479,7 +1532,7 @@ EL.replySetDetail_sub = function(rinfo, els, dev_details, epc) {
 
 			// detail
 			case '8f': // 節電動作設定, set, get, inf
-			if( edt == '41' || edt == '42' ) {
+			if( edt === '41' || edt === '42' ) {
 				dev_details[els.DEOJ][epc] = [parseInt(edt, 16)];
 				EL.sendOPC1( EL.EL_Multi, EL.toHexArray(els.DEOJ), EL.toHexArray(els.SEOJ), EL.INF, EL.toHexArray(epc), [parseInt(edt, 16)] );  // INF
 				return true;
@@ -1588,17 +1641,17 @@ EL.returner = function (bytes, rinfo, userfunc) {
 		els = EL.parseBytes(bytes);
 
 		// キチンとパースできたか？
-		if (null == els) {
+		if (null === els) {
 			return;
 		}
 
 		// ヘッダ確認
-		if (els.EHD != '1081') {
+		if (els.EHD !== '1081') {
 			return;
 		}
 
 		// Node profileに関してきちんと処理する
-		if ( els.DEOJ.substr(0,4) == EL.NODE_PROFILE ) {
+		if ( els.DEOJ.substr(0,4) === EL.NODE_PROFILE ) {
 			els.DEOJ = EL.NODE_PROFILE_OBJECT;  // ここで0ef000, 0ef001, 0ef002の表記ゆれを統合する
 
 			switch (els.ESV) {
@@ -1643,12 +1696,12 @@ EL.returner = function (bytes, rinfo, userfunc) {
 				break;
 
 				case EL.INF_REQ: // 0x63
-				if (els.DETAILs["d5"] == "00") {  // EL ver. 1.0以前のコントローラからサーチされた場合のレスポンス
+				if (els.DETAILs["d5"] === "00") {  // EL ver. 1.0以前のコントローラからサーチされた場合のレスポンス
 					// console.log( "EL.returner: Ver1.0 INF_REQ.");
-					if( EL.ipVer == 0 || EL.ipVer == 4) { // ipv4
+					if( EL.ipVer === 0 || EL.ipVer === 4) { // ipv4
 						EL.sendOPC1( EL.EL_Multi, EL.NODE_PROFILE_OBJECT, EL.toHexArray(els.SEOJ), 0x73, 0xd5, EL.Node_details["d5"]);
 					}
-					if( EL.ipVer == 0 || EL.ipVer == 6) { // ipv6
+					if( EL.ipVer === 0 || EL.ipVer === 6) { // ipv6
 						EL.sendOPC1( EL.EL_Multi6, EL.NODE_PROFILE_OBJECT, EL.toHexArray(els.SEOJ), 0x73, 0xd5, EL.Node_details["d5"]);
 					}
 				}
@@ -1685,7 +1738,7 @@ EL.returner = function (bytes, rinfo, userfunc) {
 				// 具体的な処理としては、PDCが0の時に設定値を取得できていないこととすればよい。
 				case EL.GET_RES: // 72
 				// autoGetPropertiesがfalseなら自動取得しない
-				if( EL.autoGetProperties == false ) { break; }
+				if( EL.autoGetProperties === false ) { break; }
 
 				// V1.1
 				// d6のEDT表現が特殊，EDT1バイト目がインスタンス数になっている
@@ -1710,7 +1763,7 @@ EL.returner = function (bytes, rinfo, userfunc) {
 					for( let i=0; i&lt;num; i++ ) {
 						// d6, 9d, 9e, 9fはサーチの時点で取得しているはず
 						// 特にd6と9fは取り直すと無限ループするので注意
-						if( array[i+1] != 'd6' &amp;&amp; array[i+1] != '9d' &amp;&amp; array[i+1] != '9e' &amp;&amp; array[i+1] != '9f' ) {
+						if( array[i+1] !== 'd6' &amp;&amp; array[i+1] !== '9d' &amp;&amp; array[i+1] !== '9e' &amp;&amp; array[i+1] !== '9f' ) {
 							details[ array[i+1] ] = '';
 						}
 					}
@@ -1793,19 +1846,19 @@ EL.renewFacilities = function (address, els) {
 		epcList = EL.parseDetail(els.OPC, els.DETAIL);
 
 		// 新規IP
-		if (EL.facilities[address] == null) { //見つからない
+		if (EL.facilities[address] === null) { //見つからない
 			EL.facilities[address] = {};
 		}
 
 		// 新規obj
-		if (EL.facilities[address][els.SEOJ] == null) {
+		if (EL.facilities[address][els.SEOJ] === null) {
 			EL.facilities[address][els.SEOJ] = {};
 			// 新規オブジェクトのとき，プロパティリストもらうと取りきるまでループしちゃうのでやめた
 		}
 
 		for (let epc in epcList) {
 			// GET_SNAの時のNULL {EDT:''} を入れてしまうのを避ける
-			if ( epcList[epc] != '' ) {
+			if ( epcList[epc] !== '' ) {
 				EL.facilities[address][els.SEOJ][epc] = epcList[epc];
 			}
 
@@ -1841,7 +1894,7 @@ EL.complementFacilities = function () {
 		let node = EL.facilities[ip];
 		let eojs = Object.keys( node );  // 保持するEOJについて全チェック
 
-		let node_prof = eojs.filter( (v) => { return v.substr(0, 4) == '0ef0'; } );
+		let node_prof = eojs.filter( (v) => { return v.substr(0, 4) === '0ef0'; } );
 		if( node_prof.length === 0 ) {  // Node Profileがない
 			// node_profを取りに行く、node_profがとれればその先は自動でとれると期待
 			EL.sendDetails( ip, EL.NODE_PROFILE_OBJECT, EL.NODE_PROFILE_OBJECT, EL.GET, [{'d6':''}, {'83':''}, {'9d':''}, {'9e':''}, {'9f':''}]);
@@ -1864,7 +1917,7 @@ EL.complementFacilities = function () {
 EL.complementFacilities_sub = function ( ip, eoj, props ) {  // サブルーチン
 	let epcs = Object.keys( props );
 	// '9f' (Get Property Map) が存在しない/空ならマップ取得を要求
-	if( props['9f'] == null || props['9f'] === '' ) {
+	if( props['9f'] === null || props['9f'] === '' ) {
 		EL.sendDetails( ip, EL.NODE_PROFILE_OBJECT, eoj, EL.GET, [{'9d':''}, {'9e':''}, {'9f':''}] );
 		return;
 	}
@@ -1879,7 +1932,7 @@ EL.complementFacilities_sub = function ( ip, eoj, props ) {  // サブルーチ�
 		if( !epc ) { break; }
 		// メーカー独自(F0..FF)はスキップ
 		if( epc[0].toLowerCase() === 'f' ) { continue; }
-		if( props[epc] == null || props[epc] === '' ) {
+		if( props[epc] === null || props[epc] === '' ) {
 			details.push( { [epc]: '' } );
 		}
 	}
@@ -1910,7 +1963,7 @@ EL.setObserveFacilities = function ( interval, onChanged ) {
 	let oldVal = JSON.stringify(EL.objectSort(EL.facilities));
 	const onObserve = function() {
 		const newVal = JSON.stringify(EL.objectSort(EL.facilities));
-		if ( oldVal == newVal ) return;
+		if ( oldVal === newVal ) return;
 		onChanged();
 		oldVal = newVal;
 	};
@@ -1969,12 +2022,12 @@ EL.objectSort = function (obj) {
 EL.search = function () {
 	// 複合サーチ
 	// ipv4
-	if( EL.ipVer == 0 || EL.ipVer == 4 ) {
+	if( EL.ipVer === 0 || EL.ipVer === 4 ) {
 		EL.sendDetails( EL.EL_Multi, EL.NODE_PROFILE_OBJECT, EL.NODE_PROFILE_OBJECT, EL.GET, [{'d6':''}, {'83':''}, {'9d':''}, {'9e':''}, {'9f':''}]);
 	}
 
 	// ipv6
-	if( EL.ipVer == 0 || EL.ipVer == 6 ) {
+	if( EL.ipVer === 0 || EL.ipVer === 6 ) {
 		EL.sendDetails( EL.EL_Multi6, EL.NODE_PROFILE_OBJECT, EL.NODE_PROFILE_OBJECT, EL.GET, [{'d6':''}, {'83':''}, {'9d':''}, {'9e':''}, {'9f':''}]);
 	}
 
@@ -1995,14 +2048,14 @@ EL.getPropertyMaps = function ( ip, _eoj ) {
 
 	let eoj = [];
 
-	if( typeof _eoj == 'string' ) {
+	if( typeof _eoj === 'string' ) {
 		eoj = EL.toHexArray( _eoj );
 	}else{
 		eoj = _eoj;
 	}
 
 	// プロファイルオブジェクトのときはプロパティマップももらうけど，識別番号ももらう
-	if( eoj[0] == 0x0e &amp;&amp; eoj[1] == 0xf0 ) {
+	if( eoj[0] === 0x0e &amp;&amp; eoj[1] === 0xf0 ) {
 		setTimeout(() => {
 			EL.sendDetails( ip, EL.NODE_PROFILE_OBJECT, eoj, EL.GET, {'83':'', '9d':'', '9e':'', '9f':''});
 			EL.decreaseWaitings();
@@ -2035,7 +2088,7 @@ EL.parseMapForm2 = function (bitstr) {
 	let val = 0x80;
 	let array = [];
 
-	if (typeof (bitstr) == "string") {
+	if (typeof (bitstr) === "string") {
 		array = EL.toHexArray(bitstr);
 	}else{
 		array = bitstr;
@@ -2074,7 +2127,7 @@ module.exports = EL;
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Tue Nov 11 2025 13:19:42 GMT+0000 (Coordinated Universal Time) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Tue Nov 11 2025 14:10:41 GMT+0000 (Coordinated Universal Time) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
 </footer>
 
 <script>prettyPrint();</script>
