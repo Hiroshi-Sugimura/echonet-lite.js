@@ -1337,7 +1337,7 @@ EL.returner = function (bytes, rinfo, userfunc) {
 				// V1.1
 				// d6のEDT表現が特殊，EDT1バイト目がインスタンス数になっている
 				// なお、d6にはNode profileは入っていない
-				if( els.SEOJ.substr(0, 4) === EL.NODE_PROFILE && els.DETAILs['d6'] != null && els.DETAILs['d6'] != '' ) {
+				if( els.SEOJ.substr(0, 4) === EL.NODE_PROFILE && typeof els.DETAILs['d6'] === 'string' && els.DETAILs['d6'].length > 0 ) {
 					// console.log( "EL.returner: get object list! PropertyMap req V1.0.");
 					// 自ノードインスタンスリストSに書いてあるオブジェクトのプロパティマップをもらう
 					let array = EL.toHexArray( els.DETAILs.d6 );
@@ -1373,7 +1373,7 @@ EL.returner = function (bytes, rinfo, userfunc) {
 				case EL.INF:  // 0x73
 				// ECHONETネットワークで、新規デバイスが起動したのでプロパティもらいに行く
 				// autoGetPropertiesがfalseならやらない
-				if( els.DETAILs.d5 != null && els.DETAILs.d5 != ""  && EL.autoGetProperties) {
+				if( typeof els.DETAILs.d5 === 'string' && els.DETAILs.d5.length > 0 && EL.autoGetProperties) {
 					// ノードプロファイルオブジェクトのプロパティマップをもらう
 					EL.getPropertyMaps( rinfo, EL.NODE_PROFILE_OBJECT );
 				}
@@ -1383,7 +1383,7 @@ EL.returner = function (bytes, rinfo, userfunc) {
 				// ECHONET Lite Ver. 1.0以前の処理で利用していたフロー
 				// オブジェクトリストをもらったらそのオブジェクトのPropertyMapをもらいに行く
 				// autoGetPropertiesがfalseならやらない
-				if( els.DETAILs.d5 != null && els.DETAILs.d5  && EL.autoGetProperties) {
+				if( typeof els.DETAILs.d5 === 'string' && els.DETAILs.d5.length > 0 && EL.autoGetProperties) {
 					// ノードプロファイルオブジェクトのプロパティマップをもらう
 					EL.getPropertyMaps( rinfo, EL.NODE_PROFILE_OBJECT );
 
@@ -1477,7 +1477,7 @@ EL.complementFacilities = function () {
 		let eojs = Object.keys( node );  // 保持するEOJについて全チェック
 
 		let node_prof = eojs.filter( (v) => { return v.substr(0, 4) == '0ef0'; } );
-		if( !node_prof ) {  // Node Profileがない
+		if( node_prof.length === 0 ) {  // Node Profileがない
 			// node_profを取りに行く、node_profがとれればその先は自動でとれると期待
 			EL.sendDetails( ip, EL.NODE_PROFILE_OBJECT, EL.NODE_PROFILE_OBJECT, EL.GET, [{'d6':''}, {'83':''}, {'9d':''}, {'9e':''}, {'9f':''}]);
 		}else{
@@ -1512,7 +1512,7 @@ EL.complementFacilities_sub = function ( ip, eoj, props ) {  // サブルーチ�
 		}
 	}
 
-	if( !isObjEmpty(details) ) {
+	if( details.length > 0 ) {
 		setTimeout(() => {
 			EL.sendDetails( ip, EL.NODE_PROFILE_OBJECT, eoj, EL.GET, details );
 			EL.decreaseWaitings();

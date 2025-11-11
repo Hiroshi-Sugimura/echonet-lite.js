@@ -761,6 +761,7 @@ x Warranty
 
 
 ## Log
+- 2.17.1 strict対応, 文字列切り出しのBugfix, SetC_SNAのBugfixその他、コードの見やすさや健全性チェック
 - 2.17.0 ELのヘッダチェック、OPC妥当性チェック、IPv4のNIC指定の追加 (from Pull request)
 - 2.16.3 EL.SearchをEL.Initializeを完了する前に呼んでしまい情報取得がスタックしてしまう場合があることを解消
 - 2.16.2 EL.sendELDATAのesvが宣言されていない を直していただいた
