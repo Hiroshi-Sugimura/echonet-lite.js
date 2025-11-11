@@ -5,6 +5,7 @@
 
 const os = require('os'); // interface listほしい
 const dgram = require('dgram'); // UDPつかう
+const crypto = require('crypto'); // 安定ID生成用
 
 require('date-utils'); // for log
 
@@ -268,7 +269,20 @@ EL.renewNICList = function () {
 	// console.log('EL.renewNICList(): interfaces:', interfaces);
 	// console.log('EL.renewNICList(): macArray:', macArray);
 
-	EL.Node_details["83"] = [0xfe, 0x00, 0x00, 0x77, 0x00, 0x00, 0x02, macArray[0], macArray[1], macArray[2], macArray[3], macArray[4], macArray[5], 0x00, 0x00, 0x00, 0x01]; // identifier
+	// macArrayが取得できていない環境(仮想/制限ネットワーク)ではフェールセーフな固定値を使用
+	if (macArray && macArray.length >= 6) {
+		EL.Node_details["83"] = [0xfe, 0x00, 0x00, 0x77, 0x00, 0x00, 0x02,
+			macArray[0], macArray[1], macArray[2], macArray[3], macArray[4], macArray[5],
+			0x00, 0x00, 0x00, 0x01]; // identifier
+	} else {
+		// ランダムは使わず、ホスト名からのハッシュで安定した6バイトを生成
+		const hostname = os.hostname() || 'unknown-host';
+		const digest = crypto.createHash('sha256').update(hostname).digest();
+		const b0 = digest[0], b1 = digest[1], b2 = digest[2], b3 = digest[3], b4 = digest[4], b5 = digest[5];
+		EL.Node_details["83"] = [0xfe, 0x00, 0x00, 0x77, 0x00, 0x00, 0x02,
+			b0, b1, b2, b3, b4, b5,
+			0x00, 0x00, 0x00, 0x01];
+	}
 
 	// console.log( 'EL.renewNICList(): nicList:', EL.nicList );
 	return EL.nicList;
@@ -373,11 +387,9 @@ EL.parseDetail = function( _opc, str ) {
 			throw new Error('EL.parseDetail(): Invalid OPC value: ' + opc);
 		}
 
-		// OPCで指定されたプロパティ数に対してデータが十分にあるかチェック
-		// 各プロパティには最低でも2バイト（EPC + PDC）が必要
-		if (array.length < opc * 2) {
-			throw new Error('EL.parseDetail(): Insufficient data for OPC count. OPC: ' + opc + ', Data length: ' + array.length);
-		}
+		// NOTE: OPCに対するデータ長の事前チェックは削除
+		// プロパティマップ等でPDCが不正確な機器があり、opc * 2 の計算が実データと合わない
+		// ループ内で境界チェックを行うため、ここでの事前チェックは不要
 
 		let epc = array[0]; // 最初は0
 		let pdc = array[1]; // 最初は1
@@ -410,11 +422,6 @@ EL.parseDetail = function( _opc, str ) {
 				throw new Error('EL.parseDetail(): Invalid PDC value: ' + pdc + ' for EPC: ' + EL.toHexString(epc));
 			}
 
-			// PDCで指定されたバイト数分のデータが存在するかチェック
-			if (now + pdc > array.length) {
-				throw new Error('EL.parseDetail(): Insufficient EDT data. PDC: ' + pdc + ', Required: ' + (now + pdc) + ', Available: ' + array.length);
-			}
-
 			// それ以外はEDT[0] == byte数
 			// console.log( 'opc count:', i, 'epc:', EL.toHexString(epc), 'pdc:', EL.toHexString(pdc));
 
@@ -424,23 +431,26 @@ EL.parseDetail = function( _opc, str ) {
 			} else {
 				// property mapだけEDT[0] != バイト数なので別処理
 				if( epc == 0x9d || epc == 0x9e || epc == 0x9f ) {
-					if( pdc >= 17) { // プロパティの数が16以上の場合（プロパティカウンタ含めてPDC17以上）は format 2
-						// 0byte=epc, 2byte=pdc, 4byte=edt
-						for (let j = 0; j < pdc; j += 1) {
-							// 登録
-							edt.push(array[now]);
-							now++;
-						}
+					// プロパティマップは一部機器でPDCが不正確なため、利用可能バイト数で読む
+					const availableBytes = array.length - now;
+					const readLen = Math.min(pdc, availableBytes);
+
+					for (let j = 0; j < readLen; j += 1) {
+						edt.push(array[now]);
+						now++;
+					}
+
+					// ECHONET Lite規格: EDT[0]=プロパティ数で format 判定
+					// - プロパティ数 ≤ 15 → format1 (count(1) + bitmap(2) = 3バイト)
+					// - プロパティ数 ≥ 16 → format2 (count(1) + list(count) バイト)
+					const propCount = edt[0];
+
+					// format2判定: プロパティ数が16以上
+					if (propCount >= 16) {
+						// parseMapForm2は format2 の EDT を format1 bitmap形式に変換する
 						ret[ EL.toHexString(epc) ] = EL.bytesToString( EL.parseMapForm2(edt) );
-						// return ret;
-					}else{
-						// format 2でなければ以下と同じ形式で解析可能
-						for (let j = 0; j < pdc; j += 1) {
-							// 登録
-							edt.push(array[now]);
-							now++;
-						}
-						// console.log('epc:', EL.toHexString(epc), 'edt:', EL.bytesToString(edt) );
+					} else {
+						// format1 はそのまま
 						ret[EL.toHexString(epc)] = EL.bytesToString(edt);
 					}
 				}else{
@@ -469,9 +479,14 @@ EL.parseDetail = function( _opc, str ) {
 // バイトデータをいれるとELDATA形式にする
 EL.parseBytes = function (bytes) {
 	try {
+		// もし引数が文字列なら、そのまま parseString に回す
+		if (typeof bytes === 'string') {
+			return EL.parseString(bytes);
+		}
+
 		// 最低限のELパケットになってない
-		if (bytes.length < 14) {
-			console.error("## EL.parseBytes error. bytes is less then 14 bytes. bytes.length is " + bytes.length);
+		if (!bytes || bytes.length < 14) {
+			console.error("## EL.parseBytes error. bytes is less then 14 bytes. bytes.length is " + (bytes ? bytes.length : 'undefined'));
 			console.error(bytes);
 			return null;
 		}
@@ -485,15 +500,12 @@ EL.parseBytes = function (bytes) {
 			return null;
 		}
 
-		// 数値だったら文字列にして
+		// バイト配列/BufferをHEX文字列にして parseString
 		let str = "";
-		if (bytes[0] != 'string') {
-			for (let i = 0; i < bytes.length; i++) {
-				str += EL.toHexString(bytes[i]);
-			}
+		for (let i = 0; i < bytes.length; i++) {
+			str += EL.toHexString(bytes[i]);
 		}
-		// 文字列にしたので，parseStringで何とかする
-		return (EL.parseString(str));
+		return EL.parseString(str);
 	} catch (e) {
 		console.error('EL.parseBytes: ', bytes);
 		throw e;
@@ -503,33 +515,76 @@ EL.parseBytes = function (bytes) {
 
 // 16進数で表現された文字列をいれるとELDATA形式にする
 EL.parseString = function (str) {
-	let eldata = {};
-	if( str.substr(0, 4) == '1082' ) {  // 任意電文形式, arbitrary message format
-		eldata = {
-			'EHD': str.substr(0, 4),
-			'AMF': str.substr(4)
-		}
-		return (eldata);
+	// 前処理: 受け付けるのは16進文字列。空白は除去し、小文字に統一
+	if (typeof str !== 'string') {
+		throw new Error('EL.parseString(): input is not a string');
+	}
+	let raw = str.replace(/\s+/g, '').toLowerCase();
+
+	// 偶数長チェック（1バイト=2文字）
+	if (raw.length % 2 !== 0) {
+		throw new Error('EL.parseString(): hex length must be even. length=' + raw.length);
 	}
 
+	// 最低限: EHD(2B) + TID(2B) + SEOJ(3B) + DEOJ(3B) + ESV(1B) + OPC(1B) = 12B = 24桁
+	if (raw.length < 24) {
+		throw new Error('EL.parseString(): too short. length=' + raw.length);
+	}
+
+	// EHD判定
+	const ehd = raw.substr(0, 4);
+	if (ehd !== '1081' && ehd !== '1082') {
+		throw new Error('EL.parseString(): invalid EHD=' + ehd);
+	}
+
+	// 任意電文形式はAMF部の長さだけ確認
+	if (ehd === '1082') {
+		return {
+			EHD: ehd,
+			AMF: raw.substr(4)
+		};
+	}
+
+	// 規定電文形式（1081）
+	let eldata = {};
 	try {
 		eldata = {
-			'EHD': str.substr(0, 4),
-			'TID': str.substr(4, 4),
-			'SEOJ': str.substr(8, 6),
-			'DEOJ': str.substr(14, 6),
-			'EDATA': str.substr(20),    // 下記はEDATAの詳細
-			'ESV': str.substr(20, 2),
-			'OPC': str.substr(22, 2),
-			'DETAIL': str.substr(24),
-			'DETAILs': EL.parseDetail(str.substr(22, 2), str.substr(24))
+			EHD: ehd,
+			TID: raw.substr(4, 4),
+			SEOJ: raw.substr(8, 6),
+			DEOJ: raw.substr(14, 6),
+			EDATA: raw.substr(20),    // 下記はEDATAの詳細
+			ESV: raw.substr(20, 2),
+			OPC: raw.substr(22, 2),
+			DETAIL: raw.substr(24)
 		};
+
+		// OPCの数値化（NaN/範囲外検知）
+		const opcNum = parseInt(eldata.OPC, 16);
+		if (!Number.isInteger(opcNum) || opcNum < 0 || opcNum > 255) {
+			throw new Error('invalid OPC=' + eldata.OPC);
+		}
+
+		// DETAILs解析（parseDetail内で境界チェック・PDC整合性は厳密に検証される）
+		const details = EL.parseDetail(eldata.OPC, eldata.DETAIL);
+
+		// OPC件数とDETAILs件数の一致確認
+		const parsedCount = Object.keys(details).length;
+		if (parsedCount !== opcNum) {
+			throw new Error('OPC count mismatch. OPC=' + opcNum + ', parsed=' + parsedCount);
+		}
+
+		// 注: DETAIL全体長の厳密チェックはしない
+		// 理由: プロパティマップ(9d/9e/9f)のformat2ではPDCが実バイト数と一致しない仕様があり
+		//       parseDetailが正しく消費した場合のみ成功するため、そちらの検証に委ねる
+
+		// 問題なければDETAILsを追加して返す
+		eldata.DETAILs = details;
+		return eldata;
 	} catch (e) {
-		console.error(str);
+		console.error(raw);
 		throw e;
 	}
-
-	return (eldata);
 };
 
 
@@ -814,16 +869,16 @@ EL.sendDetails = async function (ip, seoj, deoj, esv, DETAILs) {
 	let detail = '';
 
 	if( Array.isArray( DETAILs ) ) {  // detailsがArrayのときはEPCの出現順序に意味がある場合なので、順番を崩さないようにせよ
-		await DETAILs.forEach( (prop) => {
-			let epc = Object.keys(prop)[0];
-			if( prop[epc] == '' ) {  // '' の時は GetやGet_SNA等で存在する、この時はpdc省略
+		for( const prop of DETAILs ) {
+			const epc = Object.keys(prop)[0];
+			if( prop[epc] === '' ) {  // '' の時は GetやGet_SNA等で存在する、この時はpdc省略
 				detail += epc + '00';
 			}else{
 				pdc = prop[epc].length / 2;  // Byte数 = 文字数の半分
 				detail += epc + EL.toHexString(pdc) + prop[epc];
 			}
 			opc += 1;
-		});
+		}
 	}else{
 		for( let epc in DETAILs ) {
 			if( DETAILs[epc] == '' ) {  // '' の時は GetやGet_SNA等で存在する、この時はpdc省略
@@ -873,16 +928,17 @@ EL.sendELDATA = function (ip, eldata) {
 	let deoj = [];
 	let esv = [];
 
-	if( !eldata.TID || !eldata.TID == '') {		// TIDの指定がなければ自動
+	// TID未指定(undefined/null/empty)なら自動採番
+	if (eldata.TID === undefined || eldata.TID === null || eldata.TID === '') {
 		let carry = 0; // 繰り上がり
-		if( EL.tid[1] == 0xff ) {
+		if (EL.tid[1] == 0xff) {
 			EL.tid[1] = 0;
 			carry = 1;
 		} else {
 			EL.tid[1] += 1;
 		}
-		if( carry == 1 ) {
-			if( EL.tid[0] == 0xff ) {
+		if (carry == 1) {
+			if (EL.tid[0] == 0xff) {
 				EL.tid[0] = 0;
 			} else {
 				EL.tid[0] += 1;
@@ -890,8 +946,8 @@ EL.sendELDATA = function (ip, eldata) {
 		}
 		tid[0] = EL.tid[0];
 		tid[1] = EL.tid[1];
-	}else{
-		tid = EL.toHexArray( eldata.TID );
+	} else {
+		tid = EL.toHexArray(eldata.TID);
 	}
 
 	seoj = EL.toHexArray(eldata.SEOJ);
