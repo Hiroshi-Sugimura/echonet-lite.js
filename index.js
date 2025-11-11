@@ -340,7 +340,7 @@ EL.eldataShow = function (eldata) {
 // 文字列
 EL.stringShow = function (str) {
 	try {
-		eld = EL.parseString(str);
+		const eld = EL.parseString(str);
 		EL.eldataShow(eld);
 	} catch (e) {
 		throw e;
@@ -349,7 +349,7 @@ EL.stringShow = function (str) {
 
 // バイトデータ
 EL.bytesShow = function (bytes) {
-	eld = EL.parseBytes(bytes);
+	const eld = EL.parseBytes(bytes);
 	EL.eldataShow(eld);
 };
 
