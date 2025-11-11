@@ -1,0 +1,4 @@
+/unitTest/node_modules
+/unitTest/coverage
+/node_modules
+package-lock.json
