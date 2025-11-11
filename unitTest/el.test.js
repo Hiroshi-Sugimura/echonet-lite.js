@@ -5,14 +5,20 @@
 const EL = require('../index.js');
 
 describe('EL - ECHONET Lite プロトコル', () => {
-  
+
   describe('変換系関数', () => {
-    
+
     test('toHexString: バイトを16進数文字列に変換', () => {
       expect(EL.toHexString(0)).toBe('00');
       expect(EL.toHexString(15)).toBe('0f');
       expect(EL.toHexString(255)).toBe('ff');
       expect(EL.toHexString(16)).toBe('10');
+    });
+
+    test('toHexString: 境界値テスト', () => {
+      expect(EL.toHexString(0)).toBe('00');     // 最小値
+      expect(EL.toHexString(255)).toBe('ff');   // 最大値
+      expect(EL.toHexString(128)).toBe('80');   // 中間値
     });
 
     test('toHexArray: 16進数文字列をバイト配列に変換', () => {
@@ -42,12 +48,12 @@ describe('EL - ECHONET Lite プロトコル', () => {
   });
 
   describe('パース関数', () => {
-    
+
     test('parseString: 正常なECHONET Lite電文をパース', () => {
       // GET_RES応答: 動作状態(0x80)=ON(0x30)
       const hexString = '108100010ef0010ef0017201800130';
       const result = EL.parseString(hexString);
-      
+
       expect(result).toBeDefined();
       expect(result.EHD).toBe('1081');
       expect(result.TID).toBe('0001');
@@ -76,7 +82,7 @@ describe('EL - ECHONET Lite プロトコル', () => {
     test('parseBytes: Bufferからパース', () => {
       const buffer = Buffer.from([0x10, 0x81, 0x00, 0x01, 0x01, 0xef, 0x01, 0x0e, 0xf0, 0x01, 0x62, 0x01, 0xd6, 0x00]);
       const result = EL.parseBytes(buffer);
-      
+
       expect(result).toBeDefined();
       expect(result.EHD).toBe('1081');
       expect(result.TID).toBe('0001');
@@ -87,19 +93,70 @@ describe('EL - ECHONET Lite プロトコル', () => {
       // OPC=2, EPC=0x80(動作状態)=0x30, EPC=0x81(設置場所)=0x01
       const detail = '80013081010f';
       const result = EL.parseDetail('02', detail);
-      
+
       expect(result).toBeDefined();
       expect(result['80']).toBe('30');
       expect(result['81']).toBe('0f');
     });
+
+    test('parseString: 不正な文字列型でエラー', () => {
+      expect(() => {
+        EL.parseString(123);  // 数値を渡す
+      }).toThrow();
+    });
+
+    test('parseString: 奇数長の16進数文字列でエラー', () => {
+      const oddLength = '108100001';  // 奇数長
+      expect(() => {
+        EL.parseString(oddLength);
+      }).toThrow(/hex length must be even/);
+    });
+
+    test('parseString: 無効なEHD(任意電文形式1082)の処理', () => {
+      // 任意電文形式は最低24文字必要
+      const arbitraryFormat = '108200010ef0010ef001620180';
+      const result = EL.parseString(arbitraryFormat);
+
+      expect(result).toBeDefined();
+      expect(result.EHD).toBe('1082');
+      expect(result.AMF).toBe('00010ef0010ef001620180');
+    });
+
+    test('parseBytes: nullやundefinedでnullを返す', () => {
+      expect(EL.parseBytes(null)).toBeNull();
+      expect(EL.parseBytes(undefined)).toBeNull();
+    });
+
+    test('parseBytes: 短すぎるバッファでnullを返す', () => {
+      const tooShort = Buffer.from([0x10, 0x81]);
+      expect(EL.parseBytes(tooShort)).toBeNull();
+    });
+
+    test('parseBytes: 無効なEHDヘッダーでnullを返す', () => {
+      const invalidEHD = Buffer.from([0x20, 0x81, 0x00, 0x01, 0x01, 0xef, 0x01, 0x0e, 0xf0, 0x01, 0x62, 0x01, 0xd6, 0x00]);
+      expect(EL.parseBytes(invalidEHD)).toBeNull();
+    });
+
+    test('parseDetail: 不正なOPCでエラー', () => {
+      expect(() => {
+        EL.parseDetail('ff', '80013081010f');  // OPC=255
+      }).toThrow();
+    });
+
+    test('parseDetail: データ不足でエラー', () => {
+      // OPC=2だがデータが1つ分しかない
+      expect(() => {
+        EL.parseDetail('02', '800130');
+      }).toThrow();
+    });
   });
 
   describe('クラスリスト生成', () => {
-    
+
     test('getClassList: インスタンスリストからクラスリストを生成', () => {
       const objList = ['05ff01', '05ff02', '013001', '013002'];
       const classList = EL.getClassList(objList);
-      
+
       expect(classList).toContain('05ff');
       expect(classList).toContain('0130');
       expect(classList.length).toBe(2);
@@ -108,13 +165,25 @@ describe('EL - ECHONET Lite プロトコル', () => {
     test('getClassList: 重複なしの場合', () => {
       const objList = ['05ff01', '013001', '029001'];
       const classList = EL.getClassList(objList);
-      
+
       expect(classList.length).toBe(3);
+    });
+
+    test('getClassList: 空配列の場合', () => {
+      const classList = EL.getClassList([]);
+      expect(classList).toEqual([]);
+      expect(classList.length).toBe(0);
+    });
+
+    test('getClassList: 単一要素の場合', () => {
+      const classList = EL.getClassList(['05ff01']);
+      expect(classList).toContain('05ff');
+      expect(classList.length).toBe(1);
     });
   });
 
   describe('ELDATA変換', () => {
-    
+
     test('ELDATA2Array: ELDATAをバイト配列に変換', () => {
       const eldata = {
         EHD: '1081',
@@ -123,7 +192,7 @@ describe('EL - ECHONET Lite プロトコル', () => {
         DEOJ: '0ef001',
         EDATA: '6201d600'
       };
-      
+
       const result = EL.ELDATA2Array(eldata);
       expect(result).toBeInstanceOf(Array);
       expect(result[0]).toBe(0x10);
@@ -138,14 +207,28 @@ describe('EL - ECHONET Lite プロトコル', () => {
         DEOJ: '0ef001',
         EDATA: '6201d600'
       };
-      
+
       const result = EL.getSeparatedString_ELDATA(eldata);
       expect(result).toBe('1081 0001 0ef001 0ef001 6201d600');
+    });
+
+    test('getSeparatedString_String: 文字列でないとエラー', () => {
+      expect(() => {
+        EL.getSeparatedString_String(123);  // 数値を渡す
+      }).toThrow('str is not string.');
+    });
+
+    test('getSeparatedString_String: 正常な文字列を区切る', () => {
+      // 最低限の長さ: EHD(4) + TID(4) + SEOJ(6) + DEOJ(6) + ESV(2) = 22文字
+      const validStr = '108100010ef0010ef00162';
+      const result = EL.getSeparatedString_String(validStr);
+      expect(result).toContain(' ');
+      expect(result).toContain('1081');
     });
   });
 
   describe('プロパティマップ形式2のパース', () => {
-    
+
     test('parseMapForm2: 形式2を形式1に変換', () => {
       // 17個のプロパティがある場合のテスト
       // EDT: [個数(17=0x11), bitmap 16bytes]
@@ -154,7 +237,7 @@ describe('EL - ECHONET Lite プロトコル', () => {
         0x81, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // 0x80(bit7)
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
       ];
-      
+
       const result = EL.parseMapForm2(form2Data);
       expect(result[0]).toBeGreaterThan(0);  // 先頭は個数（0より大きい）
       expect(result).toContain(0x80);  // 0x80が含まれる
@@ -163,17 +246,17 @@ describe('EL - ECHONET Lite プロトコル', () => {
   });
 
   describe('オブジェクトソート', () => {
-    
+
     test('objectSort: キーでソート', () => {
       const obj = {
         'z': 1,
         'a': 2,
         'm': 3
       };
-      
+
       const sorted = EL.objectSort(obj);
       const keys = Object.keys(sorted);
-      
+
       expect(keys[0]).toBe('a');
       expect(keys[1]).toBe('m');
       expect(keys[2]).toBe('z');
@@ -181,7 +264,7 @@ describe('EL - ECHONET Lite プロトコル', () => {
   });
 
   describe('定数の確認', () => {
-    
+
     test('ESVコード定義', () => {
       expect(EL.SETI_SNA).toBe('50');
       expect(EL.SETC_SNA).toBe('51');
