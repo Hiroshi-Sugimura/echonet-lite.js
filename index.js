@@ -1491,33 +1491,33 @@ EL.complementFacilities = function () {
 
 EL.complementFacilities_sub = function ( ip, eoj, props ) {  // サブルーチン
 	let epcs = Object.keys( props );
-	let getMap = epcs.filter( (v) => { return v.substr(0, 4) == '9f'; } );
+	// '9f' (Get Property Map) が存在しない/空ならマップ取得を要求
+	if( props['9f'] == null || props['9f'] === '' ) {
+		EL.sendDetails( ip, EL.NODE_PROFILE_OBJECT, eoj, EL.GET, [{'9d':''}, {'9e':''}, {'9f':''}] );
+		return;
+	}
 
-	if( !getMap ) {
-		// get prop. mapがなければ取りに行く。そのあとは自動で取得すると期待
-		EL.sendDetails( ip, EL.NODE_PROFILE_OBJECT, eoj, EL.GET, [{'9d':''}, {'9e':''}, {'9f':''}]);
-	}else{
-		// get prop. mapにあるEPCに関してすべて値を持っているかチェックして、持っていないEPCをリストして取得しにいく
-		// to be developing.
-		let array = props[getMap].match(/.{2}/g);
-		let pdc = EL.toHexArray( array[0] )[0];
-		let details = [];
-		for( let i=0; i<pdc; i++ ) {
-			if( array[i+1].substr(0,1) == 'f'  ) {  			// EPCがF0..FFはメーカオリジナルなので無視する
-				// nop.
-			}else if( props[ array[i+1] ] == null || props[ array[i+1] ] == '' ) {  // propsにそのEPCのEDTがなければ聞く
-				details.push( { [array[i+1]]: ''} );
-			}
+	// 形式1/2どちらでも: '9f' のEDTを2桁ずつに分解
+	let array = props['9f'].match(/.{2}/g);
+	if( !array || array.length === 0 ) { return; }
+	let count = EL.toHexArray( array[0] )[0]; // 先頭は個数
+	let details = [];
+	for( let i=0; i<count; i++ ) {
+		let epc = array[i+1];
+		if( !epc ) { break; }
+		// メーカー独自(F0..FF)はスキップ
+		if( epc[0].toLowerCase() === 'f' ) { continue; }
+		if( props[epc] == null || props[epc] === '' ) {
+			details.push( { [epc]: '' } );
 		}
+	}
 
-		if( !isObjEmpty(details) ) {
-			// console.log( 'ip:', ip, 'obj:',eoj, 'props:', props, 'req details:', details );
-			setTimeout(() => {
-				EL.sendDetails( ip, EL.NODE_PROFILE_OBJECT, eoj, EL.GET, details);
-				EL.decreaseWaitings();
-			}, EL.autoGetDelay * (EL.autoGetWaitings+1));
-			EL.increaseWaitings();
-		}
+	if( !isObjEmpty(details) ) {
+		setTimeout(() => {
+			EL.sendDetails( ip, EL.NODE_PROFILE_OBJECT, eoj, EL.GET, details );
+			EL.decreaseWaitings();
+		}, EL.autoGetDelay * (EL.autoGetWaitings+1));
+		EL.increaseWaitings();
 	}
 };
 
