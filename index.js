@@ -1054,7 +1054,7 @@ EL.sendString = function (ip, string) {
 // DETAILs = [{epc: edt}, {epc: edt}, ...]
 // ex. {'80':'31', '8a':'000077'}
 
-EL.sendDetails = async function (ip, seoj, deoj, esv, DETAILs) {
+EL.sendDetails = function (ip, seoj, deoj, esv, DETAILs) {
 
 	// TIDの調整
 	let carry = 0; // 繰り上がり
@@ -1337,13 +1337,13 @@ dev_details: {
 
 
 // dev_detailのGetに対して複数OPCにも対応して返答する
-EL.replyGetDetail = async function(rinfo, els, dev_details) {
+EL.replyGetDetail = function(rinfo, els, dev_details) {
 	let success = true;
 	let retDetails = [];
 	let ret_opc = 0;
 	// console.log( 'Recv DETAILs:', els.DETAILs );
 	for (let epc in els.DETAILs) {
-		if( await EL.replyGetDetail_sub( els, dev_details, epc ) ) {
+		if( EL.replyGetDetail_sub( els, dev_details, epc ) ) {
 			retDetails.push( parseInt(epc,16) );  // epcは文字列なので
 			retDetails.push( dev_details[els.DEOJ][epc].length );
 			retDetails.push( dev_details[els.DEOJ][epc] );
@@ -1399,7 +1399,7 @@ EL.replyGetDetail_sub = function( els, dev_details, epc) {
 // ただしEPC毎の設定値に関して基本はノーチェックなので注意すべし
 // EPC毎の設定値チェックや、INF処理に関しては下記の replySetDetail_sub にて実施
 // SET_RESはEDT入ってない
-EL.replySetDetail = async function(rinfo, els, dev_details) {
+EL.replySetDetail = function(rinfo, els, dev_details) {
 	// DEOJが自分のオブジェクトでない場合は破棄
 	if ( !dev_details[els.DEOJ] ) { // EOJそのものがあるか？
 		return false;
@@ -1410,7 +1410,7 @@ EL.replySetDetail = async function(rinfo, els, dev_details) {
 	let ret_opc = 0;
 	// console.log( 'Recv DETAILs:', els.DETAILs );
 	for (let epc in els.DETAILs) {
-		if( await EL.replySetDetail_sub( rinfo, els, dev_details, epc ) ) {
+		if( EL.replySetDetail_sub( rinfo, els, dev_details, epc ) ) {
 			retDetails.push( parseInt(epc,16) );  // epcは文字列
 			retDetails.push( [0x00] );  // 処理できた分は0を返す
 		}else{
