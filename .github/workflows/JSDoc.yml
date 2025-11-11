@@ -9,29 +9,31 @@ on:
 jobs:
   generate-jsdoc:
     runs-on: ubuntu-latest
-    
+
     permissions:
       contents: write
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-      
-      - name: Install JSDoc
-        run: npm install -g jsdoc
-      
+
+      - name: Install JSDoc and Docdash
+        run: |
+          npm install -g jsdoc
+          npm install -g docdash
+
       - name: Generate JSDoc documentation
         run: |
           mkdir -p docs
-          jsdoc index.js -d docs -R README.md
-      
+          jsdoc index.js -d docs -R README.md -t $(npm root -g)/docdash
+
       - name: Commit and push documentation
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"

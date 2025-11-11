@@ -10,6 +10,11 @@ The ECHONET Lite protocol is a communication protocol for smart home devices.
 また、製品化の場合には各社・各自がECHONET Lite認証を取得する必要があります。**
 
 
+# API Documents
+
+[API Documents](http://hiroshi-sugimura.github.io/echonet-lite.js/)
+
+
 # Install
 
 下記コマンドでモジュールをインストールできます．
