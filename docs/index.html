@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Home</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Home</h1>
+
+    
+
+
+
+    
+
+
+    <h3> </h3>
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+    <section>
+        <article><h1>Overview</h1>
+<p>このモジュールは<strong>ECHONET Liteプロトコル</strong>をサポートします．
+ECHONET Liteプロトコルはスマートハウス機器の通信プロトコルです．</p>
+<p>This module provides <strong>ECHONET Lite protocol</strong>.
+The ECHONET Lite protocol is a communication protocol for smart home devices.</p>
+<p><strong>注意：本モジュールによるECHONET Lite通信規格上の保証はなく、SDKとしてもECHONET Liteの認証を受けておりません。
+また、製品化の場合には各社・各自がECHONET Lite認証を取得する必要があります。</strong></p>
+<h1>Install</h1>
+<p>下記コマンドでモジュールをインストールできます．</p>
+<p>You can install the module as following command.</p>
+<pre class="prettyprint source lang-bash"><code>npm i echonet-lite
+</code></pre>
+<h1>Demos</h1>
+<h2>Controller demo</h2>
+<p>デモプログラムはこんな感じです。動作させるためにはECHONET Lite対応デバイスが必要です。もしお持ちでない場合には**<a href="https://github.com/SonyCSL/MoekadenRoom">MoekadenRoom</a>**というシミュレータがおすすめです。</p>
+<p>Here is a demonstration script.
+For test exectuion, some devices with ECHONET Lite is required.
+If you do not have any device, we recommend the <strong><a href="https://github.com/SonyCSL/MoekadenRoom">MoekadenRoom</a></strong> as a simulator.</p>
+<pre class="prettyprint source lang-JavaScript:Demo"><code>// モジュールの機能をELとして使う
+// import functions as EL object
+var EL = require('echonet-lite');
+
+// 自分自身のオブジェクトを決める
+// set EOJ for this script
+// initializeで設定される，必ず何か設定しないといけない，今回はコントローラ
+// this EOJ list is required. '05ff01' is a controller.
+var objList = ['05ff01'];
+
+////////////////////////////////////////////////////////////////////////////
+// 初期化するとともに，受信動作をコールバックで登録する
+// initialize and setting callback. the callback is called by reseived packet.
+var elsocket = EL.initialize( objList, function( rinfo, els, err ) {
+
+	if( err ){
+		console.dir(err);
+	}else{
+		console.log('==============================');
+		console.log('Get ECHONET Lite data');
+		console.log('rinfo is ');
+		console.dir(rinfo);
+
+		// elsはELDATA構造になっているので使いやすいかも
+		// els is ELDATA stracture.
+		console.log('----');
+		console.log('els is ');
+		console.dir(els);
+
+		// ELDATAをArrayにする事で使いやすい人もいるかも
+		// convert ELDATA into byte array.
+		console.log('----');
+		console.log( 'ECHONET Lite data array is ' );
+		console.log( EL.ELDATA2Array( els ) );
+
+		// 受信データをもとに，実は内部的にfacilitiesの中で管理している
+		// this module manages facilities by receved packets.
+		console.log('----');
+		console.log( 'Found facilities are ' );
+		console.dir( EL.facilities );
+	}
+});
+
+// NetworkのELをすべてsearchしてみよう．
+// search ECHONET nodes in local network
+EL.search();
+</code></pre>
+<h2>Device demo</h2>
+<p>こんな感じで作ってみたらどうでしょうか．
+あとはairconObjのプロパティをグローバル変数として，別の関数から書き換えてもいいですよね．
+これでGetに対応できるようになります．</p>
+<p>This is a demo program for developping air conditioner object.</p>
+<pre class="prettyprint source lang-JavaScript:Demo"><code>//////////////////////////////////////////////////////////////////////
+//	Copyright (C) Hiroshi SUGIMURA 2022.09.22 - above.
+//////////////////////////////////////////////////////////////////////
+'use strict'
+
+
+//////////////////////////////////////////////////////////////////////
+// ECHONET Lite
+let EL = require('echonet-lite');
+
+// エアコンと照明があるとする
+let objList = ['013001','029001'];
+
+// 自分のエアコンのデータ，今回はこのデータをグローバル的に使用する方法で紹介する．
+let dev_details = {
+	'013001': {
+		// super
+		&quot;80&quot;: [0x30],  // 動作状態
+		&quot;81&quot;: [0xff],  // 設置場所
+		&quot;82&quot;: [0x00, 0x00, 0x66, 0x00], // EL version, 1.1
+		'83': [0xfe, 0x00, 0x00, 0x77, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02], // identifier, initialize時に、renewNICList()できちんとセットするとよい, get
+		&quot;88&quot;: [0x42],  // 異常状態
+		&quot;8a&quot;: [0x00, 0x00, 0x77], // maker code
+		&quot;9d&quot;: [0x04, 0x80, 0x8f, 0xa0, 0xb0],        // inf map, 1 Byte目は個数
+		&quot;9e&quot;: [0x04, 0x80, 0x8f, 0xa0, 0xb0],        // set map, 1 Byte目は個数
+		&quot;9f&quot;: [0x0d, 0x80, 0x81, 0x82, 0x88, 0x8a, 0x8f, 0x9d, 0x9e, 0x9f, 0xa0, 0xb0, 0xb3, 0xbb], // get map, 1 Byte目は個数
+		// child
+		&quot;8f&quot;: [0x41], // 節電動作設定
+		&quot;a0&quot;: [0x31], // 風量設定
+		&quot;b0&quot;: [0x41], // 運転モード設定
+		&quot;b3&quot;: [0x19], // 温度設定値
+		&quot;bb&quot;: [0x1a] // 室内温度計測値
+	},
+	'029001': {  // lighting
+		// super
+		'80': [0x31], // 動作状態, set?, get, inf
+		'81': [0x0f], // 設置場所, set, get, inf
+		'82': [0x00, 0x00, 0x50, 0x01],  // spec version, P. rev1, get
+		'83': [0xfe, 0x00, 0x00, 0x77, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03], // identifier, initialize時に、renewNICList()できちんとセットするとよい, get
+		'88': [0x42], // 異常状態, 0x42 = 異常無, get
+		'8a': [0x00, 0x00, 0x77],  // maker code, kait, get
+		'9d': [0x04, 0x80, 0x81],  // inf map, 1 Byte目は個数, get
+		'9e': [0x04, 0x80, 0x81, 0xb6],  // set map, 1 Byte目は個数, get
+		'9f': [0x0a, 0x80, 0x81, 0x82, 0x83, 0x88, 0x8a, 0x9d, 0x9e, 0x9f, 0xb6], // get map, 1 Byte目は個数, get
+		// uniq
+		'b6': [0x42] // 点灯モード設定, set, get
+	}
+};
+
+
+
+async function setup() {
+	// ノードプロファイルに関しては内部処理するので，ユーザーはエアコンに関する受信処理だけを記述する．
+	let elsocket = await EL.initialize(objList, function (rinfo, els, e) {
+		if (e) {
+			console.error(e);
+			return;
+		}
+		if( els.DEOJ.substr(0,4) == '0ef0' ) {return;}  // Node profileに関しては何もしない
+
+		// ESVで振り分け，主に0x60系列に対応すればいい
+		switch (els.ESV) {
+			////////////////////////////////////////////////////////////////////////////////////
+			// 0x6x
+			case EL.SETI: // &quot;60
+			case EL.SETC: // &quot;61&quot;，返信必要あり
+			EL.replySetDetail( rinfo, els, dev_details );
+			break;
+
+			case EL.GET: // 0x62，Get
+			EL.replyGetDetail( rinfo, els, dev_details );
+			break;
+
+			case EL.INFREQ: // 0x63
+			break;
+
+			case EL.SETGET: // &quot;6e&quot;
+			break;
+
+			default:
+			break;
+		}
+
+	}, 0, {ignoreMe: true, autoGetProperties: false, debugMode: false});
+
+	dev_details['013001']['83'][7]  = dev_details['029001']['83'][7]  = EL.Node_details[&quot;83&quot;][7];
+	dev_details['013001']['83'][8]  = dev_details['029001']['83'][8]  = EL.Node_details[&quot;83&quot;][8];
+	dev_details['013001']['83'][9]  = dev_details['029001']['83'][9]  = EL.Node_details[&quot;83&quot;][9];
+	dev_details['013001']['83'][10] = dev_details['029001']['83'][10] = EL.Node_details[&quot;83&quot;][10];
+	dev_details['013001']['83'][11] = dev_details['029001']['83'][11] = EL.Node_details[&quot;83&quot;][11];
+	dev_details['013001']['83'][12] = dev_details['029001']['83'][12] = EL.Node_details[&quot;83&quot;][12];
+
+	//////////////////////////////////////////////////////////////////////
+	// 全て立ち上がったのでINFでエアコンONの宣言
+	EL.sendOPC1('224.0.23.0', [0x01, 0x30, 0x01], [0x0e, 0xf0, 0x01], 0x73, 0x80, 0x30);
+	// 全て立ち上がったのでINFで照明ONの宣言
+	EL.sendOPC1('224.0.23.0', [0x02, 0x90, 0x01], [0x0e, 0xf0, 0x01], 0x73, 0x80, 0x30);
+}
+
+
+setup();
+
+
+//////////////////////////////////////////////////////////////////////
+// EOF
+//////////////////////////////////////////////////////////////////////
+</code></pre>
+<h1>Data stracture</h1>
+<pre class="prettyprint source"><code>let EL = {
+EL_port: 3610,
+EL_Multi: '224.0.23.0',
+EL_obj: null,
+facilities: {}  // ネットワーク内の機器情報リスト; device and property list in the LAN
+// Ex.
+// { '192.168.0.3': { '05ff01': { d6: '' } },
+// { '192.168.0.4': { '05ff01': { '80': '30', '82': '30' } } }
+};
+</code></pre>
+<p>ELデータはこのモジュールで定義した構造で，下記のようになっています．
+ELDATA is ECHONET Lite data stracture, which conteints</p>
+<h2>受信データ (=els, =el structure型とも)</h2>
+<pre class="prettyprint source"><code>ELDATA {
+  EHD : str.substr( 0, 4 ),
+  TID : str.substr( 4, 4 ),
+  SEOJ : str.substr( 8, 6 ),
+  DEOJ : str.substr( 14, 6 ),
+  EDATA: str.substr( 20 ),    // EDATA is followings
+  ESV : str.substr( 20, 2 ),
+  OPC : str.substr( 22, 2 ),
+  DETAIL: str.substr( 24 ),
+  DETAILs: EL.parseDetail( str.substr( 22, 2 ), str.substr( 24 ) )
+}
+</code></pre>
+<h2>オブジェクト内の機器情報リスト, facilities information</h2>
+<p>こんな感じ</p>
+<pre class="prettyprint source"><code>EL.facilities =
+{ '192.168.2.103':
+   { '05ff01': { '80': '', d6: '' },
+     '0ef001': { '80': '30', d6: '0100' } },
+  '192.168.2.104': { '0ef001': { d6: '0105ff01' }, '05ff01': { '80': '30' } },
+  '192.168.2.115': { '0ef001': { '80': '30', d6: '01013501' } } }
+</code></pre>
+<h2>識別番号リスト, identification numbers</h2>
+<p>こんな感じ</p>
+<pre class="prettyprint source"><code>EL.identificationNumbers
+[
+  {
+    id: 'fe0000776e5b0d002b5b0ef00100000000',
+    ip: '192.168.2.11',
+    OBJ: '0ef001'
+  },
+  {
+    id: 'fe0000776a6ee920fd7002870100000000',
+    ip: '192.168.2.11',
+    OBJ: '028701'
+  }
+]
+</code></pre>
+<h2>自分がデバイス扱いしたい場合は下記の dev_details の形でEPC管理すると使える関数がある</h2>
+<p>下記はエアコンと照明の詳細オブジェクトを持っている場合である。</p>
+<pre class="prettyprint source"><code>// 自分のエアコンのデータ，今回はこのデータをグローバル的に使用する方法で紹介する．
+let dev_details = {
+	'013001': {
+		// super
+		&quot;80&quot;: [0x30],  // 動作状態
+		&quot;81&quot;: [0xff],  // 設置場所
+		&quot;82&quot;: [0x00, 0x00, 0x66, 0x00], // EL version, 1.1
+		&quot;88&quot;: [0x42],  // 異常状態
+		&quot;8a&quot;: [0x00, 0x00, 0x77], // maker code
+		&quot;9d&quot;: [0x04, 0x80, 0x8f, 0xa0, 0xb0],        // inf map, 1 Byte目は個数
+		&quot;9e&quot;: [0x04, 0x80, 0x8f, 0xa0, 0xb0],        // set map, 1 Byte目は個数
+		&quot;9f&quot;: [0x0d, 0x80, 0x81, 0x82, 0x88, 0x8a, 0x8f, 0x9d, 0x9e, 0x9f, 0xa0, 0xb0, 0xb3, 0xbb], // get map, 1 Byte目は個数
+		// child
+		&quot;8f&quot;: [0x41], // 節電動作設定
+		&quot;a0&quot;: [0x31], // 風量設定
+		&quot;b0&quot;: [0x41], // 運転モード設定
+		&quot;b3&quot;: [0x19], // 温度設定値
+		&quot;bb&quot;: [0x1a] // 室内温度計測値
+	},
+	'029001': {  // lighting
+		// super
+		'80': [0x31], // 動作状態, set?, get, inf
+		'81': [0x0f], // 設置場所, set, get, inf
+		'82': [0x00, 0x00, 0x50, 0x01],  // spec version, P. rev1, get
+		'83': [0xfe, 0x00, 0x00, 0x77, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03], // identifier, initialize時に、renewNICList()できちんとセットする, get
+		'88': [0x42], // 異常状態, 0x42 = 異常無, get
+		'8a': [0x00, 0x00, 0x77],  // maker code, kait, get
+		'9d': [0x04, 0x80, 0x81],  // inf map, 1 Byte目は個数, get
+		'9e': [0x04, 0x80, 0x81, 0xb6],  // set map, 1 Byte目は個数, get
+		'9f': [0x0a, 0x80, 0x81, 0x82, 0x83, 0x88, 0x8a, 0x9d, 0x9e, 0x9f, 0xb6], // get map, 1 Byte目は個数, get
+		// uniq
+		'b6': [0x42] // 点灯モード設定, set, get
+	}
+};
+</code></pre>
+<h1>API</h1>
+<h2>初期化と受信, 監視, initialize, receriver callback and observation</h2>
+<p><img src="img/base.png" alt=""></p>
+<ul>
+<li>initialize</li>
+</ul>
+<pre class="prettyprint source"><code>EL.initialize = function ( objList, userfunc, ipVer = 4, Options = {v4: '', v6: '', ignoreMe: true, autoGetProperties: true, debugMode: false} )
+</code></pre>
+<ul>
+<li>
+<p>objList is ECHONET Lite object code.</p>
+</li>
+<li>
+<p>for example, ['05ff01'] is a controller.</p>
+</li>
+<li>
+<p>userfunc is the your callback function. userfunc is described as following.</p>
+</li>
+</ul>
+<pre class="prettyprint source"><code>function( rinfo, els, err ) {
+	console.log('==============================');
+	if( err ) {
+		console.dir(err);
+	}else{
+		// ToDo
+	}
+}
+</code></pre>
+<ul>
+<li>
+<p>ipVer is optional</p>
+</li>
+<li>
+<p>ipVer = 0, IPv4 and IPv6</p>
+</li>
+<li>
+<p>ipVer = 4, IPv4 only</p>
+</li>
+<li>
+<p>ipVer = 6, IPv6 only</p>
+</li>
+<li>
+<p>Options is optional</p>
+</li>
+<li>
+<p>v4 is specified for using IPAddress, default '' is auto</p>
+</li>
+<li>
+<p>v6 is specified for using NIC name, default '' is auto</p>
+</li>
+<li>
+<p>ignoreMe is specified to ignore self IP address, default true</p>
+</li>
+<li>
+<p>autoGetProperties is automatic get for properties, default true (trial)</p>
+</li>
+<li>
+<p>autoGetDelay is period of the auto get EDTs, default 3000ms</p>
+</li>
+<li>
+<p>debugMode shows innser log, default false</p>
+</li>
+<li>
+<p>More examples</p>
+</li>
+</ul>
+<pre class="prettyprint source"><code>let objList = ['05ff01'];
+
+let elsocket = EL.initialize( objList, function( rinfo, els, err ) {
+	console.log('==============================');
+	if( err ) {
+		console.dir(err);
+	}else{
+		console.log('----');
+		console.log('Get ECHONET Lite data');
+		console.log('rinfo is '); console.dir(rinfo);
+		console.log('els is ');   console.dir(els);
+	}
+}, 0, { 'v4': '', 'v6': '', ignoreMe:true, autoGetProperties: true, autoGetDelay: 1000, debugMode: false});  // Recommendation for a controller
+// }, 0, { 'v4': '', 'v6': '', ignoreMe:true, autoGetProperties: false, debugMode: false});  // Recommendation for a device
+</code></pre>
+<ul>
+<li>解放, release</li>
+</ul>
+<pre class="prettyprint source"><code>EL.release = function()
+</code></pre>
+<ul>
+<li>NICリスト再取得, renew NIC list</li>
+</ul>
+<pre class="prettyprint source"><code>EL.renewNICList = function()
+</code></pre>
+<ul>
+<li>戻り値はObject</li>
+<li>output is object data.</li>
+</ul>
+<ul>
+<li>ECHONET Liteネットワーク監視</li>
+</ul>
+<pre class="prettyprint source"><code>EL.setObserveFacilities = function ( interval, onChanged )
+</code></pre>
+<ul>
+<li>ECHONET Liteネットワーク監視終了（タイマー解放）</li>
+</ul>
+<pre class="prettyprint source"><code>EL.clearObserveFacilities = function ();
+</code></pre>
+<h2>データ表示系, data representations</h2>
+<p><img src="img/show.png" alt=""></p>
+<ul>
+<li>ELDATA形式, ELDATA type</li>
+</ul>
+<pre class="prettyprint source"><code>EL.eldataShow = function( eldata )
+</code></pre>
+<ul>
+<li>文字列, string</li>
+</ul>
+<pre class="prettyprint source"><code>EL.stringShow = function( str )
+</code></pre>
+<ul>
+<li>バイトデータ, byte data</li>
+</ul>
+<pre class="prettyprint source"><code>EL.bytesShow = function( bytes )
+</code></pre>
+<h2>変換系, converters</h2>
+<p><img src="img/convert.png" alt=""></p>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">from</th>
+<th style="text-align:center">to</th>
+<th style="text-align:center">function</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">String</td>
+<td style="text-align:center">ELDATA(EDT)</td>
+<td style="text-align:center">parseDetail(opc,str)</td>
+</tr>
+<tr>
+<td style="text-align:center">Bytes(=Integer[])</td>
+<td style="text-align:center">ELDATA</td>
+<td style="text-align:center">parseBytes(bytes)</td>
+</tr>
+<tr>
+<td style="text-align:center">String</td>
+<td style="text-align:center">ELDATA</td>
+<td style="text-align:center">parseString(str)</td>
+</tr>
+<tr>
+<td style="text-align:center">String</td>
+<td style="text-align:center">String (like EL)</td>
+<td style="text-align:center">getSeparatedString_String(str)</td>
+</tr>
+<tr>
+<td style="text-align:center">ELDATA</td>
+<td style="text-align:center">String (like EL)</td>
+<td style="text-align:center">getSeparatedString_ELDATA(eldata)</td>
+</tr>
+<tr>
+<td style="text-align:center">ELDATA</td>
+<td style="text-align:center">Bytes(=Integer[])</td>
+<td style="text-align:center">ELDATA2Array(eldata)</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>DetailだけをParseする，内部でよく使うけど外部で使うかわかりません．</li>
+<li>inner function. Parses only detail (for echonet lite data frame).</li>
+</ul>
+<pre class="prettyprint source"><code>EL.parseDetail = function( opc, str )
+</code></pre>
+<ul>
+<li>byte dataを入力するとELDATA形式にする</li>
+<li>bytes -&gt; ELDATA type</li>
+</ul>
+<pre class="prettyprint source"><code>EL.parseBytes = function( bytes )
+</code></pre>
+<ul>
+<li>HEXで表現されたStringをいれるとELDATA形式にする</li>
+<li>HEX string -&gt; ELDATA</li>
+</ul>
+<pre class="prettyprint source"><code>EL.parseString = function( str )
+</code></pre>
+<ul>
+<li>文字列をいれるとELらしい切り方のStringを得る</li>
+<li>String -&gt; EL-like String</li>
+</ul>
+<pre class="prettyprint source"><code>EL.getSeparatedString_String = function( str )
+</code></pre>
+<ul>
+<li>ELDATAをいれるとELらしい切り方のStringを得る</li>
+<li>ELDATA -&gt; EL-like String</li>
+</ul>
+<pre class="prettyprint source"><code>EL.getSeparatedString_ELDATA = function( eldata )
+</code></pre>
+<ul>
+<li>ELDATA形式から配列へ</li>
+<li>ELDATA -&gt; Array</li>
+</ul>
+<pre class="prettyprint source"><code>EL.ELDATA2Array = function( eldata )
+</code></pre>
+<ul>
+<li>変換表, convert pair of datas</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">from</th>
+<th style="text-align:center">to</th>
+<th style="text-align:center">function</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">Byte</td>
+<td style="text-align:center">16進表現String</td>
+<td style="text-align:center">toHexString(byte)</td>
+</tr>
+<tr>
+<td style="text-align:center">16進表現String</td>
+<td style="text-align:center">Integer[]</td>
+<td style="text-align:center">toHexArray(str)</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>1バイトを文字列の16進表現へ（1Byteは必ず2文字にする）</li>
+<li>a byte -&gt; HEX string</li>
+</ul>
+<pre class="prettyprint source"><code>EL.toHexString = function( byte )
+</code></pre>
+<ul>
+<li>HEXのStringを数値のバイト配列へ</li>
+<li>HES String -&gt; Array</li>
+</ul>
+<pre class="prettyprint source"><code>EL.toHexArray = function( string )
+</code></pre>
+<h2>送信, send</h2>
+<p><img src="img/send.png" alt=""></p>
+<p>APIは送信の成功失敗に関わらず，TIDをreturnすることにしました。
+送信TIDはEL.tid[]で管理しています。
+sendOPC1とEL.sendEPCsはEL.tidを自動的に+1します。</p>
+<p>ipの指定方法は、</p>
+<ul>
+<li>文字列で '192.168.10.3' のように記述する方法</li>
+<li>rinfoオブジェクトのように {address:'192.168.10.3', family:'IPv4'} のように記述する方法の両方使えます</li>
+</ul>
+<ul>
+<li>EL送信のベース, base function</li>
+</ul>
+<pre class="prettyprint source"><code>EL.sendBase = function( ip, buffer )
+</code></pre>
+<ul>
+<li>配列の時, send Array</li>
+</ul>
+<pre class="prettyprint source"><code>EL.sendArray = function( ip, array )
+</code></pre>
+<ul>
+<li>OPC一個でやる方式, send EL-like</li>
+</ul>
+<pre class="prettyprint source"><code>EL.sendOPC1 = function( ip, seoj, deoj, esv, epc, edt)
+</code></pre>
+<p>ex.</p>
+<pre class="prettyprint source"><code>EL.sendOPC1( '192.168.2.150', [0x05,0xff,0x01], [0x01,0x35,0x01], 0x61, 0x80, [0x31]);
+EL.sendOPC1( '192.168.2.150', [0x05,0xff,0x01], [0x01,0x35,0x01], 0x61, 0x80, 0x31);
+EL.sendOPC1( '192.168.2.150', &quot;05ff01&quot;, &quot;013501&quot;, &quot;61&quot;, &quot;80&quot;, &quot;31&quot;);
+EL.sendOPC1( '192.168.2.150', &quot;05ff01&quot;, &quot;013501&quot;, EL.SETC, &quot;80&quot;, &quot;31&quot;);
+</code></pre>
+<ul>
+<li>文字列で送信, send EL-like string</li>
+</ul>
+<pre class="prettyprint source"><code>EL.sendString = function( ip, string )
+</code></pre>
+<ul>
+<li>複数のEPCで送信する
+<ul>
+<li>seoj, deoj, esvはbyteでもstringでも受け付ける</li>
+<li>DETAILsは下記の構造で、オブジェクト指定かArray指定でよい。Arrayの場合には送信の際のEPC出現順序が守られる</li>
+<li>DETAILs = {epc: edt, epc: edt, ...}</li>
+<li>ex. {'80':'31', '8a':'000077'}</li>
+<li>DETAILs = [{epc: edt}, {epc: edt}, ...]</li>
+<li>ex. [{'80':'31'}, {'8a':'000077'}]</li>
+</ul>
+</li>
+</ul>
+<pre class="prettyprint source"><code>EL.sendDetails = function (ip, seoj, deoj, esv, DETAILs)
+</code></pre>
+<ul>
+<li>省略したELDATA型で送信する
+<ul>
+<li>ELDATA {</li>
+<li>TID : String(4),      // 省略すると自動</li>
+<li>SEOJ : String(6),</li>
+<li>DEOJ : String(6),</li>
+<li>ESV : String(2),</li>
+<li>DETAILs: Object</li>
+<li>}</li>
+<li>ex.</li>
+<li>ELDATA {</li>
+<li>TID : '0001',      // 省略すると自動</li>
+<li>SEOJ : '05ff01',</li>
+<li>DEOJ : '029001',</li>
+<li>ESV : '61',</li>
+<li>DETAILs:  {'80':'31', '8a':'000077'}</li>
+<li>}</li>
+</ul>
+</li>
+</ul>
+<pre class="prettyprint source"><code>EL.sendELDATA = function (ip, eldata)
+</code></pre>
+<ul>
+<li>機器検索</li>
+</ul>
+<pre class="prettyprint source"><code>EL.search = function()
+</code></pre>
+<ul>
+<li>ネットワーク内のEL機器全体情報を更新する</li>
+</ul>
+<pre class="prettyprint source"><code>EL.renewFacilities = function( ip, obj, opc, detail )
+</code></pre>
+<ul>
+<li>機器情報の変化監視 (From Ver. 1.0.0)</li>
+<li>Set observing function to change EL.facilities.</li>
+</ul>
+<pre class="prettyprint source"><code>EL.setObserveFacilities = function( interval, onChanged );
+</code></pre>
+<p>ex.</p>
+<pre class="prettyprint source"><code>EL.setObserveFacilities( 1000, function() {  // 1000 ms
+	console.log('EL.facilities are changed.');
+});
+</code></pre>
+<ul>
+<li>機器情報の未取得EPCを補完する</li>
+</ul>
+<pre class="prettyprint source"><code>EL.complementFacilities = function ();
+</code></pre>
+<p>ex.</p>
+<pre class="prettyprint source"><code>const cron = require('node-cron');
+cron.schedule( '*/3 * * * *', () => {
+	EL.complementFacilities();
+})
+</code></pre>
+<h2>OPC2以上対応, OPC managements for more than two</h2>
+<p><img src="img/multi.png" alt=""></p>
+<ul>
+<li>ELの返信用、典型的なOPC一個でやるタイプ．TIDをGetメッセージに合わせて返信しないといけないため</li>
+</ul>
+<pre class="prettyprint source"><code>EL.replyOPC1 = function (ip, tid, seoj, deoj, esv, epc, edt)
+</code></pre>
+<ul>
+<li>OPC2以上にSet/Getで対応するための関数、自分で管理している機器の状態を dev_details の形式で作ってわたす</li>
+</ul>
+<pre class="prettyprint source"><code>EL.replyGetDetail = async function(rinfo, els, dev_details)
+</code></pre>
+<pre class="prettyprint source"><code>EL.replySetDetail = async function(rinfo, els, dev_details)
+</code></pre>
+<ul>
+<li>dev_detailsの形式、エアコンの例</li>
+</ul>
+<pre class="prettyprint source lang-dev_details:json"><code>let dev_details = {
+	'013001': {
+		// super
+		&quot;80&quot;: [0x30],  // 動作状態
+		&quot;81&quot;: [0xff],  // 設置場所
+		&quot;82&quot;: [0x00, 0x00, 0x66, 0x00], // EL version, 1.1
+		&quot;88&quot;: [0x42],  // 異常状態
+		&quot;8a&quot;: [0x00, 0x00, 0x77], // maker code
+		&quot;9d&quot;: [0x04, 0x80, 0x8f, 0xa0, 0xb0],        // inf map, 1 Byte目は個数
+		&quot;9e&quot;: [0x04, 0x80, 0x8f, 0xa0, 0xb0],        // set map, 1 Byte目は個数
+		&quot;9f&quot;: [0x0d, 0x80, 0x81, 0x82, 0x88, 0x8a, 0x8f, 0x9d, 0x9e, 0x9f, 0xa0, 0xb0, 0xb3, 0xbb], // get map, 1 Byte目は個数
+		// child
+		&quot;8f&quot;: [0x41], // 節電動作設定
+		&quot;a0&quot;: [0x31], // 風量設定
+		&quot;b0&quot;: [0x41], // 運転モード設定
+		&quot;b3&quot;: [0x19], // 温度設定値
+		&quot;bb&quot;: [0x1a] // 室内温度計測値
+	}
+};
+</code></pre>
+<h2>受信データの完全コントロール, Full control method for received data.</h2>
+<p>ELの受信データを振り分けるよ，何とかしよう．
+ELの受信をすべて自分で書きたい人はこれを完全に書き換えればいいとおもう．
+普通の人はinitializeのuserfuncで事足りるはず．</p>
+<p>For controlling all receiving data, update EL.returner function by any function. However this method is not recommended.
+Generally, all process can be described in userfunc of EL.initialize.</p>
+<pre class="prettyprint source"><code>EL.returner = function( bytes, rinfo, userfunc )
+</code></pre>
+<h1>echonet-lite.js 攻略情報 / Knowhow</h1>
+<ul>
+<li>コントローラ開発者向け</li>
+</ul>
+<p>おそらく一番使いやすい受信データ解析はEL.facilitiesをそのままreadすることかも．
+たとえば，そのまま表示すると，</p>
+<p>Probably, easy analysis of the received data is to display directory.
+For example,</p>
+<pre class="prettyprint source"><code>console.dir( EL.facilities );
+</code></pre>
+<p>データはこんな感じ．</p>
+<p>Reseiving data as,</p>
+<pre class="prettyprint source"><code>{ '192.168.2.103':
+   { '05ff01': { '80': '', d6: '' },
+     '0ef001': { '80': '30', d6: '0100' } },
+  '192.168.2.104': { '0ef001': { d6: '0105ff01' }, '05ff01': { '80': '30' } },
+  '192.168.2.115': { '0ef001': { '80': '30', d6: '01013501' } } }
+</code></pre>
+<p>また，データ送信で一番使いやすそうなのはsendOPC1だとおもう．
+これの組み合わせてECHONET Liteはほとんど操作できるのではなかろうか．</p>
+<p>The simplest sending method is 'sendOPC1.'</p>
+<pre class="prettyprint source"><code>EL.sendOPC1( '192.168.2.103', [0x05,0xff,0x01], [0x01,0x35,0x01], 0x61, 0x80, [0x30]);
+</code></pre>
+<h1>meta data</h1>
+<h2>Authors</h2>
+<p>神奈川工科大学  創造工学部  ホームエレクトロニクス開発学科; Dept. of Home Electronics, Faculty of Creative Engineering, Kanagawa Institute of Technology</p>
+<p>杉村　博; SUGIMURA, Hiroshi</p>
+<h2>thanks</h2>
+<p>Thanks to Github users!</p>
+<h2>License</h2>
+<p>MIT License</p>
+<pre class="prettyprint source"><code>-- License summary --
+o Commercial use
+o Modification
+o Distribution
+o Private use
+x Liability
+x Warranty
+</code></pre>
+<h2>Log</h2>
+<ul>
+<li>2.17.2 parseBytes修正、TID条件バグ修正、MAC未取得時の識別子フェールセーフ</li>
+<li>2.17.1 strict対応、文字列切り出しのBugfix、SetC_SNAのBugfix、コードの見やすさや健全性チェック</li>
+<li>2.17.0 ELのヘッダチェック、OPC妥当性チェック、IPv4のNIC指定の追加 (from Pull request)</li>
+<li>2.16.3 EL.SearchをEL.Initializeを完了する前に呼んでしまい情報取得がスタックしてしまう場合があることを解消</li>
+<li>2.16.2 EL.sendELDATAのesvが宣言されていない を直していただいた</li>
+<li>2.16.1 IPv6の時に、送信でIF重複指定になる時があったバグを修正</li>
+<li>2.16.0 getClassListメソド追加</li>
+<li>2.15.2 renewFacilitiesの格納条件詳細を見直しした</li>
+<li>2.15.1 renewFacilitiesの格納条件詳細を見直しした</li>
+<li>2.15.0 renewFacilitiesの格納条件を見直しした</li>
+<li>2.14.2 Node-profile-objectへのアクセスを0ef000だったのを0ef001に戻した</li>
+<li>2.14.1 内部的にipをrinfoのまま扱うこととした</li>
+<li>2.14.0 メーカ独自EPCの未保持無視、IPv4とIPv6の処理をもう少し真面目に、ipをrinfoのような形でも受付可能にした</li>
+<li>2.13.1 complement系微修正</li>
+<li>2.13.0 complement系method追加</li>
+<li>2.12.5 無駄なログ削除</li>
+<li>2.12.4 sendDetailsのDETAILs指定に配列を受けるようにした。配列の場合にはEPC送信順序を守る</li>
+<li>2.12.3 autoGetPropertiesの発見をnew objの時も動くように</li>
+<li>2.12.2 SetC_SNA受信対応</li>
+<li>2.12.1 SetC_SNA送信対応</li>
+<li>2.12.0 Search、autoGetPropertiesの処理を一気にGetするように変更、ただし、うまくいくか調査が足りていない。</li>
+<li>2.11.3 Get_SNAの対応をもう少しまともに</li>
+<li>2.11.2 parseDetail bug fix, parseMapForm2がarray引数にとれるように修正</li>
+<li>2.11.1 Get bug fix</li>
+<li>2.11.0 メソド追加（EL.sendELDATA）</li>
+<li>2.10.0 メソド追加（EL.sendDetails）</li>
+<li>2.9.6 parseDetail、OPCが10以上でバグがあったのを修正</li>
+<li>2.9.5 コメント修正</li>
+<li>2.9.4 定数 EL_Multi, EL_Multi6 がEL.EL_Multiとなって冗長なので、同等内容のMulti、Multi6を追加した。</li>
+<li>2.9.3 EPC:bf, Set対応</li>
+<li>2.9.2 EPC:bf, 追加</li>
+<li>2.9.1 EPC:83, identifier のバグ修正</li>
+<li>2.9.0 OPC2以上に対応するべくSet/Getの関数を用意した</li>
+<li>2.8.1 node profile 8b = 02とした</li>
+<li>2.8.0 IPv6のignoreMeが効いてないバグを修正</li>
+<li>2.7.1 NIC auto 対応、NIC list取得のバグ修正、WindowsによるIPv6 Multicastのして方法が不明(bug)</li>
+<li>2.7.0 method(replyOPC1)を追加、bugfix（自動返信でのTIDの設定ミスを修正）</li>
+<li>2.6.0 method(release, clearObserveFacilities)を追加</li>
+<li>2.5.8 PropertyMap2のautoGetの時に，違うEPCをGetするバグを直した</li>
+<li>2.5.7 識別番号の自動生成はオブジェクトではなく配列とした</li>
+<li>2.5.6 SET_RESはfacilitiesへの登録をやめた</li>
+<li>2.5.5 bug fix. format 2</li>
+<li>2.5.4 bug fix. Option.v6</li>
+<li>2.5.3 bug fix. ignoreMe</li>
+<li>2.5.2 bug fix. ipv6 mac</li>
+<li>2.5.1 bug fix. ipv6 win</li>
+<li>2.5.0 これから個体識別番号でELネットワーク管理をしたいので，その布石にNodeprofileの個体識別番号を自動生成することとした。macアドレスを利用するので重複しないとおもう。識別番号リストの確保もできるようにした。</li>
+<li>2.4.2 ignoreMeのときの自IPとして127.0.0.1を排除するように設定。v6は::1を排除する。ignoreMeをデフォルトtrueに。</li>
+<li>2.4.1 OPCが複数のときにparseDetailで不具合があったのを修正した。関連する関数はparseDetail, parseString, parseBytes, renewFacilitiesの4つ。</li>
+<li>2.4.0 自動取得をすぐ実行するとデバイス側が対応出来ないことが多いので，3秒（autoGetDelay）待つことにした</li>
+<li>2.3.1 send系関数全部がTIDを戻り値とするようにした。sendOPC1以外はTIDはを自動設定しない</li>
+<li>2.3.0 sendOPC1がTIDを自動設定して，戻り値とするようにした</li>
+<li>2.2.2 autoGetPropertiesをもう少し強化した。debugModeを追加した。</li>
+<li>2.2.1 InitializeにautoGetPropertiesオプションを追加した。トライアルです。</li>
+<li>2.2.0 PropertyMap解析のときに，形式2の読み取りにバグがあったのを修正，READMEを整理＆図をつくって充実させた。</li>
+<li>2.1.1 GetPropertyMapのときに，各プロパティ読み取りのWAITをつけた。処理が遅いデバイス対策</li>
+<li>2.1.0 自IPの受信を無視する，ignoreMeオプションを実装</li>
+<li>2.0.3 bind見直し</li>
+<li>2.0.2 log消し</li>
+<li>2.0.1 repush</li>
+<li>2.0.0 IPv4，IPv6，デュアルスタック対応，Interface切り替え対応。複雑になってきたので少しコンソールにログがでる。</li>
+<li>1.0.4 くだらないログがでてました。削除</li>
+<li>1.0.3 IPv6をIPv4と同時対応可能にした。initializeを下記のようにするとv4, v6同時に通信できる。複数NIC対応のため，MulticastAddressを指定できるようにしたが，うまく利いていない気はする。</li>
+<li>1.0.2 IPv6対応のための布石。Node.jsがIPv6のmulticast対応をきちんとしてくれないので動かないような気がする。</li>
+<li>1.0.1 bug fix. string equal，ユーザ設定が間違っているときにどのようにエラーを出すかを今後の課題として記す。</li>
+<li>1.0.0 EL.setObserveFacilitiesを実装した。ついでにいろいろあきらめてVer. 1ということにした。</li>
+<li>0.0.23 Replace new Buffer() by Buffer.from().</li>
+<li>0.0.22 property mapを一度に3個聞いていたのをデバイスの通信負荷を考慮して少し待つことにした。</li>
+<li>0.0.21 OPC != 1 でのparseDetailsの処理に不具合があったので修正しました。ほかにも'use strict'に対応，varをletにした。</li>
+<li>0.0.20 INF_REQがINFREQだったバグを修正した。</li>
+<li>0.0.19 utf-8n対応，EL.parseDetailのエラーに対応，ライブラリのくせに結構標準出力していたあたりを取った。</li>
+<li>0.0.18 Readmeを少し修正．</li>
+<li>0.0.17 473行以下でプロパティマップを受信した場合の処理を記述していますが、ノードプロファイル以外の場合もこの処理に入ってしまうバグがあります。この修正によりノードプロファイルの場合のみプロパティマップ内のプロパティを取得するようになります。</li>
+<li>0.0.16 Readmeを少し修正．</li>
+<li>0.0.15 HEX変換をNodeの標準ライブラリにしてくれた．IPv6対応してくれた．</li>
+<li>0.0.14 EL.sendOPC1の引数の型に関してかなりあいまいに処理できるようにした．seoj, deoj, esv, epcは文字列でもOK，edtは数値も文字列もOKにした．また，esvをわかりやすくするために下記も利用できるように定義した．</li>
+</ul>
+<pre class="prettyprint source"><code>EL.SETI_SNA   = &quot;50&quot;
+EL.SETC_SNA   = &quot;51&quot;
+EL.GET_SNA    = &quot;52&quot;
+EL.INF_SNA    = &quot;53&quot;
+EL.SETGET_SNA = &quot;5e&quot;
+EL.SETI       = &quot;60&quot;
+EL.SETC       = &quot;61&quot;
+EL.GET        = &quot;62&quot;
+EL.INF_REQ    = &quot;63&quot;
+EL.SETGET     = &quot;6e&quot;
+EL.SET_RES    = &quot;71&quot;
+EL.GET_RES    = &quot;72&quot;
+EL.INF        = &quot;73&quot;
+EL.INFC       = &quot;74&quot;
+EL.INFC_RES   = &quot;7a&quot;
+EL.SETGET_RES = &quot;7e&quot;
+</code></pre>
+<ul>
+<li>0.0.13 ReadmeのsendOPC1が分かりにくかったので修正．</li>
+<li>0.0.12 Node Profile Objectに対するGet関係に対応．facilities構成に関して，ESVがSetとINFREQできたEPCをtoIPデバイスのものとして確保するバグを修正．結構頑張って規格に対応したつもりです．README手直し</li>
+<li>0.0.11 マニュアルの英語表記追加</li>
+<li>0.0.10 API追加とBug修正，PropertyMap対応，sendOPC1のEPCを3バイトにしたので0.0.9と互換性きえた．Node.jsからだと家電の速度が間に合わないのでUDPの取りこぼしが発生する．ライブラリとしては対処しないこととなった．．</li>
+</ul></article>
+    </section>
+
+
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Namespaces</h3><ul><li><a href="EL.html">EL</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Tue Nov 11 2025 12:33:45 GMT+0000 (Coordinated Universal Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>
