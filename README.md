@@ -316,7 +316,7 @@ let dev_details = {
 
 # API
 
-## 初期化と受信, 監視, initialize, receriver callback and observation
+## 初期化と受信, 監視, initialize, receiver callback and observation
 
 ![](img/base.png)
 
