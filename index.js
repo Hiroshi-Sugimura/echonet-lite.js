@@ -285,7 +285,7 @@ EL.renewNICList = function () {
 					break;
 
 					default:
-					console.log( 'EL.renewNICList(): no assoc default:', details );
+					EL.debugMode ? console.log( 'EL.renewNICList(): no assoc default:', details ) : 0;
 					break;
 				}
 			}
@@ -392,7 +392,7 @@ function isObjEmpty(obj) {
 // ELDATA形式
 EL.eldataShow = function (eldata) {
 	if (eldata !== null) {
-		console.log('EHD: ' + eldata.EHD + 'TID: ' + eldata.TID + 'SEOJ: ' + eldata.SEOJ + 'DEOJ: ' + eldata.DEOJ + '\nEDATA: ' + eldata.EDATA);
+		EL.debugMode ? console.log('EHD: ' + eldata.EHD + 'TID: ' + eldata.TID + 'SEOJ: ' + eldata.SEOJ + 'DEOJ: ' + eldata.DEOJ + '\nEDATA: ' + eldata.EDATA) : 0;
 	} else {
 		console.error("EL.eldataShow error. eldata is not EL data.");
 	}
@@ -829,7 +829,7 @@ EL.sendBase = function ( ip, buffer) {
 		try {
 			socket.close();
 		} catch (e) {
-			EL.debugMode ? console.error('Socket close error:', e) : 0;
+			console.error('Socket close error:', e);
 		}
 	};
 
