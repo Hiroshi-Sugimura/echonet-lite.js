@@ -168,7 +168,7 @@ let EL = {
  * @property {string} [ESV] サービスコード(2桁hex)
  * @property {string} [OPC] プロパティ数(2桁hex)
  * @property {string} [DETAIL] 詳細部(EDATAからESV/OPCを除くhex)
- * @property {Object<string,string>} [DETAILs] 解析済マップ {EPC(2桁hex): EDT(hex or "")}  
+ * @property {Object<string,string>} [DETAILs] 解析済マップ {EPC(2桁hex): EDT(hex or "")}
  *  値が空文字のときは「PDC=0(値未同梱/要求)」を表す
  */
 
@@ -2084,7 +2084,7 @@ EL.complementFacilities = function () {
 EL.complementFacilities_sub = function ( ip, eoj, props ) {  // サブルーチン
 	let epcs = Object.keys( props );
 	// '9f' (Get Property Map) が存在しない/空ならマップ取得を要求
-	if( props['9f'] === null || props['9f'] === '' ) {
+	if( !props['9f'] ) {
 		EL.sendDetails( ip, EL.NODE_PROFILE_OBJECT, eoj, EL.GET, [{'9d':''}, {'9e':''}, {'9f':''}] );
 		return;
 	}
@@ -2099,7 +2099,7 @@ EL.complementFacilities_sub = function ( ip, eoj, props ) {  // サブルーチ�
 		if( !epc ) { break; }
 		// メーカー独自(F0..FF)はスキップ
 		if( epc[0].toLowerCase() === 'f' ) { continue; }
-		if( props[epc] === null || props[epc] === '' ) {
+		if( !props[epc] ) {
 			details.push( { [epc]: '' } );
 		}
 	}

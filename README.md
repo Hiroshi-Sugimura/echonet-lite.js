@@ -784,6 +784,8 @@ x Warranty
 
 
 ## Log
+- 2.17.6 undefinedのチェック追加
+- 2.17.5 識別番号チェック、ドキュメントのチェック
 - 2.17.4 ガード条件見直し
 - 2.17.3 JSDoc対応、不要なPromise化削除、不要なrequire削除、単体テスト作成、Socketの安全管理、debuglog制御追加、等価演算子を厳密化、substrの非推奨対応しsubstringに変更、サブルーチンの引数確認
 - 2.17.2 parseBytes修正、TID条件バグ修正、MAC未取得時の識別子フェールセーフ
