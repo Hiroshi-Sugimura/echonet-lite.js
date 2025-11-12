@@ -519,6 +519,34 @@ describe('EL - ECHONET Lite プロトコル', () => {
     });
   });
 
+  describe('renewFacilities 初期化', () => {
+
+    test('新規IP/EOJでも例外なく初期化できる', () => {
+      const ip = '198.51.100.55'; // TEST-NET-2
+      // 事前クリーンアップ
+      if (EL.facilities && EL.facilities[ip]) {
+        delete EL.facilities[ip];
+      }
+
+      const els = {
+        SEOJ: '05ff01',
+        OPC: '01',
+        DETAIL: '800130'
+      };
+
+      expect(() => {
+        EL.renewFacilities(ip, els);
+      }).not.toThrow();
+
+      expect(EL.facilities[ip]).toBeDefined();
+      expect(EL.facilities[ip]['05ff01']).toBeDefined();
+      expect(EL.facilities[ip]['05ff01']['80']).toBe('30');
+
+      // 後片付け
+      delete EL.facilities[ip];
+    });
+  });
+
   describe('PropertyMap統合テスト', () => {
 
     test('PropertyMap 15 bytes (記述形式1)', () => {

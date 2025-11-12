@@ -1862,14 +1862,14 @@ EL.renewFacilities = function (address, els) {
 	try {
 		epcList = EL.parseDetail(els.OPC, els.DETAIL);
 
-		// 新規IP
-		if (EL.facilities[address] === null) { //見つからない
-			EL.facilities[address] = {};
-		}
+			// 新規IP（undefined/null双方を受ける）
+			if (!EL.facilities[address]) { // 見つからない
+				EL.facilities[address] = {};
+			}
 
-		// 新規obj
-		if (EL.facilities[address][els.SEOJ] === null) {
-			EL.facilities[address][els.SEOJ] = {};
+			// 新規obj（undefined/null双方を受ける）
+			if (!EL.facilities[address][els.SEOJ]) {
+				EL.facilities[address][els.SEOJ] = {};
 			// 新規オブジェクトのとき，プロパティリストもらうと取りきるまでループしちゃうのでやめた
 		}
 
