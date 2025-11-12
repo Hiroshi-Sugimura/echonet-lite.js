@@ -522,21 +522,19 @@ describe('EL - ECHONET Lite プロトコル', () => {
   describe('PropertyMap統合テスト', () => {
 
     test('PropertyMap 15 bytes (記述形式1)', () => {
-      const bytes = [0x10, 0x81, 0x00, 0x00, 0x05, 0xff, 0x01, 0x0e, 0xf0, 0x01, 0x72, 0x01, 0x9f, 0x0f, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87, 0x88, 0x89, 0x8a, 0x8b, 0x8c, 0x8d, 0x8e, 0x8f];
+      const bytes = [0x10, 0x81, 0x00, 0x00, 0x05, 0xff, 0x01, 0x0e, 0xf0, 0x01, 0x72, 0x01, 0x9f, 0x10, 0x0f, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87, 0x88, 0x89, 0x8a, 0x8b, 0x8c, 0x8d, 0x8e, 0x8f];
       const result = EL.parseBytes(bytes);
-
-      // 現在の実装では PropertyMap(0x9f) の形式1でも内部処理で形式2変換ロジック(parseMapForm2)が走り、
-      // DETAILs['9f'] が "個数+プロパティ列" ではなく "個数+ビットマップ展開結果" になっている。
-      // 仕様上は 0x0f + 15個列挙のまま保持されるべきなので、ここでは最低限の構造のみ検証し、
-      // 具体的な値は将来コード側修正で形式1を正しく扱えるようになったら再度厳密チェックに戻す。
-      expect(result.EHD).toBe('1081');
-      expect(result.DEOJ).toBe('0ef001');
-      expect(result.ESV).toBe('72');
-      expect(result.OPC).toBe('01');
-      expect(result.DETAIL.startsWith('9f0f')).toBe(true); // 先頭は EPC(9f) + 個数(0f)
-      expect(result.DETAILs['9f']).toBeDefined();
-      // 個数0x0fが含まれているか（形式2展開されてしまっても最初の2桁は個数になっている想定）
-      expect(/^0f/.test(result.DETAILs['9f']) || /^[0F]/.test(result.DETAILs['9f']) || result.DETAILs['9f'].length > 2).toBe(true);
+      expect(result).toEqual({
+        EHD: '1081',
+        TID: '0000',
+        SEOJ: '05ff01',
+        DEOJ: '0ef001',
+        EDATA: '72019f100f8182838485868788898a8b8c8d8e8f',
+        ESV: '72',
+        OPC: '01',
+        DETAIL: '9f100f8182838485868788898a8b8c8d8e8f',
+        DETAILs: { '9f': '0f8182838485868788898a8b8c8d8e8f' }
+      });
     });
 
     test('PropertyMap 16 bytes (記述形式2 - シンプル)', () => {
