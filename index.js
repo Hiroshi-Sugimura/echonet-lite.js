@@ -818,7 +818,8 @@ EL.sendBase = function ( ip, buffer) {
 
 
 	EL.debugMode ? console.log( "======== sendBase:", address ) :0;
-	EL.debugMode ? console.log( buffer ) :0;
+	EL.debugMode ? console.log( "======== sendBase:", address ) : 0;
+	EL.debugMode ? console.log( buffer ) : 0;
 	let tid = [ buffer[2], buffer[3] ];
 
 	// ソケットを安全にクローズするヘルパー関数
@@ -1576,8 +1577,8 @@ EL.replySetDetail_sub = function(rinfo, els, dev_details, epc) {
  */
 // ELの受信データを振り分ける
 EL.returner = function (bytes, rinfo, userfunc) {
-	EL.debugMode ? console.log( "======== returner:", rinfo.address ) :0;
-	EL.debugMode ? console.log( bytes) :0;
+	EL.debugMode ? console.log( "======== returner:", rinfo.address ) : 0;
+	EL.debugMode ? console.log( bytes) : 0;
 
 	// 自IPを無視する設定があればチェックして無視する
 	// 無視しないならチェックもしない
