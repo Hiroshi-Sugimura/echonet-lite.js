@@ -2062,6 +2062,11 @@ EL.complementFacilities = function () {
 		}else{
 			// node_profはある
 			eojs.forEach( (eoj) => {
+				// EOJが正しい16進6桁かチェック
+				if( typeof eoj !== 'string' || eoj.length !== 6 || !/^[0-9a-fA-F]{6}$/.test(eoj) ) {
+					EL.debugMode ? console.error('complementFacilities: invalid EOJ format:', eoj, 'for IP:', ip) : 0;
+					return;
+				}
 				EL.complementFacilities_sub( ip, eoj, node[eoj] );
 			})
 		}
@@ -2082,10 +2087,30 @@ EL.complementFacilities = function () {
  * - 実要求は autoGetDelay と autoGetWaitings によってスロットリングされる。
  */
 EL.complementFacilities_sub = function ( ip, eoj, props ) {  // サブルーチン
+	// パラメータバリデーション
+	if( typeof ip !== 'string' || ip.length === 0 ) {
+		EL.debugMode ? console.error('complementFacilities_sub: invalid ip:', ip) : 0;
+		return;
+	}
+	if( typeof eoj !== 'string' || eoj.length !== 6 || !/^[0-9a-fA-F]{6}$/.test(eoj) ) {
+		EL.debugMode ? console.error('complementFacilities_sub: invalid eoj format:', eoj, 'for IP:', ip) : 0;
+		return;
+	}
+	if( typeof props !== 'object' || props === null || Array.isArray(props) ) {
+		EL.debugMode ? console.error('complementFacilities_sub: props is not an object:', typeof props, 'for', ip, eoj) : 0;
+		return;
+	}
+
 	let epcs = Object.keys( props );
 	// '9f' (Get Property Map) が存在しない/空ならマップ取得を要求
 	if( !props['9f'] ) {
 		EL.sendDetails( ip, EL.NODE_PROFILE_OBJECT, eoj, EL.GET, [{'9d':''}, {'9e':''}, {'9f':''}] );
+		return;
+	}
+
+	// 型チェック: props['9f']が文字列でない場合はエラー
+	if( typeof props['9f'] !== 'string' ) {
+		EL.debugMode ? console.error('complementFacilities_sub: props[9f] is not a string:', typeof props['9f'], props['9f']) : 0;
 		return;
 	}
 
@@ -2104,7 +2129,8 @@ EL.complementFacilities_sub = function ( ip, eoj, props ) {  // サブルーチ�
 		}
 		// メーカー独自(F0..FF)はスキップ
 		if( epc[0].toLowerCase() === 'f' ) { continue; }
-		if( !props[epc] ) {
+		// プロパティが存在しないか空文字列の場合のみ取得
+		if( props[epc] === undefined || props[epc] === '' || props[epc] === null ) {
 			details.push( { [epc]: '' } );
 		}
 	}

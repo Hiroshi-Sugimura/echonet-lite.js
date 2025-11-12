@@ -664,6 +664,128 @@ describe('EL - ECHONET Lite プロトコル', () => {
       EL.autoGetWaitings = originalAutoGetWaitings;
     });
 
+    test('ipが空文字列の場合はエラー', () => {
+      EL.debugMode = true;
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+      const props = { '9f': '03808182', '80': '30' };
+      EL.complementFacilities_sub('', '013001', props);
+
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'complementFacilities_sub: invalid ip:',
+        ''
+      );
+      expect(sendDetailsSpy).not.toHaveBeenCalled();
+
+      consoleErrorSpy.mockRestore();
+    });
+
+    test('ipがnullの場合はエラー', () => {
+      EL.debugMode = true;
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+      const props = { '9f': '03808182', '80': '30' };
+      EL.complementFacilities_sub(null, '013001', props);
+
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'complementFacilities_sub: invalid ip:',
+        null
+      );
+      expect(sendDetailsSpy).not.toHaveBeenCalled();
+
+      consoleErrorSpy.mockRestore();
+    });
+
+    test('eojが6桁でない場合はエラー', () => {
+      EL.debugMode = true;
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+      const props = { '9f': '03808182', '80': '30' };
+      EL.complementFacilities_sub('192.168.1.1', '0130', props); // 4桁
+
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'complementFacilities_sub: invalid eoj format:',
+        '0130',
+        'for IP:',
+        '192.168.1.1'
+      );
+      expect(sendDetailsSpy).not.toHaveBeenCalled();
+
+      consoleErrorSpy.mockRestore();
+    });
+
+    test('eojが16進数でない場合はエラー', () => {
+      EL.debugMode = true;
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+      const props = { '9f': '03808182', '80': '30' };
+      EL.complementFacilities_sub('192.168.1.1', 'GGGGGG', props); // 不正な16進
+
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'complementFacilities_sub: invalid eoj format:',
+        'GGGGGG',
+        'for IP:',
+        '192.168.1.1'
+      );
+      expect(sendDetailsSpy).not.toHaveBeenCalled();
+
+      consoleErrorSpy.mockRestore();
+    });
+
+    test('eojが空文字列の場合はエラー', () => {
+      EL.debugMode = true;
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+      const props = { '9f': '03808182', '80': '30' };
+      EL.complementFacilities_sub('192.168.1.1', '', props);
+
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'complementFacilities_sub: invalid eoj format:',
+        '',
+        'for IP:',
+        '192.168.1.1'
+      );
+      expect(sendDetailsSpy).not.toHaveBeenCalled();
+
+      consoleErrorSpy.mockRestore();
+    });
+
+    test('propsがnullの場合はエラー', () => {
+      EL.debugMode = true;
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+      EL.complementFacilities_sub('192.168.1.1', '013001', null);
+
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'complementFacilities_sub: props is not an object:',
+        'object',
+        'for',
+        '192.168.1.1',
+        '013001'
+      );
+      expect(sendDetailsSpy).not.toHaveBeenCalled();
+
+      consoleErrorSpy.mockRestore();
+    });
+
+    test('propsが配列の場合はエラー', () => {
+      EL.debugMode = true;
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+      EL.complementFacilities_sub('192.168.1.1', '013001', []);
+
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'complementFacilities_sub: props is not an object:',
+        'object',
+        'for',
+        '192.168.1.1',
+        '013001'
+      );
+      expect(sendDetailsSpy).not.toHaveBeenCalled();
+
+      consoleErrorSpy.mockRestore();
+    });
+
     test('9fが存在しない場合はマップ取得要求を送信', () => {
       const props = { '80': '30', '82': '0001' };
       EL.complementFacilities_sub('192.168.1.1', '013001', props);
@@ -844,6 +966,99 @@ describe('EL - ECHONET Lite プロトコル', () => {
       expect(details.length).toBe(15);
       expect(details[0]).toEqual({ '81': '' });
       expect(details[14]).toEqual({ '8f': '' });
+
+      jest.useRealTimers();
+      done();
+    });
+
+    test('props[9f]が文字列でない場合はエラー', () => {
+      EL.debugMode = true;
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+      // オブジェクトが入っている場合
+      const props1 = { '9f': { count: 3 } };
+      EL.complementFacilities_sub('192.168.1.1', '013001', props1);
+
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'complementFacilities_sub: props[9f] is not a string:',
+        'object',
+        { count: 3 }
+      );
+
+      consoleErrorSpy.mockClear();
+
+      // 配列が入っている場合
+      const props2 = { '9f': [0x03, 0x80, 0x81, 0x82] };
+      EL.complementFacilities_sub('192.168.1.1', '013001', props2);
+
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'complementFacilities_sub: props[9f] is not a string:',
+        'object',
+        [0x03, 0x80, 0x81, 0x82]
+      );
+
+      consoleErrorSpy.mockClear();
+
+      // 数値が入っている場合
+      const props3 = { '9f': 12345 };
+      EL.complementFacilities_sub('192.168.1.1', '013001', props3);
+
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'complementFacilities_sub: props[9f] is not a string:',
+        'number',
+        12345
+      );
+
+      consoleErrorSpy.mockRestore();
+    });
+
+    test('props[epc]が0やfalseでも正しく判定', (done) => {
+      jest.useFakeTimers();
+      const props = {
+        '9f': '03808182',
+        '80': 0,      // 数値0は取得済みと判定
+        '81': false,  // falseは取得済みと判定
+        // '82'はundefined
+      };
+
+      EL.complementFacilities_sub('192.168.1.1', '013001', props);
+
+      jest.runAllTimers();
+
+      // 82のみ要求される(0とfalseは存在するとみなされる)
+      expect(sendDetailsSpy).toHaveBeenCalledWith(
+        '192.168.1.1',
+        EL.NODE_PROFILE_OBJECT,
+        '013001',
+        EL.GET,
+        [{ '82': '' }]
+      );
+
+      jest.useRealTimers();
+      done();
+    });
+
+    test('props[epc]がnullの場合は再取得', (done) => {
+      jest.useFakeTimers();
+      const props = {
+        '9f': '03808182',
+        '80': null,    // nullは再取得
+        '81': '0f',
+        '82': undefined  // 明示的にundefined
+      };
+
+      EL.complementFacilities_sub('192.168.1.1', '013001', props);
+
+      jest.runAllTimers();
+
+      // 80(null)と82(undefined)が要求される
+      expect(sendDetailsSpy).toHaveBeenCalledWith(
+        '192.168.1.1',
+        EL.NODE_PROFILE_OBJECT,
+        '013001',
+        EL.GET,
+        [{ '80': '' }, { '82': '' }]
+      );
 
       jest.useRealTimers();
       done();
@@ -2417,6 +2632,95 @@ describe('EL - ECHONET Lite プロトコル', () => {
         '0ef001',
         expect.any(Object)
       );
+    });
+
+    test('不正なEOJ形式(6桁未満)はスキップ', () => {
+      EL.debugMode = true;
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+      EL.facilities = {
+        '192.168.1.1': {
+          '0ef001': { '80': '30', 'd6': '010130' },
+          '0130': { '80': '30' }, // 4桁: 不正
+          '013001': { '80': '30' } // 正常
+        }
+      };
+
+      EL.complementFacilities();
+
+      // 0ef001と013001のみに対してcomplementFacilities_subが呼ばれる
+      expect(complementFacilities_subSpy).toHaveBeenCalledTimes(2);
+      expect(complementFacilities_subSpy).toHaveBeenCalledWith(
+        '192.168.1.1',
+        '0ef001',
+        expect.any(Object)
+      );
+      expect(complementFacilities_subSpy).toHaveBeenCalledWith(
+        '192.168.1.1',
+        '013001',
+        expect.any(Object)
+      );
+      // '0130'に対してはエラーログ
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'complementFacilities: invalid EOJ format:',
+        '0130',
+        'for IP:',
+        '192.168.1.1'
+      );
+
+      consoleErrorSpy.mockRestore();
+    });
+
+    test('不正なEOJ形式(非16進)はスキップ', () => {
+      EL.debugMode = true;
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+      EL.facilities = {
+        '192.168.1.1': {
+          '0ef001': { '80': '30', 'd6': '010130' },
+          'GGGGGG': { '80': '30' }, // 不正な16進
+          '013001': { '80': '30' }
+        }
+      };
+
+      EL.complementFacilities();
+
+      // 0ef001と013001のみに対してcomplementFacilities_subが呼ばれる
+      expect(complementFacilities_subSpy).toHaveBeenCalledTimes(2);
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'complementFacilities: invalid EOJ format:',
+        'GGGGGG',
+        'for IP:',
+        '192.168.1.1'
+      );
+
+      consoleErrorSpy.mockRestore();
+    });
+
+    test('空文字列のEOJはスキップ', () => {
+      EL.debugMode = true;
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+      EL.facilities = {
+        '192.168.1.1': {
+          '0ef001': { '80': '30', 'd6': '010130' },
+          '': { '80': '30' }, // 空文字列
+          '013001': { '80': '30' }
+        }
+      };
+
+      EL.complementFacilities();
+
+      // 0ef001と013001のみに対してcomplementFacilities_subが呼ばれる
+      expect(complementFacilities_subSpy).toHaveBeenCalledTimes(2);
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'complementFacilities: invalid EOJ format:',
+        '',
+        'for IP:',
+        '192.168.1.1'
+      );
+
+      consoleErrorSpy.mockRestore();
     });
   });
 
