@@ -12,8 +12,74 @@ const crypto = require('crypto'); // 安定ID生成用
 // ECHONET Lite
 
 /**
+ * NICアドレス情報
+ * @typedef {Object} ELNIC
+ * @property {string} name インターフェース名
+ * @property {string} address IPアドレス
+ */
+
+/**
+ * 識別番号の記録1件
+ * @typedef {Object} ELIdentificationEntry
+ * @property {string} id EPC83で得た識別番号(HEX文字列)
+ * @property {string} ip 送信元IP
+ * @property {string} OBJ SEOJ(6桁HEX)
+ */
+
+/**
+ * facilitiesの型: { [ip: string]: { [SEOJ: string]: { [EPC: string]: string } } }
+ * @typedef {Object<string, Object<string, Object<string, string>>>} ELFacilities
+ */
+
+/**
+ * ECHONET Lite メインオブジェクトのプロパティ群
+ * @typedef {Object} ELNamespace
+ * @property {string} SETI_SNA 0x50 SetI_SNA
+ * @property {string} SETC_SNA 0x51 SetC_SNA
+ * @property {string} GET_SNA 0x52 Get_SNA
+ * @property {string} INF_SNA 0x53 Inf_SNA
+ * @property {string} SETGET_SNA 0x5e SetGet_SNA
+ * @property {string} SETI 0x60 SetI
+ * @property {string} SETC 0x61 SetC
+ * @property {string} GET 0x62 Get
+ * @property {string} INF_REQ 0x63 Inf_Req
+ * @property {string} SETGET 0x6e SetGet
+ * @property {string} SET_RES 0x71 Set_Res
+ * @property {string} GET_RES 0x72 Get_Res
+ * @property {string} INF 0x73 Inf
+ * @property {string} INFC 0x74 InfC
+ * @property {string} INFC_RES 0x7a InfC_Res
+ * @property {string} SETGET_RES 0x7e SetGet_Res
+ * @property {number} EL_port UDPポート(3610)
+ * @property {string} EL_Multi IPv4マルチキャストアドレス
+ * @property {string} Multi 互換エイリアス
+ * @property {string} EL_Multi6 IPv6マルチキャストアドレス
+ * @property {string} Multi6 互換エイリアス
+ * @property {string[]|null} EL_obj 初期化時に与えたEOJリスト
+ * @property {string[]|null} EL_cls 上記から派生したクラスリスト
+ * @property {import('dgram').Socket|null} sock4 IPv4ソケット
+ * @property {import('dgram').Socket|null} sock6 IPv6ソケット
+ * @property {string} NODE_PROFILE ノードプロファイルクラス(0ef0)
+ * @property {string} NODE_PROFILE_OBJECT ノードプロファイルEOJ(送信用:0ef001 等)
+ * @property {Object<string, number[]>} Node_details ノードプロファイルのEPC既定値
+ * @property {0|4|6} ipVer 利用するIPバージョン(0=両方)
+ * @property {{v4: ELNIC[], v6: ELNIC[]}} nicList NIC一覧
+ * @property {{v4: string, v6: string}} usingIF 送信に使うIF指定(''はOS任せ)
+ * @property {number[]} tid トランザクションID[hi,lo]
+ * @property {boolean} ignoreMe 自ホスト由来受信を無視
+ * @property {boolean} autoGetProperties 不足プロパティの自動取得
+ * @property {number} autoGetDelay 自動取得時の遅延(ms)
+ * @property {number} autoGetWaitings 自動取得の待ち行列長
+ * @property {NodeJS.Timeout|null} observeFacilitiesTimerId 監視タイマーID
+ * @property {boolean} debugMode デバッグログ出力
+ * @property {ELFacilities} facilities 保持中の機器情報
+ * @property {ELIdentificationEntry[]} identificationNumbers 識別番号の収集結果
+ */
+
+/**
  * ECHONET Lite プロトコルのメインオブジェクト
  * @namespace EL
+ * @type {ELNamespace}
  */
 // クラス変数
 let EL = {
@@ -82,6 +148,47 @@ let EL = {
 	// '192.168.0.4': { '05ff01': { '80': '30', '82': '30' } } }
 	identificationNumbers: []  // ELの識別番号リスト
 };
+
+
+/**
+ * @typedef {Object} Rinfo
+ * @property {string} address 送信元IPアドレス
+ * @property {('IPv4'|'IPv6')} family アドレスファミリ
+ * @property {number} port 送信元ポート
+ * @property {number} size 受信サイズ(byte)
+ */
+
+/**
+ * @typedef {Object} ELData
+ * @property {string} EHD ヘッダ(1081/1082)
+ * @property {string} [TID] トランザクションID(4桁hex)
+ * @property {string} [SEOJ] 送信元EOJ(6桁hex)
+ * @property {string} [DEOJ] 宛先EOJ(6桁hex)
+ * @property {string} [EDATA] 後続データ全体(hex)
+ * @property {string} [ESV] サービスコード(2桁hex)
+ * @property {string} [OPC] プロパティ数(2桁hex)
+ * @property {string} [DETAIL] 詳細部(EDATAからESV/OPCを除くhex)
+ * @property {Object<string,string>} [DETAILs] 解析済マップ {EPC(2桁hex): EDT(hex or "")}  
+ *  値が空文字のときは「PDC=0(値未同梱/要求)」を表す
+ */
+
+/**
+ * @callback UserFunc
+ * @param {Rinfo} rinfo 受信メタ情報
+ * @param {ELData|null} els パース済みELデータ(不正ヘッダ等で無視時はnull)
+ * @param {Error|null} error パースやハンドリング中の例外(無いときはnull)
+ * @returns {void}
+ */
+
+/**
+ * @typedef {Object} Options
+ * @property {string} [v4=''] 送信に使うIPv4アドレス(空文字でOS任せ)
+ * @property {string} [v6=''] 送信に使うIPv6インターフェース名またはアドレス(空文字でOS任せ)
+ * @property {boolean} [ignoreMe=true] 自IPからのループバック/同一NIC発の受信を無視
+ * @property {boolean} [autoGetProperties=true] 自動で不足プロパティを取得
+ * @property {number} [autoGetDelay=1000] 自動取得時の遅延(ms)。待ち行列長に比例して増加
+ * @property {boolean} [debugMode=false] デバッグログ出力
+ */
 
 
 /**
@@ -376,6 +483,18 @@ EL.myIPaddress = function(rinfo) {
 function isObjEmpty(obj) {
 	return Object.keys(obj).length === 0;
 }
+/**
+ * 与えられたオブジェクトが空かどうかを判定する内部ヘルパー関数だよ。
+ * プロパティ列挙可能なキーの長さが0なら空とみなすシンプル判定。
+ * @private
+ * @memberof EL
+ * @param {Object} obj 判定対象オブジェクト
+ * @returns {boolean} true=キーが1つも無い / false=何かしらキーがある
+ * @example
+ * isObjEmpty({}) // => true
+ * isObjEmpty({a:1}) // => false
+ */
+
 
 
 //////////////////////////////////////////////////////////////////////
@@ -1359,6 +1478,12 @@ EL.replyOPC1 = function (ip, tid, seoj, deoj, esv, epc, edt) {
 	// データができたので送信する
 	return EL.sendBase(ip, buffer);
 };
+/**
+ * replyOPC1 の追加説明だよ先輩。
+ * Set/Get 系で 1 プロパティだけ返したい超典型パターン向けのショートカット。
+ * 引数は string でも数値/配列でも柔軟に受けるようにしてて、内部で toHexArray で正規化してる。
+ * @throws {Error} 型が不正（例: SEOJ長さ不足）な場合は下位変換関数が例外投げる可能性あり。
+ */
 
 
 
@@ -1636,9 +1761,14 @@ EL.replySetDetail_sub = function(rinfo, els, dev_details, epc) {
 /**
  * ECHONET Lite電文の受信処理と振り分け
  * @memberof EL
- * @param {Buffer|Array<number>} bytes - 受信したバイトデータ
- * @param {Object} rinfo - 受信情報 {address, family, port, size}
- * @param {Function} userfunc - ユーザー定義のコールバック関数 (rinfo, els, error) => {}
+ * @param {Buffer|Array<number>} bytes 受信したバイトデータ
+ * @param {Rinfo} rinfo 受信メタ情報
+ * @param {UserFunc} userfunc ユーザー定義コールバック(rinfo, els, error)
+ * @returns {void}
+ * @remarks
+ * - ignoreMe が true の場合、自ホスト由来の受信は早期リターンする。
+ * - parseBytes/parseString/parseDetail で厳密に検証し、不正時は例外を userfunc の第3引数 error 経由で通知。
+ * - NodeProfile 宛の ESV ごとにオートゲットや返信処理を内蔵。機器情報（facilities）は GET系/INF/SETGET_RES 到着時に更新する。
  */
 // ELの受信データを振り分ける
 EL.returner = function (bytes, rinfo, userfunc) {
@@ -1852,9 +1982,14 @@ EL.returner = function (bytes, rinfo, userfunc) {
 /**
  * ネットワーク内の機器情報を更新（受信時に自動実行）
  * @memberof EL
- * @param {string} address - 機器のIPアドレス
- * @param {Object} els - パース済みELDATA
+ * @param {string} address 機器のIPアドレス
+ * @param {ELData} els パース済みELDATA
+ * @returns {void}
  * @throws {Error} パースエラー時
+ * @remarks
+ * - アドレス/EOJごとの入れ子連想配列 `EL.facilities[address][SEOJ][EPC] = EDT(hex)` を更新。
+ * - GET_SNA のようにPDC=0で値無し（空文字）の項目は保存しない。
+ * - EPC=0x83(識別番号)は `EL.identificationNumbers` に {id, ip, OBJ} で追記（重複は追加しない）。
  */
 // ネットワーク内のEL機器全体情報を更新する，受信したら勝手に実行される
 EL.renewFacilities = function (address, els) {
@@ -1900,6 +2035,11 @@ EL.renewFacilities = function (address, els) {
  * 機器情報の不足プロパティを補完取得
  * ネットワーク負荷に注意（頻繁な実行は避ける）
  * @memberof EL
+ * @returns {void}
+ * @remarks
+ * - `EL.autoGetWaitings` が多い(>10)場合はスキップしてネットワーク負荷を抑制。
+ * - Node Profile が未取得の宛先には d6/83/9d/9e/9f をまとめて GET 要求する。
+ * - 取得済みEOJについては {@link EL.complementFacilities_sub} で個別補完を行う。
  */
 // ネットワーク内のEL機器全体情報のEPCを取得したか確認する
 // 取得漏れがあれば取得する
@@ -1929,11 +2069,17 @@ EL.complementFacilities = function () {
 };
 
 /**
- * complementFacilitiesのサブルーチン - 個別機器のプロパティ補完
+ * complementFacilities のサブルーチン - 個別機器のプロパティ補完
  * @memberof EL
- * @param {string} ip - 機器のIPアドレス
- * @param {string} eoj - ECHONET Liteオブジェクト
- * @param {Object} props - 現在保持しているプロパティ情報
+ * @param {string} ip 機器のIPアドレス
+ * @param {string} eoj ECHONET Liteオブジェクト(6桁hex)
+ * @param {Object<string,string>} props 現在保持しているプロパティ情報 {EPC: EDT}
+ * @returns {void}
+ * @remarks
+ * - まず 9f (Get Property Map) が空/未取得なら 9d/9e/9f をまとめて要求。
+ * - 9f の形式1/2に依らず先頭バイトの個数に従って EPC リストを展開。
+ * - メーカー独自領域(F0..FF)は要求対象から除外。
+ * - 実要求は autoGetDelay と autoGetWaitings によってスロットリングされる。
  */
 EL.complementFacilities_sub = function ( ip, eoj, props ) {  // サブルーチン
 	let epcs = Object.keys( props );
@@ -2038,6 +2184,10 @@ EL.objectSort = function (obj) {
  * ネットワーク内のECHONET Lite機器を検索
  * マルチキャストで機器情報を要求
  * @memberof EL
+ * @returns {void}
+ * @remarks
+ * - IPv4/IPv6 の両方(設定に応じて)へ NodeProfile 宛に GET を投げる。
+ * - 取得対象: d6(自ノードインスタンスリストS), 83(識別番号), 9d/9e/9f(プロパティマップ)。
  */
 // 機器検索
 EL.search = function () {
@@ -2059,8 +2209,12 @@ EL.search = function () {
  * 機器のプロパティマップをすべて取得
  * デバイス負荷を考慮して遅延を入れる
  * @memberof EL
- * @param {string|Object} ip - 機器のIPアドレス
- * @param {string|Array<number>} _eoj - ECHONET Liteオブジェクト（6桁の16進数文字列または3バイト配列）
+ * @param {string|Object} ip 機器のIPアドレス(文字列 or rinfo)
+ * @param {string|Array<number>} _eoj ECHONET Liteオブジェクト（6桁hex or 3バイト配列）
+ * @returns {void}
+ * @remarks
+ * - プロファイルオブジェクト(0x0ef0xx)の場合は 83 も同時取得。
+ * - 実送信は autoGetDelay/autoGetWaitings によりスロットリングされる。
  */
 // プロパティマップをすべて取得する
 // 一度に一気に取得するとデバイス側が対応できないタイミングもあるようで，適当にwaitする。
@@ -2129,6 +2283,11 @@ EL.parseMapForm2 = function (bitstr) {
 	ret.unshift(ret.length);
 	return ret;
 };
+/**
+ * parseMapForm2 追加メモ: 先頭バイト(プロパティ数) + 各バイトのビット列(LSB→MSB方向にbit走査, 0x80から連番)を見て format1 に射影。
+ * 規格上 bit0 が最下位ビットなので ((array[byt] >> bit) & 0x01) の順番でチェックしてる。
+ * プロパティ数は push 完了後に ret.length を unshift して算出してるから、入力のビットが 1 個も立ってない場合は 0 が入る。
+ */
 
 module.exports = EL;
 //////////////////////////////////////////////////////////////////////
