@@ -321,4 +321,62 @@ describe('EL - ソケット処理', () => {
     });
   });
 
+  describe('sendString関数', () => {
+
+    test('16進数文字列から送信できる', () => {
+      const mockSocket = {
+        on: jest.fn(),
+        send: jest.fn((buffer, offset, length, port, address, callback) => {
+          if (callback) callback(null, buffer.length);
+        }),
+        close: jest.fn()
+      };
+
+      dgram.createSocket = jest.fn(() => mockSocket);
+
+      const hexString = '1081000005ff010ef00163018000';
+
+      const tid = EL.sendString('192.168.1.1', hexString);
+
+      expect(tid).toBeDefined();
+      expect(Array.isArray(tid)).toBe(true);
+    });
+
+    test('sendString送信エラー時もクラッシュしない', () => {
+      const mockSocket = {
+        on: jest.fn(),
+        send: jest.fn((buffer, offset, length, port, address, callback) => {
+          if (callback) callback(new Error('Send failed'), 0);
+        }),
+        close: jest.fn()
+      };
+
+      dgram.createSocket = jest.fn(() => mockSocket);
+
+      expect(() => {
+        EL.sendString('192.168.1.1', '1081000005ff010ef00163018000');
+      }).not.toThrow();
+    });
+  });
+
+  describe('search関数 (機器検索)', () => {
+
+    test('機器検索パケットを送信できる', () => {
+      const mockSocket = {
+        on: jest.fn(),
+        send: jest.fn((buffer, offset, length, port, address, callback) => {
+          if (callback) callback(null, buffer.length);
+        }),
+        close: jest.fn()
+      };
+
+      dgram.createSocket = jest.fn(() => mockSocket);
+
+      // search()は内部でマルチキャストに送信する
+      expect(() => {
+        EL.search();
+      }).not.toThrow();
+    });
+  });
+
 });
