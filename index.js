@@ -817,7 +817,6 @@ EL.sendBase = function ( ip, buffer) {
 	}
 
 
-	EL.debugMode ? console.log( "======== sendBase:", address ) :0;
 	EL.debugMode ? console.log( "======== sendBase:", address ) : 0;
 	EL.debugMode ? console.log( buffer ) : 0;
 	let tid = [ buffer[2], buffer[3] ];
