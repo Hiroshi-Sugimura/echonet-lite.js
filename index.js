@@ -609,7 +609,7 @@ EL.parseString = function (str) {
 	}
 
 	// EHD判定
-	const ehd = raw.substr(0, 4);
+	const ehd = raw.substring(0, 4);
 	if (ehd !== '1081' && ehd !== '1082') {
 		throw new Error('EL.parseString(): invalid EHD=' + ehd);
 	}
@@ -618,7 +618,7 @@ EL.parseString = function (str) {
 	if (ehd === '1082') {
 		return {
 			EHD: ehd,
-			AMF: raw.substr(4)
+			AMF: raw.substring(4)
 		};
 	}
 
@@ -627,13 +627,13 @@ EL.parseString = function (str) {
 	try {
 		eldata = {
 			EHD: ehd,
-			TID: raw.substr(4, 4),
-			SEOJ: raw.substr(8, 6),
-			DEOJ: raw.substr(14, 6),
-			EDATA: raw.substr(20),    // 下記はEDATAの詳細
-			ESV: raw.substr(20, 2),
-			OPC: raw.substr(22, 2),
-			DETAIL: raw.substr(24)
+			TID: raw.substring(4, 8),
+			SEOJ: raw.substring(8, 14),
+			DEOJ: raw.substring(14, 20),
+			EDATA: raw.substring(20),    // 下記はEDATAの詳細
+			ESV: raw.substring(20, 22),
+			OPC: raw.substring(22, 24),
+			DETAIL: raw.substring(24)
 		};
 
 		// OPCの数値化（NaN/範囲外検知）
@@ -676,12 +676,12 @@ EL.parseString = function (str) {
 EL.getSeparatedString_String = function (str) {
 	try {
 		if (typeof str === 'string') {
-			return (str.substr(0, 4) + " " +
-					str.substr(4, 4) + " " +
-					str.substr(8, 6) + " " +
-					str.substr(14, 6) + " " +
-					str.substr(20, 2) + " " +
-					str.substr(22));
+			return (str.substring(0, 4) + " " +
+					str.substring(4, 8) + " " +
+					str.substring(8, 14) + " " +
+					str.substring(14, 20) + " " +
+					str.substring(20, 22) + " " +
+					str.substring(22));
 		} else {
 			// console.error( "str is not string." );
 			throw new Error("str is not string.");
@@ -739,8 +739,8 @@ EL.toHexArray = function (string) {
 	let ret = [];
 
 	for (let i = 0; i < string.length; i += 2) {
-		let l = string.substr(i, 1);
-		let r = string.substr(i + 1, 1);
+		let l = string.substring(i, i + 1);
+		let r = string.substring(i + 1, i + 2);
 		ret.push((parseInt(l, 16) * 16) + parseInt(r, 16));
 	}
 
@@ -776,7 +776,7 @@ EL.getClassList = function( objList ) {
 
 	// クラスリストにする
 	let classes = objList.map(function (e) {	// クラスだけにかえる
-		return e.substr(0, 4);
+		return e.substring(0, 4);
 	});
 
 	let classList = classes.filter(function (x, i, self) {		// 重複削除
@@ -1446,7 +1446,7 @@ EL.replySetDetail = function(rinfo, els, dev_details) {
 EL.replySetDetail_sub = function(rinfo, els, dev_details, epc) {
 	let edt = els.DETAILs[epc];
 
-	switch( els.DEOJ.substr(0,4) ) {
+	switch( els.DEOJ.substring(0, 4) ) {
 		case EL.NODE_PROFILE: // ノードプロファイルはsetするものがbfだけ
 		switch( epc ) {
 			case 'bf': // 個体識別番号, 最上位1bitは変化させてはいけない。
@@ -1597,15 +1597,13 @@ EL.returner = function (bytes, rinfo, userfunc) {
 		}
 
 		// ヘッダ確認
-		if (els.EHD !== '1081') {
-			return;
-		}
+	if (els.EHD !== '1081') {
+		return;
+	}
 
-		// Node profileに関してきちんと処理する
-		if ( els.DEOJ.substr(0,4) === EL.NODE_PROFILE ) {
-			els.DEOJ = EL.NODE_PROFILE_OBJECT;  // ここで0ef000, 0ef001, 0ef002の表記ゆれを統合する
-
-			switch (els.ESV) {
+	// Node profileに関してきちんと処理する
+	if ( els.DEOJ.substring(0, 4) === EL.NODE_PROFILE ) {
+		els.DEOJ = EL.NODE_PROFILE_OBJECT;  // ここで0ef000, 0ef001, 0ef002の表記ゆれを統合する			switch (els.ESV) {
 				////////////////////////////////////////////////////////////////////////////////////
 				// 0x5x
 				// エラー受け取ったときの処理
@@ -1694,7 +1692,7 @@ EL.returner = function (bytes, rinfo, userfunc) {
 				// V1.1
 				// d6のEDT表現が特殊，EDT1バイト目がインスタンス数になっている
 				// なお、d6にはNode profileは入っていない
-				if( els.SEOJ.substr(0, 4) === EL.NODE_PROFILE && typeof els.DETAILs['d6'] === 'string' && els.DETAILs['d6'].length > 0 ) {
+				if( els.SEOJ.substring(0, 4) === EL.NODE_PROFILE && typeof els.DETAILs['d6'] === 'string' && els.DETAILs['d6'].length > 0 ) {
 					// console.log( "EL.returner: get object list! PropertyMap req V1.0.");
 					// 自ノードインスタンスリストSに書いてあるオブジェクトのプロパティマップをもらう
 					let array = EL.toHexArray( els.DETAILs.d6 );
