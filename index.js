@@ -1881,7 +1881,11 @@ EL.renewFacilities = function (address, els) {
 
 			// もしEPC = 0x83の時は識別番号なので，識別番号リストに確保
 			if( epc === '83' ) {
-				EL.identificationNumbers.push( {id: epcList[epc], ip: address, OBJ: els.SEOJ } );
+				const idVal = epcList[epc];
+				const exists = EL.identificationNumbers.some(entry => entry.id === idVal && entry.ip === address && entry.OBJ === els.SEOJ);
+				if (!exists) {
+					EL.identificationNumbers.push( {id: idVal, ip: address, OBJ: els.SEOJ } );
+				}
 			}
 		}
 	} catch (e) {

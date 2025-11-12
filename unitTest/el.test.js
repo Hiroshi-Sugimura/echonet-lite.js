@@ -547,6 +547,33 @@ describe('EL - ECHONET Lite プロトコル', () => {
     });
   });
 
+  describe('識別番号の重複登録を避ける', () => {
+    test('同じID/IP/OBJは1回だけ格納される', () => {
+      const ip = '192.0.2.10'; // TEST-NET-1
+      // 事前クリア
+      EL.identificationNumbers = [];
+      if (EL.facilities && EL.facilities[ip]) delete EL.facilities[ip];
+
+      const els = {
+        SEOJ: '0ef001',
+        OPC: '01',
+        // EPC=0x83, PDC=1, EDT=00 （短いけどparseDetail的には問題なし）
+        DETAIL: '830100'
+      };
+
+      // 2回流しても重複しない
+      EL.renewFacilities(ip, els);
+      EL.renewFacilities(ip, els);
+
+      expect(EL.identificationNumbers.length).toBe(1);
+      expect(EL.identificationNumbers[0]).toEqual({ id: '00', ip, OBJ: '0ef001' });
+
+      // 後片付け
+      delete EL.facilities[ip];
+      EL.identificationNumbers = [];
+    });
+  });
+
   describe('PropertyMap統合テスト', () => {
 
     test('PropertyMap 15 bytes (記述形式1)', () => {
