@@ -7,8 +7,6 @@ const os = require('os'); // interface listほしい
 const dgram = require('dgram'); // UDPつかう
 const crypto = require('crypto'); // 安定ID生成用
 
-require('date-utils'); // for log
-
 
 //////////////////////////////////////////////////////////////////////
 // ECHONET Lite
