@@ -554,9 +554,20 @@ EL.parseBytes = function (bytes) {
 			return EL.parseString(bytes);
 		}
 
+		// 入力バリデーション
+		if (!bytes) {
+			console.error("## EL.parseBytes error. bytes is null or undefined");
+			return null;
+		}
+
+		if (!Array.isArray(bytes) && !Buffer.isBuffer(bytes)) {
+			console.error("## EL.parseBytes error. bytes must be an Array or Buffer (got " + typeof bytes + ")");
+			return null;
+		}
+
 		// 最低限のELパケットになってない
-		if (!bytes || bytes.length < 14) {
-			console.error("## EL.parseBytes error. bytes is less then 14 bytes. bytes.length is " + (bytes ? bytes.length : 'undefined'));
+		if (bytes.length < 14) {
+			console.error("## EL.parseBytes error. bytes is less then 14 bytes. bytes.length is " + bytes.length);
 			console.error(bytes);
 			return null;
 		}
@@ -700,6 +711,13 @@ EL.getSeparatedString_String = function (str) {
  */
 // ELDATAをいれるとELらしい切り方のStringを得る
 EL.getSeparatedString_ELDATA = function (eldata) {
+	// 入力バリデーション
+	if (!eldata || typeof eldata !== 'object') {
+		throw new Error('EL.getSeparatedString_ELDATA(): Input must be an object');
+	}
+	if (!eldata.EHD || !eldata.TID || !eldata.SEOJ || !eldata.DEOJ || !eldata.EDATA) {
+		throw new Error('EL.getSeparatedString_ELDATA(): ELDATA object must have EHD, TID, SEOJ, DEOJ, and EDATA properties');
+	}
 	return (eldata.EHD + ' ' + eldata.TID + ' ' + eldata.SEOJ + ' ' + eldata.DEOJ + ' ' + eldata.EDATA);
 };
 
@@ -712,6 +730,13 @@ EL.getSeparatedString_ELDATA = function (eldata) {
  */
 // ELDATA形式から配列へ
 EL.ELDATA2Array = function (eldata) {
+	// 入力バリデーション
+	if (!eldata || typeof eldata !== 'object') {
+		throw new Error('EL.ELDATA2Array(): Input must be an object');
+	}
+	if (!eldata.EHD || !eldata.TID || !eldata.SEOJ || !eldata.DEOJ || !eldata.EDATA) {
+		throw new Error('EL.ELDATA2Array(): ELDATA object must have EHD, TID, SEOJ, DEOJ, and EDATA properties');
+	}
 	let ret = EL.toHexArray(eldata.EHD + eldata.TID + eldata.SEOJ + eldata.DEOJ + eldata.EDATA);
 	return ret;
 };
@@ -724,6 +749,13 @@ EL.ELDATA2Array = function (eldata) {
  */
 // 1バイトを文字列の16進表現へ（1Byteは必ず2文字にする）
 EL.toHexString = function (byte) {
+	// 入力バリデーション
+	if (typeof byte !== 'number') {
+		throw new Error('EL.toHexString(): Input must be a number (got ' + typeof byte + ')');
+	}
+	if (byte < 0 || byte > 255) {
+		throw new Error('EL.toHexString(): Input must be between 0-255 (got ' + byte + ')');
+	}
 	// 文字列0をつなげて，後ろから2文字分スライスする
 	return (("0" + byte.toString(16)).slice(-2));
 };
@@ -736,6 +768,20 @@ EL.toHexString = function (byte) {
  */
 // 16進表現の文字列を数値のバイト配列へ
 EL.toHexArray = function (string) {
+	// 入力バリデーション
+	if (typeof string !== 'string') {
+		throw new Error('EL.toHexArray(): Input must be a string');
+	}
+	if (string.length === 0) {
+		return [];
+	}
+	if (string.length % 2 !== 0) {
+		throw new Error('EL.toHexArray(): String length must be even (got ' + string.length + ')');
+	}
+	if (!/^[0-9a-fA-F]*$/.test(string)) {
+		throw new Error('EL.toHexArray(): String must contain only hexadecimal characters');
+	}
+
 	let ret = [];
 
 	for (let i = 0; i < string.length; i += 2) {
@@ -756,9 +802,21 @@ EL.toHexArray = function (string) {
  */
 // バイト配列を文字列にかえる
 EL.bytesToString = function (bytes) {
+	// 入力バリデーション
+	if (!bytes) {
+		throw new Error('EL.bytesToString(): Input cannot be null or undefined');
+	}
+	if (!Array.isArray(bytes)) {
+		throw new Error('EL.bytesToString(): Input must be an array');
+	}
+
 	let ret = "";
 
 	for (let i = 0; i < bytes.length; i++) {
+		// 各要素が数値で0-255の範囲内かチェック
+		if (typeof bytes[i] !== 'number' || bytes[i] < 0 || bytes[i] > 255) {
+			throw new Error('EL.bytesToString(): Array element at index ' + i + ' must be a number between 0-255 (got ' + bytes[i] + ')');
+		}
 		ret += EL.toHexString(bytes[i]);
 	}
 	return ret;
@@ -772,10 +830,18 @@ EL.bytesToString = function (bytes) {
  */
 // インスタンスリストからクラスリストを作る
 EL.getClassList = function( objList ) {
+	// 入力バリデーション
+	if (!Array.isArray(objList)) {
+		throw new Error('EL.getClassList(): Input must be an array');
+	}
+
 	let ret;
 
 	// クラスリストにする
 	let classes = objList.map(function (e) {	// クラスだけにかえる
+		if (typeof e !== 'string' || e.length < 4) {
+			throw new Error('EL.getClassList(): Each element must be a string with at least 4 characters (got ' + e + ')');
+		}
 		return e.substring(0, 4);
 	});
 
@@ -1603,7 +1669,9 @@ EL.returner = function (bytes, rinfo, userfunc) {
 
 	// Node profileに関してきちんと処理する
 	if ( els.DEOJ.substring(0, 4) === EL.NODE_PROFILE ) {
-		els.DEOJ = EL.NODE_PROFILE_OBJECT;  // ここで0ef000, 0ef001, 0ef002の表記ゆれを統合する			switch (els.ESV) {
+		els.DEOJ = EL.NODE_PROFILE_OBJECT;  // ここで0ef000, 0ef001, 0ef002の表記ゆれを統合する
+
+		switch (els.ESV) {
 				////////////////////////////////////////////////////////////////////////////////////
 				// 0x5x
 				// エラー受け取ったときの処理
