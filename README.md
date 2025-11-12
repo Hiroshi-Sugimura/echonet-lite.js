@@ -171,7 +171,7 @@ async function setup() {
 			EL.replyGetDetail( rinfo, els, dev_details );
 			break;
 
-			case EL.INFREQ: // 0x63
+			case EL.INF_REQ: // 0x63
 			break;
 
 			case EL.SETGET: // "6e"
@@ -555,6 +555,24 @@ EL.sendOPC1( '192.168.2.150', [0x05,0xff,0x01], [0x01,0x35,0x01], 0x61, 0x80, [0
 EL.sendOPC1( '192.168.2.150', [0x05,0xff,0x01], [0x01,0x35,0x01], 0x61, 0x80, 0x31);
 EL.sendOPC1( '192.168.2.150', "05ff01", "013501", "61", "80", "31");
 EL.sendOPC1( '192.168.2.150', "05ff01", "013501", EL.SETC, "80", "31");
+```
+
+### Run tests
+
+プロジェクト内の単体テストは `unitTest` ディレクトリ配下の Jest で実行できるよ。ルートからでも実行できるようにスクリプトを用意してある。
+
+ローカルで直接実行する場合:
+
+```bash
+cd unitTest
+npm install
+npm test
+```
+
+ルートから実行する場合:
+
+```bash
+npm test
 ```
 
 
