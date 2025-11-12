@@ -601,9 +601,20 @@ EL.parseBytes = function (bytes) {
 			return EL.parseString(bytes);
 		}
 
+		// 入力バリデーション
+		if (!bytes) {
+			console.error("## EL.parseBytes error. bytes is null or undefined");
+			return null;
+		}
+
+		if (!Array.isArray(bytes) &amp;&amp; !Buffer.isBuffer(bytes)) {
+			console.error("## EL.parseBytes error. bytes must be an Array or Buffer (got " + typeof bytes + ")");
+			return null;
+		}
+
 		// 最低限のELパケットになってない
-		if (!bytes || bytes.length &lt; 14) {
-			console.error("## EL.parseBytes error. bytes is less then 14 bytes. bytes.length is " + (bytes ? bytes.length : 'undefined'));
+		if (bytes.length &lt; 14) {
+			console.error("## EL.parseBytes error. bytes is less then 14 bytes. bytes.length is " + bytes.length);
 			console.error(bytes);
 			return null;
 		}
@@ -656,7 +667,7 @@ EL.parseString = function (str) {
 	}
 
 	// EHD判定
-	const ehd = raw.substr(0, 4);
+	const ehd = raw.substring(0, 4);
 	if (ehd !== '1081' &amp;&amp; ehd !== '1082') {
 		throw new Error('EL.parseString(): invalid EHD=' + ehd);
 	}
@@ -665,7 +676,7 @@ EL.parseString = function (str) {
 	if (ehd === '1082') {
 		return {
 			EHD: ehd,
-			AMF: raw.substr(4)
+			AMF: raw.substring(4)
 		};
 	}
 
@@ -674,13 +685,13 @@ EL.parseString = function (str) {
 	try {
 		eldata = {
 			EHD: ehd,
-			TID: raw.substr(4, 4),
-			SEOJ: raw.substr(8, 6),
-			DEOJ: raw.substr(14, 6),
-			EDATA: raw.substr(20),    // 下記はEDATAの詳細
-			ESV: raw.substr(20, 2),
-			OPC: raw.substr(22, 2),
-			DETAIL: raw.substr(24)
+			TID: raw.substring(4, 8),
+			SEOJ: raw.substring(8, 14),
+			DEOJ: raw.substring(14, 20),
+			EDATA: raw.substring(20),    // 下記はEDATAの詳細
+			ESV: raw.substring(20, 22),
+			OPC: raw.substring(22, 24),
+			DETAIL: raw.substring(24)
 		};
 
 		// OPCの数値化（NaN/範囲外検知）
@@ -723,12 +734,12 @@ EL.parseString = function (str) {
 EL.getSeparatedString_String = function (str) {
 	try {
 		if (typeof str === 'string') {
-			return (str.substr(0, 4) + " " +
-					str.substr(4, 4) + " " +
-					str.substr(8, 6) + " " +
-					str.substr(14, 6) + " " +
-					str.substr(20, 2) + " " +
-					str.substr(22));
+			return (str.substring(0, 4) + " " +
+					str.substring(4, 8) + " " +
+					str.substring(8, 14) + " " +
+					str.substring(14, 20) + " " +
+					str.substring(20, 22) + " " +
+					str.substring(22));
 		} else {
 			// console.error( "str is not string." );
 			throw new Error("str is not string.");
@@ -747,6 +758,13 @@ EL.getSeparatedString_String = function (str) {
  */
 // ELDATAをいれるとELらしい切り方のStringを得る
 EL.getSeparatedString_ELDATA = function (eldata) {
+	// 入力バリデーション
+	if (!eldata || typeof eldata !== 'object') {
+		throw new Error('EL.getSeparatedString_ELDATA(): Input must be an object');
+	}
+	if (!eldata.EHD || !eldata.TID || !eldata.SEOJ || !eldata.DEOJ || !eldata.EDATA) {
+		throw new Error('EL.getSeparatedString_ELDATA(): ELDATA object must have EHD, TID, SEOJ, DEOJ, and EDATA properties');
+	}
 	return (eldata.EHD + ' ' + eldata.TID + ' ' + eldata.SEOJ + ' ' + eldata.DEOJ + ' ' + eldata.EDATA);
 };
 
@@ -759,6 +777,13 @@ EL.getSeparatedString_ELDATA = function (eldata) {
  */
 // ELDATA形式から配列へ
 EL.ELDATA2Array = function (eldata) {
+	// 入力バリデーション
+	if (!eldata || typeof eldata !== 'object') {
+		throw new Error('EL.ELDATA2Array(): Input must be an object');
+	}
+	if (!eldata.EHD || !eldata.TID || !eldata.SEOJ || !eldata.DEOJ || !eldata.EDATA) {
+		throw new Error('EL.ELDATA2Array(): ELDATA object must have EHD, TID, SEOJ, DEOJ, and EDATA properties');
+	}
 	let ret = EL.toHexArray(eldata.EHD + eldata.TID + eldata.SEOJ + eldata.DEOJ + eldata.EDATA);
 	return ret;
 };
@@ -771,6 +796,13 @@ EL.ELDATA2Array = function (eldata) {
  */
 // 1バイトを文字列の16進表現へ（1Byteは必ず2文字にする）
 EL.toHexString = function (byte) {
+	// 入力バリデーション
+	if (typeof byte !== 'number') {
+		throw new Error('EL.toHexString(): Input must be a number (got ' + typeof byte + ')');
+	}
+	if (byte &lt; 0 || byte > 255) {
+		throw new Error('EL.toHexString(): Input must be between 0-255 (got ' + byte + ')');
+	}
 	// 文字列0をつなげて，後ろから2文字分スライスする
 	return (("0" + byte.toString(16)).slice(-2));
 };
@@ -783,11 +815,25 @@ EL.toHexString = function (byte) {
  */
 // 16進表現の文字列を数値のバイト配列へ
 EL.toHexArray = function (string) {
+	// 入力バリデーション
+	if (typeof string !== 'string') {
+		throw new Error('EL.toHexArray(): Input must be a string');
+	}
+	if (string.length === 0) {
+		return [];
+	}
+	if (string.length % 2 !== 0) {
+		throw new Error('EL.toHexArray(): String length must be even (got ' + string.length + ')');
+	}
+	if (!/^[0-9a-fA-F]*$/.test(string)) {
+		throw new Error('EL.toHexArray(): String must contain only hexadecimal characters');
+	}
+
 	let ret = [];
 
 	for (let i = 0; i &lt; string.length; i += 2) {
-		let l = string.substr(i, 1);
-		let r = string.substr(i + 1, 1);
+		let l = string.substring(i, i + 1);
+		let r = string.substring(i + 1, i + 2);
 		ret.push((parseInt(l, 16) * 16) + parseInt(r, 16));
 	}
 
@@ -803,9 +849,21 @@ EL.toHexArray = function (string) {
  */
 // バイト配列を文字列にかえる
 EL.bytesToString = function (bytes) {
+	// 入力バリデーション
+	if (!bytes) {
+		throw new Error('EL.bytesToString(): Input cannot be null or undefined');
+	}
+	if (!Array.isArray(bytes)) {
+		throw new Error('EL.bytesToString(): Input must be an array');
+	}
+
 	let ret = "";
 
 	for (let i = 0; i &lt; bytes.length; i++) {
+		// 各要素が数値で0-255の範囲内かチェック
+		if (typeof bytes[i] !== 'number' || bytes[i] &lt; 0 || bytes[i] > 255) {
+			throw new Error('EL.bytesToString(): Array element at index ' + i + ' must be a number between 0-255 (got ' + bytes[i] + ')');
+		}
 		ret += EL.toHexString(bytes[i]);
 	}
 	return ret;
@@ -819,11 +877,19 @@ EL.bytesToString = function (bytes) {
  */
 // インスタンスリストからクラスリストを作る
 EL.getClassList = function( objList ) {
+	// 入力バリデーション
+	if (!Array.isArray(objList)) {
+		throw new Error('EL.getClassList(): Input must be an array');
+	}
+
 	let ret;
 
 	// クラスリストにする
 	let classes = objList.map(function (e) {	// クラスだけにかえる
-		return e.substr(0, 4);
+		if (typeof e !== 'string' || e.length &lt; 4) {
+			throw new Error('EL.getClassList(): Each element must be a string with at least 4 characters (got ' + e + ')');
+		}
+		return e.substring(0, 4);
 	});
 
 	let classList = classes.filter(function (x, i, self) {		// 重複削除
@@ -1493,7 +1559,7 @@ EL.replySetDetail = function(rinfo, els, dev_details) {
 EL.replySetDetail_sub = function(rinfo, els, dev_details, epc) {
 	let edt = els.DETAILs[epc];
 
-	switch( els.DEOJ.substr(0,4) ) {
+	switch( els.DEOJ.substring(0, 4) ) {
 		case EL.NODE_PROFILE: // ノードプロファイルはsetするものがbfだけ
 		switch( epc ) {
 			case 'bf': // 個体識別番号, 最上位1bitは変化させてはいけない。
@@ -1644,15 +1710,15 @@ EL.returner = function (bytes, rinfo, userfunc) {
 		}
 
 		// ヘッダ確認
-		if (els.EHD !== '1081') {
-			return;
-		}
+	if (els.EHD !== '1081') {
+		return;
+	}
 
-		// Node profileに関してきちんと処理する
-		if ( els.DEOJ.substr(0,4) === EL.NODE_PROFILE ) {
-			els.DEOJ = EL.NODE_PROFILE_OBJECT;  // ここで0ef000, 0ef001, 0ef002の表記ゆれを統合する
+	// Node profileに関してきちんと処理する
+	if ( els.DEOJ.substring(0, 4) === EL.NODE_PROFILE ) {
+		els.DEOJ = EL.NODE_PROFILE_OBJECT;  // ここで0ef000, 0ef001, 0ef002の表記ゆれを統合する
 
-			switch (els.ESV) {
+		switch (els.ESV) {
 				////////////////////////////////////////////////////////////////////////////////////
 				// 0x5x
 				// エラー受け取ったときの処理
@@ -1741,7 +1807,7 @@ EL.returner = function (bytes, rinfo, userfunc) {
 				// V1.1
 				// d6のEDT表現が特殊，EDT1バイト目がインスタンス数になっている
 				// なお、d6にはNode profileは入っていない
-				if( els.SEOJ.substr(0, 4) === EL.NODE_PROFILE &amp;&amp; typeof els.DETAILs['d6'] === 'string' &amp;&amp; els.DETAILs['d6'].length > 0 ) {
+				if( els.SEOJ.substring(0, 4) === EL.NODE_PROFILE &amp;&amp; typeof els.DETAILs['d6'] === 'string' &amp;&amp; els.DETAILs['d6'].length > 0 ) {
 					// console.log( "EL.returner: get object list! PropertyMap req V1.0.");
 					// 自ノードインスタンスリストSに書いてあるオブジェクトのプロパティマップをもらう
 					let array = EL.toHexArray( els.DETAILs.d6 );
@@ -2125,7 +2191,7 @@ module.exports = EL;
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Wed Nov 12 2025 00:33:22 GMT+0000 (Coordinated Universal Time) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Wed Nov 12 2025 03:50:26 GMT+0000 (Coordinated Universal Time) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
 </footer>
 
 <script>prettyPrint();</script>
