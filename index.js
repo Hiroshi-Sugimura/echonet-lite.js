@@ -2097,6 +2097,11 @@ EL.complementFacilities_sub = function ( ip, eoj, props ) {  // サブルーチ�
 	for( let i=0; i<count; i++ ) {
 		let epc = array[i+1];
 		if( !epc ) { break; }
+		// EPCが正しい16進2桁かチェック
+		if( typeof epc !== 'string' || epc.length !== 2 || !/^[0-9a-fA-F]{2}$/.test(epc) ) {
+			EL.debugMode ? console.error('complementFacilities_sub: invalid EPC format:', epc, 'in 9f:', props['9f']) : 0;
+			continue;
+		}
 		// メーカー独自(F0..FF)はスキップ
 		if( epc[0].toLowerCase() === 'f' ) { continue; }
 		if( !props[epc] ) {

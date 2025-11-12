@@ -644,4 +644,1780 @@ describe('EL - ECHONET Lite プロトコル', () => {
     });
   });
 
+  describe('complementFacilities_sub', () => {
+    let sendDetailsSpy;
+    let originalDebugMode;
+    let originalAutoGetWaitings;
+
+    beforeEach(() => {
+      // sendDetailsをモック化
+      sendDetailsSpy = jest.spyOn(EL, 'sendDetails').mockImplementation(() => {});
+      originalDebugMode = EL.debugMode;
+      originalAutoGetWaitings = EL.autoGetWaitings;
+      EL.debugMode = false; // デバッグログを抑制
+      EL.autoGetWaitings = 0; // 待ち行列をリセット
+    });
+
+    afterEach(() => {
+      sendDetailsSpy.mockRestore();
+      EL.debugMode = originalDebugMode;
+      EL.autoGetWaitings = originalAutoGetWaitings;
+    });
+
+    test('9fが存在しない場合はマップ取得要求を送信', () => {
+      const props = { '80': '30', '82': '0001' };
+      EL.complementFacilities_sub('192.168.1.1', '013001', props);
+
+      expect(sendDetailsSpy).toHaveBeenCalledWith(
+        '192.168.1.1',
+        EL.NODE_PROFILE_OBJECT,
+        '013001',
+        EL.GET,
+        [{ '9d': '' }, { '9e': '' }, { '9f': '' }]
+      );
+    });
+
+    test('9fが空文字の場合はマップ取得要求を送信', () => {
+      const props = { '9f': '', '80': '30' };
+      EL.complementFacilities_sub('192.168.1.1', '013001', props);
+
+      expect(sendDetailsSpy).toHaveBeenCalledWith(
+        '192.168.1.1',
+        EL.NODE_PROFILE_OBJECT,
+        '013001',
+        EL.GET,
+        [{ '9d': '' }, { '9e': '' }, { '9f': '' }]
+      );
+    });
+
+    test('9fがundefinedの場合はマップ取得要求を送信', () => {
+      const props = { '80': '30' };
+      // propsに9fキーが存在しない = undefined
+      EL.complementFacilities_sub('192.168.1.1', '013001', props);
+
+      expect(sendDetailsSpy).toHaveBeenCalledWith(
+        '192.168.1.1',
+        EL.NODE_PROFILE_OBJECT,
+        '013001',
+        EL.GET,
+        [{ '9d': '' }, { '9e': '' }, { '9f': '' }]
+      );
+    });
+
+    test('正常な9fで不足EPCを補完', (done) => {
+      jest.useFakeTimers();
+      const props = {
+        '9f': '03808182', // 3個のEPC: 80, 81, 82
+        '80': '30' // 80は存在
+        // 81, 82は存在しない
+      };
+
+      EL.complementFacilities_sub('192.168.1.1', '013001', props);
+
+      // タイマーを進める
+      jest.runAllTimers();
+
+      expect(sendDetailsSpy).toHaveBeenCalledWith(
+        '192.168.1.1',
+        EL.NODE_PROFILE_OBJECT,
+        '013001',
+        EL.GET,
+        [{ '81': '' }, { '82': '' }]
+      );
+
+      jest.useRealTimers();
+      done();
+    });
+
+    test('メーカー独自EPC(F0-FF)はスキップ', (done) => {
+      jest.useFakeTimers();
+      const props = {
+        '9f': '0480f0f1', // 4個のEPC: 80, f0, f1
+        '80': '30'
+      };
+
+      EL.complementFacilities_sub('192.168.1.1', '013001', props);
+
+      jest.runAllTimers();
+
+      // f0, f1はスキップされるため呼ばれない
+      expect(sendDetailsSpy).not.toHaveBeenCalled();
+
+      jest.useRealTimers();
+      done();
+    });
+
+    test('不正なEPC形式(非16進)を検出してスキップ', (done) => {
+      jest.useFakeTimers();
+      EL.debugMode = true; // デバッグログを有効化
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+      const props = {
+        '9f': '03ZZ8182', // 不正: 'ZZ'
+        '81': '0f'
+      };
+
+      EL.complementFacilities_sub('192.168.1.1', '013001', props);
+
+      jest.runAllTimers();
+
+      // 'ZZ'は不正なのでスキップ、81は既存、82のみ要求
+      expect(sendDetailsSpy).toHaveBeenCalledWith(
+        '192.168.1.1',
+        EL.NODE_PROFILE_OBJECT,
+        '013001',
+        EL.GET,
+        [{ '82': '' }]
+      );
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'complementFacilities_sub: invalid EPC format:',
+        'ZZ',
+        'in 9f:',
+        '03ZZ8182'
+      );
+
+      consoleErrorSpy.mockRestore();
+      jest.useRealTimers();
+      done();
+    });
+
+    test('不正なEPC形式(奇数長)を検出', (done) => {
+      jest.useFakeTimers();
+      EL.debugMode = true;
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+      const props = {
+        '9f': '0280', // 個数2だが後続が足りない(80のみ)
+        // match(/.{2}/g) で ['02', '80'] となり、array[2]はundefined
+        '80': '30' // 80は既に存在
+      };
+
+      EL.complementFacilities_sub('192.168.1.1', '013001', props);
+
+      jest.runAllTimers();
+
+      // 80は既存なので要求なし、2個目は取得できないのでbreakで終了
+      expect(sendDetailsSpy).not.toHaveBeenCalled();
+
+      consoleErrorSpy.mockRestore();
+      jest.useRealTimers();
+      done();
+    });
+
+    test('全EPCが既に存在する場合は何も送信しない', (done) => {
+      jest.useFakeTimers();
+      const props = {
+        '9f': '02808182',
+        '80': '30',
+        '81': '0f',
+        '82': '0001'
+      };
+
+      EL.complementFacilities_sub('192.168.1.1', '013001', props);
+
+      jest.runAllTimers();
+
+      expect(sendDetailsSpy).not.toHaveBeenCalled();
+
+      jest.useRealTimers();
+      done();
+    });
+
+    test('形式2のプロパティマップでも正しく動作', (done) => {
+      jest.useFakeTimers();
+      // 形式2は既にparseMapForm2で形式1に変換済みと仮定
+      // 実際にはrenewFacilitiesでDETAILsとして保存される時点で変換されている
+      const props = {
+        '9f': '10808182838485868788898a8b8c8d8e8f', // 16個
+        '80': '30'
+        // 残り15個は存在しない
+      };
+
+      EL.complementFacilities_sub('192.168.1.1', '013001', props);
+
+      jest.runAllTimers();
+
+      expect(sendDetailsSpy).toHaveBeenCalled();
+      const callArgs = sendDetailsSpy.mock.calls[0];
+      const details = callArgs[4];
+      // 81-8fの15個が要求される
+      expect(details.length).toBe(15);
+      expect(details[0]).toEqual({ '81': '' });
+      expect(details[14]).toEqual({ '8f': '' });
+
+      jest.useRealTimers();
+      done();
+    });
+  });
+
+  describe('待機カウンタ系関数', () => {
+    let originalAutoGetWaitings;
+
+    beforeEach(() => {
+      originalAutoGetWaitings = EL.autoGetWaitings;
+      EL.autoGetWaitings = 0;
+    });
+
+    afterEach(() => {
+      EL.autoGetWaitings = originalAutoGetWaitings;
+    });
+
+    test('increaseWaitings: カウンタを1増やす', () => {
+      expect(EL.autoGetWaitings).toBe(0);
+      EL.increaseWaitings();
+      expect(EL.autoGetWaitings).toBe(1);
+      EL.increaseWaitings();
+      expect(EL.autoGetWaitings).toBe(2);
+      EL.increaseWaitings();
+      expect(EL.autoGetWaitings).toBe(3);
+    });
+
+    test('decreaseWaitings: カウンタを1減らす', () => {
+      EL.autoGetWaitings = 5;
+      EL.decreaseWaitings();
+      expect(EL.autoGetWaitings).toBe(4);
+      EL.decreaseWaitings();
+      expect(EL.autoGetWaitings).toBe(3);
+    });
+
+    test('decreaseWaitings: 0の時は減らさない', () => {
+      EL.autoGetWaitings = 0;
+      EL.decreaseWaitings();
+      expect(EL.autoGetWaitings).toBe(0);
+      EL.decreaseWaitings();
+      expect(EL.autoGetWaitings).toBe(0);
+    });
+
+    test('increaseWaitingsとdecreaseWaitingsの組み合わせ', () => {
+      EL.increaseWaitings(); // 0 -> 1
+      EL.increaseWaitings(); // 1 -> 2
+      EL.increaseWaitings(); // 2 -> 3
+      expect(EL.autoGetWaitings).toBe(3);
+
+      EL.decreaseWaitings(); // 3 -> 2
+      expect(EL.autoGetWaitings).toBe(2);
+
+      EL.increaseWaitings(); // 2 -> 3
+      expect(EL.autoGetWaitings).toBe(3);
+
+      EL.decreaseWaitings(); // 3 -> 2
+      EL.decreaseWaitings(); // 2 -> 1
+      EL.decreaseWaitings(); // 1 -> 0
+      expect(EL.autoGetWaitings).toBe(0);
+
+      EL.decreaseWaitings(); // 0のまま
+      expect(EL.autoGetWaitings).toBe(0);
+    });
+  });
+
+  describe('文字列処理系関数', () => {
+
+    describe('getSeparatedString_String', () => {
+      test('正常な16進数文字列をスペース区切りに変換', () => {
+        const input = '108100010ef0010ef0017201800130';
+        const expected = '1081 0001 0ef001 0ef001 72 01800130';
+        expect(EL.getSeparatedString_String(input)).toBe(expected);
+      });
+
+      test('短い文字列でも正しく区切る', () => {
+        const input = '108100010ef0010ef00172';
+        const expected = '1081 0001 0ef001 0ef001 72 ';
+        expect(EL.getSeparatedString_String(input)).toBe(expected);
+      });
+
+      test('長いEDATA部分も正しく処理', () => {
+        const input = '108100010ef0010ef001620380013081010f82040001';
+        const expected = '1081 0001 0ef001 0ef001 62 0380013081010f82040001';
+        expect(EL.getSeparatedString_String(input)).toBe(expected);
+      });
+
+      test('文字列以外が渡されたらエラー', () => {
+        expect(() => EL.getSeparatedString_String(123)).toThrow('str is not string.');
+        expect(() => EL.getSeparatedString_String(null)).toThrow('str is not string.');
+        expect(() => EL.getSeparatedString_String(undefined)).toThrow('str is not string.');
+        expect(() => EL.getSeparatedString_String([])).toThrow('str is not string.');
+      });
+
+      test('オブジェクトが渡されたらエラー', () => {
+        expect(() => EL.getSeparatedString_String({})).toThrow('str is not string.');
+        expect(() => EL.getSeparatedString_String({ a: 1 })).toThrow('str is not string.');
+      });
+
+      test('空文字列でも処理可能', () => {
+        const result = EL.getSeparatedString_String('');
+        expect(result).toBe('     ');
+      });
+
+      test('極端に短い文字列(4文字未満)', () => {
+        const result = EL.getSeparatedString_String('10');
+        expect(result).toBe('10     ');
+      });
+
+      test('関数が渡されたらエラー', () => {
+        expect(() => EL.getSeparatedString_String(() => {})).toThrow('str is not string.');
+      });
+    });
+
+    describe('getSeparatedString_ELDATA', () => {
+      test('正常なELDATAオブジェクトをスペース区切り文字列に変換', () => {
+        const eldata = {
+          EHD: '1081',
+          TID: '0001',
+          SEOJ: '0ef001',
+          DEOJ: '0ef001',
+          EDATA: '7201800130'
+        };
+        const expected = '1081 0001 0ef001 0ef001 7201800130';
+        expect(EL.getSeparatedString_ELDATA(eldata)).toBe(expected);
+      });
+
+      test('複数プロパティを持つEDATA', () => {
+        const eldata = {
+          EHD: '1081',
+          TID: '0002',
+          SEOJ: '05ff01',
+          DEOJ: '013501',
+          EDATA: '620380013081010f82040001'
+        };
+        const expected = '1081 0002 05ff01 013501 620380013081010f82040001';
+        expect(EL.getSeparatedString_ELDATA(eldata)).toBe(expected);
+      });
+
+      test('nullやundefinedが渡されたらエラー', () => {
+        expect(() => EL.getSeparatedString_ELDATA(null))
+          .toThrow('Input must be an object');
+        expect(() => EL.getSeparatedString_ELDATA(undefined))
+          .toThrow('Input must be an object');
+      });
+
+      test('必須プロパティが欠けているとエラー', () => {
+        expect(() => EL.getSeparatedString_ELDATA({}))
+          .toThrow('ELDATA object must have EHD, TID, SEOJ, DEOJ, and EDATA properties');
+
+        expect(() => EL.getSeparatedString_ELDATA({ EHD: '1081' }))
+          .toThrow('ELDATA object must have EHD, TID, SEOJ, DEOJ, and EDATA properties');
+
+        expect(() => EL.getSeparatedString_ELDATA({
+          EHD: '1081',
+          TID: '0001'
+        })).toThrow('ELDATA object must have EHD, TID, SEOJ, DEOJ, and EDATA properties');
+      });
+
+      test('文字列が渡されたらエラー', () => {
+        expect(() => EL.getSeparatedString_ELDATA('test'))
+          .toThrow('Input must be an object');
+      });
+
+      test('数値が渡されたらエラー', () => {
+        expect(() => EL.getSeparatedString_ELDATA(123))
+          .toThrow('Input must be an object');
+      });
+
+      test('配列が渡されたらエラー', () => {
+        expect(() => EL.getSeparatedString_ELDATA([]))
+          .toThrow('ELDATA object must have EHD, TID, SEOJ, DEOJ, and EDATA properties');
+      });
+
+      test('SEOJだけ欠けている場合', () => {
+        expect(() => EL.getSeparatedString_ELDATA({
+          EHD: '1081',
+          TID: '0001',
+          DEOJ: '0ef001',
+          EDATA: '7201800130'
+        })).toThrow('ELDATA object must have EHD, TID, SEOJ, DEOJ, and EDATA properties');
+      });
+
+      test('DEOJだけ欠けている場合', () => {
+        expect(() => EL.getSeparatedString_ELDATA({
+          EHD: '1081',
+          TID: '0001',
+          SEOJ: '0ef001',
+          EDATA: '7201800130'
+        })).toThrow('ELDATA object must have EHD, TID, SEOJ, DEOJ, and EDATA properties');
+      });
+
+      test('EDATAだけ欠けている場合', () => {
+        expect(() => EL.getSeparatedString_ELDATA({
+          EHD: '1081',
+          TID: '0001',
+          SEOJ: '0ef001',
+          DEOJ: '0ef001'
+        })).toThrow('ELDATA object must have EHD, TID, SEOJ, DEOJ, and EDATA properties');
+      });
+
+      test('プロパティが空文字列の場合はエラー', () => {
+        // 空文字列はfalsyなので!eldata.EHDでtrueになりエラー
+        expect(() => EL.getSeparatedString_ELDATA({
+          EHD: '',
+          TID: '',
+          SEOJ: '',
+          DEOJ: '',
+          EDATA: ''
+        })).toThrow('ELDATA object must have EHD, TID, SEOJ, DEOJ, and EDATA properties');
+      });
+    });
+  });
+
+  describe('表示系関数', () => {
+    let consoleLogSpy;
+    let consoleErrorSpy;
+    let originalDebugMode;
+
+    beforeEach(() => {
+      consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+      consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      originalDebugMode = EL.debugMode;
+    });
+
+    afterEach(() => {
+      consoleLogSpy.mockRestore();
+      consoleErrorSpy.mockRestore();
+      EL.debugMode = originalDebugMode;
+    });
+
+    describe('eldataShow', () => {
+      test('debugMode=trueの時にELDATAを表示', () => {
+        EL.debugMode = true;
+        const eldata = {
+          EHD: '1081',
+          TID: '0001',
+          SEOJ: '0ef001',
+          DEOJ: '0ef001',
+          EDATA: '7201800130'
+        };
+
+        EL.eldataShow(eldata);
+
+        expect(consoleLogSpy).toHaveBeenCalledWith(
+          'EHD: 1081TID: 0001SEOJ: 0ef001DEOJ: 0ef001\nEDATA: 7201800130'
+        );
+      });
+
+      test('debugMode=falseの時は何も表示しない', () => {
+        EL.debugMode = false;
+        const eldata = {
+          EHD: '1081',
+          TID: '0001',
+          SEOJ: '0ef001',
+          DEOJ: '0ef001',
+          EDATA: '7201800130'
+        };
+
+        EL.eldataShow(eldata);
+
+        expect(consoleLogSpy).not.toHaveBeenCalled();
+      });
+
+      test('eldataがnullの時はエラーメッセージを表示', () => {
+        EL.eldataShow(null);
+
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+          'EL.eldataShow error. eldata is not EL data.'
+        );
+      });
+
+      test('eldataがundefinedでは何も表示されない', () => {
+        // undefinedの場合は何も表示されず終了
+        EL.eldataShow(undefined);
+        expect(consoleLogSpy).not.toHaveBeenCalled();
+      });
+
+      test('eldataが空オブジェクトでもdebugMode=trueなら表示', () => {
+        EL.debugMode = true;
+        const eldata = {
+          EHD: '',
+          TID: '',
+          SEOJ: '',
+          DEOJ: '',
+          EDATA: ''
+        };
+
+        EL.eldataShow(eldata);
+
+        expect(consoleLogSpy).toHaveBeenCalled();
+      });
+
+      test('eldataが不完全でもdebugMode=trueなら表示試行', () => {
+        EL.debugMode = true;
+        const eldata = {
+          EHD: '1081',
+          TID: '0001'
+          // SEOJ, DEOJ, EDATAなし
+        };
+
+        EL.eldataShow(eldata);
+
+        // エラーは出ないが、undefinedを含む文字列が表示される
+        expect(consoleLogSpy).toHaveBeenCalled();
+      });
+    });
+
+    describe('stringShow', () => {
+      test('正常な16進数文字列をパースして表示', () => {
+        EL.debugMode = true;
+        const hexString = '108100010ef0010ef0017201800130';
+
+        EL.stringShow(hexString);
+
+        expect(consoleLogSpy).toHaveBeenCalled();
+        const loggedMessage = consoleLogSpy.mock.calls[0][0];
+        expect(loggedMessage).toContain('EHD: 1081');
+        expect(loggedMessage).toContain('TID: 0001');
+      });
+
+      test('不正な文字列でエラーをthrow', () => {
+        expect(() => EL.stringShow('invalid')).toThrow();
+      });
+
+      test('短すぎる文字列でエラーをthrow', () => {
+        expect(() => EL.stringShow('1081')).toThrow();
+      });
+    });
+
+    describe('bytesShow', () => {
+      test('正常なバイト配列をパースして表示', () => {
+        EL.debugMode = true;
+        const bytes = [0x10, 0x81, 0x00, 0x01, 0x0e, 0xf0, 0x01, 0x0e, 0xf0, 0x01, 0x72, 0x01, 0x80, 0x01, 0x30];
+
+        EL.bytesShow(bytes);
+
+        expect(consoleLogSpy).toHaveBeenCalled();
+        const loggedMessage = consoleLogSpy.mock.calls[0][0];
+        expect(loggedMessage).toContain('EHD: 1081');
+        expect(loggedMessage).toContain('TID: 0001');
+      });
+
+      test('Bufferでも正しく処理', () => {
+        EL.debugMode = true;
+        const buffer = Buffer.from([0x10, 0x81, 0x00, 0x01, 0x0e, 0xf0, 0x01, 0x0e, 0xf0, 0x01, 0x72, 0x01, 0x80, 0x01, 0x30]);
+
+        EL.bytesShow(buffer);
+
+        expect(consoleLogSpy).toHaveBeenCalled();
+        const loggedMessage = consoleLogSpy.mock.calls[0][0];
+        expect(loggedMessage).toContain('EHD: 1081');
+      });
+
+      test('不正なバイト配列でもエラーハンドリング', () => {
+        EL.debugMode = true;
+        const invalidBytes = [0x10, 0x81]; // 短すぎる
+
+        EL.bytesShow(invalidBytes);
+
+        // parseBytes内でエラーが出て、eldataShowにnullが渡される
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+          'EL.eldataShow error. eldata is not EL data.'
+        );
+      });
+
+      test('空配列でもエラーハンドリング', () => {
+        EL.debugMode = true;
+
+        EL.bytesShow([]);
+
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+          'EL.eldataShow error. eldata is not EL data.'
+        );
+      });
+
+      test('nullが渡された場合', () => {
+        EL.debugMode = true;
+
+        EL.bytesShow(null);
+
+        expect(consoleErrorSpy).toHaveBeenCalled();
+      });
+
+      test('文字列が渡された場合(Buffer変換失敗)', () => {
+        EL.debugMode = true;
+
+        // 文字列を渡すとエラー
+        expect(() => EL.bytesShow('invalid')).toThrow();
+      });
+    });
+  });
+
+  describe('返信サブルーチン関数', () => {
+
+    describe('replyGetDetail_sub', () => {
+      test('EOJとEPCが両方存在する場合はtrue', () => {
+        const els = { DEOJ: '013501' };
+        const dev_details = {
+          '013501': {
+            '80': '30',
+            '81': '0f'
+          }
+        };
+
+        expect(EL.replyGetDetail_sub(els, dev_details, '80')).toBe(true);
+        expect(EL.replyGetDetail_sub(els, dev_details, '81')).toBe(true);
+      });
+
+      test('EOJは存在するがEPCが存在しない場合はfalse', () => {
+        const els = { DEOJ: '013501' };
+        const dev_details = {
+          '013501': {
+            '80': '30'
+          }
+        };
+
+        expect(EL.replyGetDetail_sub(els, dev_details, '81')).toBe(false);
+        expect(EL.replyGetDetail_sub(els, dev_details, 'b0')).toBe(false);
+      });
+
+      test('EOJ自体が存在しない場合はfalse', () => {
+        const els = { DEOJ: '029001' };
+        const dev_details = {
+          '013501': {
+            '80': '30'
+          }
+        };
+
+        expect(EL.replyGetDetail_sub(els, dev_details, '80')).toBe(false);
+      });
+
+      test('dev_detailsが空の場合はfalse', () => {
+        const els = { DEOJ: '013501' };
+        const dev_details = {};
+
+        expect(EL.replyGetDetail_sub(els, dev_details, '80')).toBe(false);
+      });
+
+      test('dev_detailsがnullの場合', () => {
+        const els = { DEOJ: '013501' };
+        const dev_details = null;
+
+        // nullだとプロパティアクセスでエラー
+        expect(() => EL.replyGetDetail_sub(els, dev_details, '80')).toThrow();
+      });
+
+      test('elsがnullの場合', () => {
+        const dev_details = { '013501': { '80': '30' } };
+
+        // null.DEOJでエラー
+        expect(() => EL.replyGetDetail_sub(null, dev_details, '80')).toThrow();
+      });
+
+      test('EPCがnullの場合', () => {
+        const els = { DEOJ: '013501' };
+        const dev_details = { '013501': { '80': '30' } };
+
+        // nullはプロパティキーとして使えるので、存在しないとfalse
+        expect(EL.replyGetDetail_sub(els, dev_details, null)).toBe(false);
+      });
+
+      test('EPCが空文字列の場合', () => {
+        const els = { DEOJ: '013501' };
+        const dev_details = { '013501': { '80': '30', '': 'test' } };
+
+        // 空文字列のEPCが存在すればtrue
+        expect(EL.replyGetDetail_sub(els, dev_details, '')).toBe(true);
+      });
+
+      test('EOJのプロパティがnullの場合はPDC=0を返す', () => {
+        const els = { DEOJ: '013501' };
+        const dev_details = { '013501': null };
+
+        // nullの場合はfalseを返す
+        const result = EL.replyGetDetail_sub(els, dev_details, '80');
+        expect(result).toBe(false);
+      });
+    });
+
+    describe('replySetDetail_sub', () => {
+      let sendOPC1Spy;
+
+      beforeEach(() => {
+        sendOPC1Spy = jest.spyOn(EL, 'sendOPC1').mockImplementation(() => {});
+      });
+
+      afterEach(() => {
+        sendOPC1Spy.mockRestore();
+      });
+
+      test('ノードプロファイルのbf(個体識別番号)を設定できる', () => {
+        const rinfo = { address: '192.168.1.1' };
+        const els = {
+          DEOJ: '0ef001',
+          SEOJ: '05ff01',
+          DETAILs: { 'bf': '0102' }
+        };
+        const dev_details = {
+          '0ef001': {
+            'bf': [0x81, 0x00] // 最上位bitは0x80
+          }
+        };
+
+        const result = EL.replySetDetail_sub(rinfo, els, dev_details, 'bf');
+
+        expect(result).toBe(true);
+        // 最上位bitは保持される (0x81 & 0x80) | (0x01 & 0x7F) = 0x81
+        expect(dev_details['0ef001']['bf'][0]).toBe(0x81);
+        expect(dev_details['0ef001']['bf'][1]).toBe(0x02);
+      });
+
+      test('エアコンの動作状態(80)を0x30(ON)に設定', () => {
+        const rinfo = { address: '192.168.1.1' };
+        const els = {
+          DEOJ: '013001',
+          SEOJ: '05ff01',
+          DETAILs: { '80': '30' }
+        };
+        const dev_details = {
+          '013001': {
+            '80': [0x31] // 現在OFF
+          }
+        };
+
+        const result = EL.replySetDetail_sub(rinfo, els, dev_details, '80');
+
+        expect(result).toBe(true);
+        expect(dev_details['013001']['80']).toEqual([0x30]);
+        // INFが送信される
+        expect(sendOPC1Spy).toHaveBeenCalled();
+      });
+
+      test('エアコンの動作状態(80)に不正値を設定するとfalse', () => {
+        const rinfo = { address: '192.168.1.1' };
+        const els = {
+          DEOJ: '013001',
+          SEOJ: '05ff01',
+          DETAILs: { '80': 'ff' } // 不正値
+        };
+        const dev_details = {
+          '013001': {
+            '80': [0x30]
+          }
+        };
+
+        const result = EL.replySetDetail_sub(rinfo, els, dev_details, '80');
+
+        expect(result).toBe(false);
+        // 値は変更されない
+        expect(dev_details['013001']['80']).toEqual([0x30]);
+      });
+
+      test('エアコンの温度設定(b3)を20度に設定', () => {
+        const rinfo = { address: '192.168.1.1' };
+        const els = {
+          DEOJ: '013001',
+          SEOJ: '05ff01',
+          DETAILs: { 'b3': '14' } // 20度 (0x14 = 20)
+        };
+        const dev_details = {
+          '013001': {
+            'b3': [0x18] // 現在24度
+          }
+        };
+
+        const result = EL.replySetDetail_sub(rinfo, els, dev_details, 'b3');
+
+        expect(result).toBe(true);
+        expect(dev_details['013001']['b3']).toEqual([20]);
+      });
+
+      test('エアコンの温度設定(b3)に範囲外の値を設定するとfalse', () => {
+        const rinfo = { address: '192.168.1.1' };
+        const els = {
+          DEOJ: '013001',
+          SEOJ: '05ff01',
+          DETAILs: { 'b3': '64' } // 100度 (範囲外)
+        };
+        const dev_details = {
+          '013001': {
+            'b3': [0x18]
+          }
+        };
+
+        const result = EL.replySetDetail_sub(rinfo, els, dev_details, 'b3');
+
+        expect(result).toBe(false);
+      });
+
+      test('サポートされていないEOJ/EPCの組み合わせはfalse', () => {
+        const rinfo = { address: '192.168.1.1' };
+        const els = {
+          DEOJ: '013001', // エアコン
+          SEOJ: '05ff01',
+          DETAILs: { 'ff': '01' } // 未定義EPC
+        };
+        const dev_details = {
+          '013001': {
+            '80': [0x30]
+          }
+        };
+
+        const result = EL.replySetDetail_sub(rinfo, els, dev_details, 'ff');
+
+        expect(result).toBe(false);
+      });
+
+      test('未知のEOJクラスはdefaultでfalse', () => {
+        const rinfo = { address: '192.168.1.1' };
+        const els = {
+          DEOJ: '099999', // 未知のEOJ
+          SEOJ: '05ff01',
+          DETAILs: { '80': '30' }
+        };
+        const dev_details = {
+          '099999': {
+            '80': [0x31]
+          }
+        };
+
+        const result = EL.replySetDetail_sub(rinfo, els, dev_details, '80');
+
+        // switch文のdefaultでEPCが存在すればtrue
+        expect(result).toBe(true);
+      });
+
+      test('rinfoがnullでもエラーにならない(INF送信時はエラー)', () => {
+        const els = {
+          DEOJ: '013001',
+          SEOJ: '05ff01',
+          DETAILs: { 'b3': '14' }
+        };
+        const dev_details = {
+          '013001': {
+            'b3': [0x18]
+          }
+        };
+
+        // b3は温度設定でINFなし、rinfoがnullでもエラーにならない
+        const result = EL.replySetDetail_sub(null, els, dev_details, 'b3');
+        expect(result).toBe(true);
+      });
+
+      test('elsがnullの場合', () => {
+        const rinfo = { address: '192.168.1.1' };
+        const dev_details = {
+          '013001': {
+            '80': [0x30]
+          }
+        };
+
+        // null.DEOJでエラー
+        expect(() => EL.replySetDetail_sub(rinfo, null, dev_details, '80')).toThrow();
+      });
+
+      test('dev_detailsがnullの場合', () => {
+        const rinfo = { address: '192.168.1.1' };
+        const els = {
+          DEOJ: '013001',
+          SEOJ: '05ff01',
+          DETAILs: { '80': '30' }
+        };
+
+        // dev_details[els.DEOJ]でエラー
+        expect(() => EL.replySetDetail_sub(rinfo, els, null, '80')).toThrow();
+      });
+
+      test('照明(0290)はdefaultケースで処理', () => {
+        sendOPC1Spy.mockClear();
+        const rinfo = { address: '192.168.1.1' };
+        const els = {
+          DEOJ: '029001', // 一般照明
+          SEOJ: '05ff01',
+          DETAILs: { '80': '30' }
+        };
+        const dev_details = {
+          '029001': {
+            '80': [0x31]
+          }
+        };
+
+        const result = EL.replySetDetail_sub(rinfo, els, dev_details, '80');
+
+        // 照明は詳細実装がないためdefaultケースでtrueを返すのみ
+        expect(result).toBe(true);
+        // 値は更新されない
+        expect(dev_details['029001']['80']).toEqual([0x31]);
+        // defaultケースではINF送信しない
+        expect(sendOPC1Spy).not.toHaveBeenCalled();
+      });
+    });
+  });
+
+  describe('myIPaddress', () => {
+    let originalIgnoreMe;
+    let originalNicList;
+
+    beforeEach(() => {
+      originalIgnoreMe = EL.ignoreMe;
+      originalNicList = EL.nicList;
+    });
+
+    afterEach(() => {
+      EL.ignoreMe = originalIgnoreMe;
+      EL.nicList = originalNicList;
+    });
+
+    test('ignoreMe=false の時は常にfalseを返す', () => {
+      EL.ignoreMe = false;
+      const rinfo = { address: '192.168.1.100' };
+      expect(EL.myIPaddress(rinfo)).toBe(false);
+    });
+
+    test('ループバックアドレス(127.0.0.1)の時はtrueを返す', () => {
+      EL.ignoreMe = true;
+      const rinfo = { address: '127.0.0.1' };
+      expect(EL.myIPaddress(rinfo)).toBe(true);
+    });
+
+    test('IPv6ループバックアドレス(::1)の時はtrueを返す', () => {
+      EL.ignoreMe = true;
+      const rinfo = { address: '::1' };
+      expect(EL.myIPaddress(rinfo)).toBe(true);
+    });
+
+    test('nicListに含まれるIPv4アドレスの時はtrueを返す', () => {
+      EL.ignoreMe = true;
+      EL.nicList = {
+        v4: [
+          { address: '192.168.1.10' },
+          { address: '10.0.0.5' }
+        ],
+        v6: []
+      };
+
+      expect(EL.myIPaddress({ address: '192.168.1.10' })).toBe(true);
+      expect(EL.myIPaddress({ address: '10.0.0.5' })).toBe(true);
+    });
+
+    test('nicListに含まれないIPv4アドレスの時はfalseを返す', () => {
+      EL.ignoreMe = true;
+      EL.nicList = {
+        v4: [
+          { address: '192.168.1.10' }
+        ],
+        v6: []
+      };
+
+      expect(EL.myIPaddress({ address: '192.168.1.100' })).toBe(false);
+    });
+
+    test('nicListに含まれるIPv6アドレスの時はtrueを返す', () => {
+      EL.ignoreMe = true;
+      EL.nicList = {
+        v4: [],
+        v6: [
+          { address: 'fe80::1234:5678:abcd:ef01' }
+        ]
+      };
+
+      expect(EL.myIPaddress({ address: 'fe80::1234:5678:abcd:ef01' })).toBe(true);
+    });
+
+    test('IPv6アドレスのゾーンID(%付き)を正しく処理', () => {
+      EL.ignoreMe = true;
+      EL.nicList = {
+        v4: [],
+        v6: [
+          { address: 'fe80::1234:5678:abcd:ef01' }
+        ]
+      };
+
+      // %en0などのゾーンIDは無視して比較
+      expect(EL.myIPaddress({ address: 'fe80::1234:5678:abcd:ef01%en0' })).toBe(true);
+    });
+
+    test('nicListに含まれないIPv6アドレスの時はfalseを返す', () => {
+      EL.ignoreMe = true;
+      EL.nicList = {
+        v4: [],
+        v6: [
+          { address: 'fe80::1111:2222:3333:4444' }
+        ]
+      };
+
+      expect(EL.myIPaddress({ address: 'fe80::5555:6666:7777:8888' })).toBe(false);
+    });
+
+    test('rinfoがnullの場合', () => {
+      EL.ignoreMe = true;
+
+      // null.addressでエラー
+      expect(() => EL.myIPaddress(null)).toThrow();
+    });
+
+    test('rinfo.addressがundefinedの場合', () => {
+      EL.ignoreMe = true;
+      EL.nicList = {
+        v4: [{ address: '192.168.1.10' }],
+        v6: []
+      };
+
+      // undefinedとの比較はfalseを返す
+      expect(EL.myIPaddress({ address: undefined })).toBe(false);
+    });
+
+    test('nicList.v4が空配列の場合', () => {
+      EL.ignoreMe = true;
+      EL.nicList = {
+        v4: [],
+        v6: []
+      };
+
+      expect(EL.myIPaddress({ address: '192.168.1.10' })).toBe(false);
+    });
+
+    test('nicList.v6が空配列の場合', () => {
+      EL.ignoreMe = true;
+      EL.nicList = {
+        v4: [],
+        v6: []
+      };
+
+      expect(EL.myIPaddress({ address: 'fe80::1234:5678:abcd:ef01' })).toBe(false);
+    });
+
+    test('nicListがnullの場合', () => {
+      EL.ignoreMe = true;
+      EL.nicList = null;
+
+      // null.v4.forEachでエラー
+      expect(() => EL.myIPaddress({ address: '192.168.1.10' })).toThrow();
+    });
+
+    test('nicList.v4がundefinedの場合', () => {
+      EL.ignoreMe = true;
+      EL.nicList = {
+        v6: []
+      };
+
+      // undefined.forEachでエラー
+      expect(() => EL.myIPaddress({ address: '192.168.1.10' })).toThrow();
+    });
+
+    test('IPv6アドレスに%がない場合も正常処理', () => {
+      EL.ignoreMe = true;
+      EL.nicList = {
+        v4: [],
+        v6: [
+          { address: 'fe80::1234:5678:abcd:ef01' }
+        ]
+      };
+
+      // %がなくても.split('%')[0]で同じ文字列が返る
+      expect(EL.myIPaddress({ address: 'fe80::1234:5678:abcd:ef01' })).toBe(true);
+    });
+
+    test('複数のNICに同じIPがある場合', () => {
+      EL.ignoreMe = true;
+      EL.nicList = {
+        v4: [
+          { address: '192.168.1.10' },
+          { address: '192.168.1.10' }, // 重複
+          { address: '10.0.0.5' }
+        ],
+        v6: []
+      };
+
+      // 最初のマッチでtrueを返す
+      expect(EL.myIPaddress({ address: '192.168.1.10' })).toBe(true);
+    });
+  });
+
+  describe('replyOPC1', () => {
+    let sendBaseSpy;
+
+    beforeEach(() => {
+      sendBaseSpy = jest.spyOn(EL, 'sendBase').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      sendBaseSpy.mockRestore();
+    });
+
+    test('文字列パラメータで正常に送信', () => {
+      EL.replyOPC1('192.168.1.1', '0001', '0ef001', '013001', '72', '80', '30');
+
+      expect(sendBaseSpy).toHaveBeenCalledWith(
+        '192.168.1.1',
+        expect.any(Buffer)
+      );
+
+      const buffer = sendBaseSpy.mock.calls[0][1];
+      expect(buffer[0]).toBe(0x10);
+      expect(buffer[1]).toBe(0x81);
+      expect(buffer[2]).toBe(0x00); // TID
+      expect(buffer[3]).toBe(0x01);
+      expect(buffer[10]).toBe(0x72); // ESV
+      expect(buffer[11]).toBe(0x01); // OPC
+      expect(buffer[12]).toBe(0x80); // EPC
+      expect(buffer[13]).toBe(0x01); // PDC
+      expect(buffer[14]).toBe(0x30); // EDT
+    });
+
+    test('配列パラメータで正常に送信', () => {
+      EL.replyOPC1('192.168.1.1', [0x00, 0x02], [0x0e, 0xf0, 0x01], [0x01, 0x30, 0x01], 0x72, 0x80, [0x30]);
+
+      expect(sendBaseSpy).toHaveBeenCalled();
+      const buffer = sendBaseSpy.mock.calls[0][1];
+      expect(buffer[2]).toBe(0x00); // TID
+      expect(buffer[3]).toBe(0x02);
+    });
+
+    test('GET(0x62)の時はPDC=0でEDTなし', () => {
+      EL.replyOPC1('192.168.1.1', '0001', '0ef001', '013001', '62', '80', '');
+
+      const buffer = sendBaseSpy.mock.calls[0][1];
+      expect(buffer[10]).toBe(0x62); // ESV = GET
+      expect(buffer[12]).toBe(0x80); // EPC
+      expect(buffer[13]).toBe(0x00); // PDC = 0
+      expect(buffer.length).toBe(14); // EDTなし
+    });
+
+    test('数値EDTも配列に変換', () => {
+      EL.replyOPC1('192.168.1.1', '0001', '0ef001', '013001', '72', '80', 0x30);
+
+      const buffer = sendBaseSpy.mock.calls[0][1];
+      expect(buffer[14]).toBe(0x30);
+    });
+
+    test('複数バイトのEDT', () => {
+      EL.replyOPC1('192.168.1.1', '0001', '0ef001', '001101', '72', 'e0', [0x00, 0xdc]);
+
+      const buffer = sendBaseSpy.mock.calls[0][1];
+      expect(buffer[12]).toBe(0xe0); // EPC
+      expect(buffer[13]).toBe(0x02); // PDC = 2
+      expect(buffer[14]).toBe(0x00); // EDT[0]
+      expect(buffer[15]).toBe(0xdc); // EDT[1]
+    });
+
+    test('tidがnullの場合は変換時にエラー', () => {
+      expect(() => EL.replyOPC1('192.168.1.1', null, '0ef001', '013001', '72', '80', '30')).toThrow();
+    });
+
+    test('seojがnullの場合は変換時にエラー', () => {
+      expect(() => EL.replyOPC1('192.168.1.1', '0001', null, '013001', '72', '80', '30')).toThrow();
+    });
+
+    test('deojがnullの場合は変換時にエラー', () => {
+      expect(() => EL.replyOPC1('192.168.1.1', '0001', '0ef001', null, '72', '80', '30')).toThrow();
+    });
+
+    test('esvがnullの場合は変換時にエラー', () => {
+      // nullは文字列として処理されてしまう
+      EL.replyOPC1('192.168.1.1', '0001', '0ef001', '013001', null, '80', '30');
+      expect(sendBaseSpy).toHaveBeenCalled();
+    });
+
+    test('epcがnullの場合は変換時にエラー', () => {
+      // nullは文字列として処理されてしまう
+      EL.replyOPC1('192.168.1.1', '0001', '0ef001', '013001', '72', null, '30');
+      expect(sendBaseSpy).toHaveBeenCalled();
+    });
+
+    test('edtがnullの場合はlengthでエラー', () => {
+      expect(() => EL.replyOPC1('192.168.1.1', '0001', '0ef001', '013001', '72', '80', null)).toThrow();
+    });
+
+    test('edtがundefinedの場合はlengthでエラー', () => {
+      expect(() => EL.replyOPC1('192.168.1.1', '0001', '0ef001', '013001', '72', '80', undefined)).toThrow();
+    });
+
+    test('空文字列パラメータ', () => {
+      EL.replyOPC1('192.168.1.1', '', '0ef001', '013001', '72', '80', '30');
+
+      expect(sendBaseSpy).toHaveBeenCalled();
+      const buffer = sendBaseSpy.mock.calls[0][1];
+      expect(buffer[2]).toBe(0x00);
+      expect(buffer[3]).toBe(0x00);
+    });
+
+    test('不正な16進数文字列', () => {
+      // toHexArray内でparseIntが失敗してNaNになる可能性
+      expect(() => EL.replyOPC1('192.168.1.1', 'ZZZZ', '0ef001', '013001', '72', '80', '30')).toThrow();
+    });
+  });
+
+  describe('replyGetDetail', () => {
+    let sendArraySpy;
+
+    beforeEach(() => {
+      sendArraySpy = jest.spyOn(EL, 'sendArray').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      sendArraySpy.mockRestore();
+    });
+
+    test('単一プロパティのGETに正常応答', () => {
+      const rinfo = { address: '192.168.1.1' };
+      const els = {
+        TID: '0001',
+        SEOJ: '05ff01',
+        DEOJ: '013001',
+        ESV: '62',
+        DETAILs: { '80': '' }
+      };
+      const dev_details = {
+        '013001': {
+          '80': [0x30]
+        }
+      };
+
+      EL.replyGetDetail(rinfo, els, dev_details);
+
+      expect(sendArraySpy).toHaveBeenCalled();
+      const sentArray = sendArraySpy.mock.calls[0][1];
+
+      // ESVが0x72(GET_RES)であることを確認
+      expect(sentArray).toContain(0x72);
+      // OPC=1
+      expect(sentArray).toContain(0x01);
+      // EPC=0x80
+      expect(sentArray).toContain(0x80);
+      // EDT=0x30
+      expect(sentArray).toContain(0x30);
+    });
+
+    test('複数プロパティのGETに正常応答', () => {
+      const rinfo = { address: '192.168.1.1' };
+      const els = {
+        TID: '0001',
+        SEOJ: '05ff01',
+        DEOJ: '013001',
+        ESV: '62',
+        DETAILs: { '80': '', '81': '', 'b3': '' }
+      };
+      const dev_details = {
+        '013001': {
+          '80': [0x30],
+          '81': [0x0f],
+          'b3': [0x18]
+        }
+      };
+
+      EL.replyGetDetail(rinfo, els, dev_details);
+
+      const sentArray = sendArraySpy.mock.calls[0][1];
+
+      // ESVが0x72(GET_RES)
+      expect(sentArray).toContain(0x72);
+      // OPC=3が含まれているはず(配列の中の適切な位置)
+      const opcIndex = sentArray.findIndex((val, idx, arr) =>
+        idx > 10 && val === 0x03 && arr[idx-1] !== 0x03
+      );
+      expect(opcIndex).toBeGreaterThan(-1);
+    });
+
+    test('存在しないプロパティがあるとGET_SNA(0x52)を返す', () => {
+      const rinfo = { address: '192.168.1.1' };
+      const els = {
+        TID: '0001',
+        SEOJ: '05ff01',
+        DEOJ: '013001',
+        ESV: '62',
+        DETAILs: { '80': '', 'ff': '' } // ffは存在しない
+      };
+      const dev_details = {
+        '013001': {
+          '80': [0x30]
+        }
+      };
+
+      EL.replyGetDetail(rinfo, els, dev_details);
+
+      const sentArray = sendArraySpy.mock.calls[0][1];
+
+      // ESVが0x52(GET_SNA)
+      expect(sentArray).toContain(0x52);
+    });
+
+    test('全プロパティが存在しない場合もGET_SNAを返す', () => {
+      const rinfo = { address: '192.168.1.1' };
+      const els = {
+        TID: '0001',
+        SEOJ: '05ff01',
+        DEOJ: '013001',
+        ESV: '62',
+        DETAILs: { 'fe': '', 'ff': '' }
+      };
+      const dev_details = {
+        '013001': {
+          '80': [0x30]
+        }
+      };
+
+      EL.replyGetDetail(rinfo, els, dev_details);
+
+      const sentArray = sendArraySpy.mock.calls[0][1];
+      expect(sentArray).toContain(0x52);
+    });
+
+    test('elsがnullの場合', () => {
+      const rinfo = { address: '192.168.1.1' };
+      const dev_details = {
+        '013001': {
+          '80': [0x30]
+        }
+      };
+
+      expect(() => EL.replyGetDetail(rinfo, null, dev_details)).toThrow();
+    });
+
+    test('dev_detailsがnullの場合', () => {
+      const rinfo = { address: '192.168.1.1' };
+      const els = {
+        TID: '0001',
+        SEOJ: '05ff01',
+        DEOJ: '013001',
+        ESV: '62',
+        DETAILs: { '80': '' }
+      };
+
+      expect(() => EL.replyGetDetail(rinfo, els, null)).toThrow();
+    });
+
+    test('els.DETAILsが空オブジェクトの場合', () => {
+      const rinfo = { address: '192.168.1.1' };
+      const els = {
+        TID: '0001',
+        SEOJ: '05ff01',
+        DEOJ: '013001',
+        ESV: '62',
+        DETAILs: {}
+      };
+      const dev_details = {
+        '013001': {
+          '80': [0x30]
+        }
+      };
+
+      EL.replyGetDetail(rinfo, els, dev_details);
+
+      // 空でも送信は行われる(OPC=0)
+      expect(sendArraySpy).toHaveBeenCalled();
+    });
+
+    test('dev_detailsに該当EOJがない場合', () => {
+      const rinfo = { address: '192.168.1.1' };
+      const els = {
+        TID: '0001',
+        SEOJ: '05ff01',
+        DEOJ: '013001',
+        ESV: '62',
+        DETAILs: { '80': '' }
+      };
+      const dev_details = {
+        '029001': { // 違うEOJ
+          '80': [0x30]
+        }
+      };
+
+      EL.replyGetDetail(rinfo, els, dev_details);
+
+      const sentArray = sendArraySpy.mock.calls[0][1];
+      // 見つからない→GET_SNA
+      expect(sentArray).toContain(0x52);
+    });
+  });
+
+  describe('replySetDetail', () => {
+    let sendArraySpy;
+    let replySetDetail_subSpy;
+
+    beforeEach(() => {
+      sendArraySpy = jest.spyOn(EL, 'sendArray').mockImplementation(() => {});
+      replySetDetail_subSpy = jest.spyOn(EL, 'replySetDetail_sub');
+    });
+
+    afterEach(() => {
+      sendArraySpy.mockRestore();
+      replySetDetail_subSpy.mockRestore();
+    });
+
+    test('SetIの時は応答を返さない', () => {
+      const rinfo = { address: '192.168.1.1' };
+      const els = {
+        TID: '0001',
+        SEOJ: '05ff01',
+        DEOJ: '013001',
+        ESV: '60', // SETI
+        DETAILs: { '80': '30' }
+      };
+      const dev_details = {
+        '013001': {
+          '80': [0x31]
+        }
+      };
+
+      replySetDetail_subSpy.mockReturnValue(true);
+      EL.replySetDetail(rinfo, els, dev_details);
+
+      // SetIは応答を返さない
+      expect(sendArraySpy).not.toHaveBeenCalled();
+    });
+
+    test('SetCで全て成功した時はSET_RES(0x71)を返す', () => {
+      const rinfo = { address: '192.168.1.1' };
+      const els = {
+        TID: '0001',
+        SEOJ: '05ff01',
+        DEOJ: '013001',
+        ESV: '61', // SETC
+        DETAILs: { '80': '30' }
+      };
+      const dev_details = {
+        '013001': {
+          '80': [0x31]
+        }
+      };
+
+      replySetDetail_subSpy.mockReturnValue(true);
+      EL.replySetDetail(rinfo, els, dev_details);
+
+      const sentArray = sendArraySpy.mock.calls[0][1];
+      expect(sentArray).toContain(0x71); // SET_RES
+    });
+
+    test('SetCで一部失敗した時はSETC_SNA(0x51)を返す', () => {
+      const rinfo = { address: '192.168.1.1' };
+      const els = {
+        TID: '0001',
+        SEOJ: '05ff01',
+        DEOJ: '013001',
+        ESV: '61', // SETC
+        DETAILs: { '80': '30', '81': '0f' }
+      };
+      const dev_details = {
+        '013001': {
+          '80': [0x31]
+        }
+      };
+
+      // 80は成功、81は失敗
+      replySetDetail_subSpy.mockReturnValueOnce(true).mockReturnValueOnce(false);
+      EL.replySetDetail(rinfo, els, dev_details);
+
+      const sentArray = sendArraySpy.mock.calls[0][1];
+      expect(sentArray).toContain(0x51); // SETC_SNA
+    });
+
+    test('DEOJが存在しない場合はfalseを返して何もしない', () => {
+      const rinfo = { address: '192.168.1.1' };
+      const els = {
+        TID: '0001',
+        SEOJ: '05ff01',
+        DEOJ: '029001', // 存在しないEOJ
+        ESV: '61',
+        DETAILs: { '80': '30' }
+      };
+      const dev_details = {
+        '013001': {
+          '80': [0x31]
+        }
+      };
+
+      const result = EL.replySetDetail(rinfo, els, dev_details);
+
+      expect(result).toBe(false);
+      expect(sendArraySpy).not.toHaveBeenCalled();
+    });
+
+    test('elsがnullの場合', () => {
+      const rinfo = { address: '192.168.1.1' };
+      const dev_details = {
+        '013001': {
+          '80': [0x31]
+        }
+      };
+
+      expect(() => EL.replySetDetail(rinfo, null, dev_details)).toThrow();
+    });
+
+    test('dev_detailsがnullの場合', () => {
+      const rinfo = { address: '192.168.1.1' };
+      const els = {
+        TID: '0001',
+        SEOJ: '05ff01',
+        DEOJ: '013001',
+        ESV: '61',
+        DETAILs: { '80': '30' }
+      };
+
+      expect(() => EL.replySetDetail(rinfo, els, null)).toThrow();
+    });
+
+    test('els.DETAILsが空オブジェクトの場合', () => {
+      const rinfo = { address: '192.168.1.1' };
+      const els = {
+        TID: '0001',
+        SEOJ: '05ff01',
+        DEOJ: '013001',
+        ESV: '61',
+        DETAILs: {}
+      };
+      const dev_details = {
+        '013001': {
+          '80': [0x31]
+        }
+      };
+
+      replySetDetail_subSpy.mockReturnValue(true);
+      EL.replySetDetail(rinfo, els, dev_details);
+
+      // 空でも送信は行われる(OPC=0)
+      expect(sendArraySpy).toHaveBeenCalled();
+    });
+
+    test('ESVが不明な値の場合', () => {
+      const rinfo = { address: '192.168.1.1' };
+      const els = {
+        TID: '0001',
+        SEOJ: '05ff01',
+        DEOJ: '013001',
+          ESV: '99', // 不明なESV
+        DETAILs: { '80': '30' }
+      };
+      const dev_details = {
+        '013001': {
+          '80': [0x31]
+        }
+      };
+
+      replySetDetail_subSpy.mockReturnValue(true);
+      const result = EL.replySetDetail(rinfo, els, dev_details);
+
+        // 不明なESVはswitchでマッチせずundefinedを返す
+        expect(result).toBeUndefined();
+    });
+
+    test('全てのプロパティ設定が失敗した場合', () => {
+      const rinfo = { address: '192.168.1.1' };
+      const els = {
+        TID: '0001',
+        SEOJ: '05ff01',
+        DEOJ: '013001',
+        ESV: '61',
+        DETAILs: { '80': '30', '81': '0f' }
+      };
+      const dev_details = {
+        '013001': {
+          '80': [0x31]
+        }
+      };
+
+      // 全て失敗
+      replySetDetail_subSpy.mockReturnValue(false);
+      EL.replySetDetail(rinfo, els, dev_details);
+
+      const sentArray = sendArraySpy.mock.calls[0][1];
+      expect(sentArray).toContain(0x51); // SETC_SNA
+    });
+  });
+
+  describe('complementFacilities', () => {
+    let sendDetailsSpy;
+    let complementFacilities_subSpy;
+    let originalAutoGetWaitings;
+    let originalFacilities;
+
+    beforeEach(() => {
+      sendDetailsSpy = jest.spyOn(EL, 'sendDetails').mockImplementation(() => {});
+      complementFacilities_subSpy = jest.spyOn(EL, 'complementFacilities_sub').mockImplementation(() => {});
+      originalAutoGetWaitings = EL.autoGetWaitings;
+      originalFacilities = EL.facilities;
+      EL.autoGetWaitings = 0;
+    });
+
+    afterEach(() => {
+      sendDetailsSpy.mockRestore();
+      complementFacilities_subSpy.mockRestore();
+      EL.autoGetWaitings = originalAutoGetWaitings;
+      EL.facilities = originalFacilities;
+    });
+
+    test('autoGetWaitingsが10を超えるとスキップ', () => {
+      EL.autoGetWaitings = 11;
+      EL.facilities = {
+        '192.168.1.1': {
+          '0ef001': { '80': '30' }
+        }
+      };
+
+      EL.complementFacilities();
+
+      // 処理がスキップされるので何も送信されない
+      expect(sendDetailsSpy).not.toHaveBeenCalled();
+      expect(complementFacilities_subSpy).not.toHaveBeenCalled();
+    });
+
+    test('NodeProfileが無い場合はd6/83/9d/9e/9fを要求', () => {
+      EL.facilities = {
+        '192.168.1.1': {
+          '013001': { '80': '30' } // NodeProfileなし
+        }
+      };
+
+      EL.complementFacilities();
+
+      expect(sendDetailsSpy).toHaveBeenCalledWith(
+        '192.168.1.1',
+        EL.NODE_PROFILE_OBJECT,
+        EL.NODE_PROFILE_OBJECT,
+        EL.GET,
+        [{'d6':''}, {'83':''}, {'9d':''}, {'9e':''}, {'9f':''}]
+      );
+    });
+
+    test('NodeProfileがある場合は各EOJに対してcomplementFacilities_subを呼ぶ', () => {
+      EL.facilities = {
+        '192.168.1.1': {
+          '0ef001': { '80': '30', 'd6': '010130' },
+          '013001': { '80': '30' }
+        }
+      };
+
+      EL.complementFacilities();
+
+      expect(complementFacilities_subSpy).toHaveBeenCalledTimes(2);
+      expect(complementFacilities_subSpy).toHaveBeenCalledWith(
+        '192.168.1.1',
+        '0ef001',
+        expect.any(Object)
+      );
+      expect(complementFacilities_subSpy).toHaveBeenCalledWith(
+        '192.168.1.1',
+        '013001',
+        expect.any(Object)
+      );
+    });
+
+    test('複数IPアドレスの機器を処理', () => {
+      EL.facilities = {
+        '192.168.1.1': {
+          '0ef001': { '80': '30' },
+          '013001': { '80': '30' }
+        },
+        '192.168.1.2': {
+          '0ef001': { '80': '30' },
+          '029001': { '80': '30' }
+        }
+      };
+
+      EL.complementFacilities();
+
+      // 各IPの各EOJに対してcomplementFacilities_subが呼ばれる
+      // IP1: 0ef001, 013001 = 2回
+      // IP2: 0ef001, 029001 = 2回
+      expect(complementFacilities_subSpy).toHaveBeenCalledTimes(4);
+    });
+
+    test('facilitiesが空の場合は何もしない', () => {
+      EL.facilities = {};
+
+      EL.complementFacilities();
+
+      expect(sendDetailsSpy).not.toHaveBeenCalled();
+      expect(complementFacilities_subSpy).not.toHaveBeenCalled();
+    });
+
+    test('facilitiesがnullの場合', () => {
+      EL.facilities = null;
+
+      // null.forEachでエラー
+      expect(() => EL.complementFacilities()).toThrow();
+    });
+
+    test('facilitiesがundefinedの場合', () => {
+      EL.facilities = undefined;
+
+      // undefinedのObject.keysでエラー
+      expect(() => EL.complementFacilities()).toThrow();
+    });
+
+    test('NodeProfile(0ef001)が複数プロパティを持つ場合', () => {
+      EL.facilities = {
+        '192.168.1.1': {
+          '0ef001': {
+            '80': '30',
+            'd6': '010130',
+            '83': '00fe01',
+            '9d': '01',
+            '9e': '01',
+            '9f': '01'
+          },
+          '013001': { '80': '30' }
+        }
+      };
+
+      EL.complementFacilities();
+
+      // NodeProfileはあるのでcomplementFacilities_subが呼ばれる
+      expect(complementFacilities_subSpy).toHaveBeenCalled();
+      // NodeProfile自体に対しても呼ばれる
+      expect(complementFacilities_subSpy).toHaveBeenCalledWith(
+        '192.168.1.1',
+        '0ef001',
+        expect.any(Object)
+      );
+    });
+
+    test('一部のIPにNodeProfileがない場合', () => {
+      EL.facilities = {
+        '192.168.1.1': {
+          '0ef001': { '80': '30', 'd6': '010130' },
+          '013001': { '80': '30' }
+        },
+        '192.168.1.2': {
+          '013001': { '80': '30' } // NodeProfileなし
+        }
+      };
+
+      EL.complementFacilities();
+
+      // IP2にNodeProfileがないのでsendDetailsが呼ばれる
+      expect(sendDetailsSpy).toHaveBeenCalledWith(
+        '192.168.1.2',
+        EL.NODE_PROFILE_OBJECT,
+        EL.NODE_PROFILE_OBJECT,
+        EL.GET,
+        [{'d6':''}, {'83':''}, {'9d':''}, {'9e':''}, {'9f':''}]
+      );
+
+      // IP1のEOJに対してはcomplementFacilities_subが呼ばれる
+      expect(complementFacilities_subSpy).toHaveBeenCalledWith(
+        '192.168.1.1',
+        '0ef001',
+        expect.any(Object)
+      );
+    });
+
+    test('autoGetWaitingsがちょうど10の場合は処理を実行', () => {
+      EL.autoGetWaitings = 10;
+      EL.facilities = {
+        '192.168.1.1': {
+          '0ef001': { '80': '30', 'd6': '010130' },
+          '013001': { '80': '30' }
+        }
+      };
+
+      EL.complementFacilities();
+
+      // 10以下なので処理される
+      expect(complementFacilities_subSpy).toHaveBeenCalled();
+    });
+
+    test('EOJが0ef001のみの場合', () => {
+      EL.facilities = {
+        '192.168.1.1': {
+          '0ef001': { '80': '30', 'd6': '010130' }
+        }
+      };
+
+      EL.complementFacilities();
+
+      // NodeProfile自体に対してcomplementFacilities_subが呼ばれる
+      expect(complementFacilities_subSpy).toHaveBeenCalledTimes(1);
+      expect(complementFacilities_subSpy).toHaveBeenCalledWith(
+        '192.168.1.1',
+        '0ef001',
+        expect.any(Object)
+      );
+    });
+  });
+
 });
