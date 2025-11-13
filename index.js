@@ -57,8 +57,8 @@ const crypto = require('crypto'); // 安定ID生成用
  * @property {string} Multi6 互換エイリアス
  * @property {string[]|null} EL_obj 初期化時に与えたEOJリスト
  * @property {string[]|null} EL_cls 上記から派生したクラスリスト
- * @property {import('dgram').Socket|null} sock4 IPv4ソケット
- * @property {import('dgram').Socket|null} sock6 IPv6ソケット
+ * @property {Object|null} sock4 IPv4ソケット(dgram.Socket)
+ * @property {Object|null} sock6 IPv6ソケット(dgram.Socket)
  * @property {string} NODE_PROFILE ノードプロファイルクラス(0ef0)
  * @property {string} NODE_PROFILE_OBJECT ノードプロファイルEOJ(送信用:0ef001 等)
  * @property {Object<string, number[]>} Node_details ノードプロファイルのEPC既定値
