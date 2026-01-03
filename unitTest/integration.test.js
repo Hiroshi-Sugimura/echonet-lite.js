@@ -21,7 +21,8 @@ describe('EL - 実ネットワーク通信テスト (MoekadenRoom対応)', () =>
   let receivedMessages = [];
   let detectedDevices = [];
   const TIMEOUT = 10000; // 10秒タイムアウト
-  const SEARCH_TIMEOUT = 10000; // Search応答待機時間（延長）
+  const SEARCH_TIMEOUT = 10000; // Search応答待機時間
+  const IPV6_TIMEOUT = 15000; // IPv6はまだ開発中のため、タイムアウト時間を延長
 
   beforeAll(() => {
     consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
@@ -46,10 +47,15 @@ describe('EL - 実ネットワーク通信テスト (MoekadenRoom対応)', () =>
   const discoverMoekadenRoom = (ipVersion = 4) => {
     return new Promise((resolve, reject) => {
       const foundDevices = [];
+      const timeoutMs = ipVersion === 6 ? IPV6_TIMEOUT : SEARCH_TIMEOUT;
       const searchTimeout = setTimeout(() => {
         EL.release();
-        reject(new Error('MoekadenRoom: Search応答タイムアウト'));
-      }, SEARCH_TIMEOUT);
+        const protocolName = ipVersion === 6 ? 'IPv6' : 'IPv4';
+        const errorMsg = ipVersion === 6
+          ? `MoekadenRoom: ${protocolName} Search応答タイムアウト。MoekadenRoomのIPv6マルチキャスト対応を確認してください。`
+          : `MoekadenRoom: ${protocolName} Search応答タイムアウト`;
+        reject(new Error(errorMsg));
+      }, timeoutMs);
 
       const discoveryFunc = (rinfo, els, error) => {
         if (error) return;
@@ -147,8 +153,8 @@ describe('EL - 実ネットワーク通信テスト (MoekadenRoom対応)', () =>
         const objList = ['013001'];
         const testTimeout = setTimeout(() => {
           EL.release();
-          done(new Error('タイムアウト: IPv6でデータを受信できませんでした'));
-        }, TIMEOUT);
+          done(new Error('IPv6テストタイムアウト: MoekadenRoomがIPv6マルチキャストに応答していない可能性があります。MoekadenRoomのIPv6設定を確認してください。'));
+        }, IPV6_TIMEOUT);
 
         const userfunc = (rinfo, els, error) => {
           if (error) return;
@@ -174,7 +180,7 @@ describe('EL - 実ネットワーク通信テスト (MoekadenRoom対応)', () =>
       .catch((error) => {
         done(error);
       });
-  });
+  }, IPV6_TIMEOUT + 5000); // Jest timeout設定
 
   test('IPv4 & IPv6両方: MoekadenRoomからの双方向受信', (done) => {
     Promise.all([
@@ -223,5 +229,5 @@ describe('EL - 実ネットワーク通信テスト (MoekadenRoom対応)', () =>
       .catch((error) => {
         done(error);
       });
-  });
+  }, IPV6_TIMEOUT * 2 + 5000); // Jest timeout設定（両方のProtocolが必要）
 });
