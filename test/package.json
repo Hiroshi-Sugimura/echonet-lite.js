@@ -1,7 +1,7 @@
 {
-  "name": "echonet-lite-unittest",
+  "name": "echonet-lite-test",
   "version": "1.0.0",
-  "description": "Unit tests for echonet-lite.js",
+  "description": "Tests for echonet-lite.js",
   "scripts": {
     "test": "jest",
     "test:watch": "jest --watch",

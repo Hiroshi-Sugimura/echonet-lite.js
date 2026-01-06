@@ -4,9 +4,9 @@
   "description": "This module provides ECHONET Lite protocol API.",
   "main": "index.js",
   "scripts": {
-    "test": "npm --prefix ./unitTest test",
-    "test:install": "npm --prefix ./unitTest install",
-    "test:coverage": "npm --prefix ./unitTest run test:coverage"
+    "test": "npm --prefix ./test test",
+    "test:install": "npm --prefix ./test install",
+    "test:coverage": "npm --prefix ./test run test:coverage"
   },
   "repository": {
     "type": "git",

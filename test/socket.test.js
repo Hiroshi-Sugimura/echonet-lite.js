@@ -18,7 +18,7 @@ describe('EL - ソケット処理', () => {
     // フェイクタイマーを使用してsetTimeoutを制御
     jest.useFakeTimers();
     // console.errorをモック化
-    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => { });
   });
 
   afterAll(() => {
@@ -172,6 +172,8 @@ describe('EL - ソケット処理', () => {
       const mockSocket = {
         on: jest.fn(),
         send: jest.fn((buffer, offset, length, port, address, callback) => {
+          // 送信先アドレスにスコープIDが正しく付与されているか確認
+          expect(address).toContain('%en0');
           // 送信成功
           if (callback) callback(null, buffer.length);
         }),
@@ -180,13 +182,33 @@ describe('EL - ソケット処理', () => {
 
       dgram.createSocket = jest.fn(() => mockSocket);
 
-      // initializeは不要 - sendBaseは単独で動作する
+      // interfaceを指定しておく
+      EL.usingIF.v6 = 'en0';
+
       const buffer = Buffer.from([0x10, 0x81, 0x00, 0x01, 0x05, 0xff, 0x01, 0x0e, 0xf0, 0x01, 0x62, 0x01, 0x80, 0x00]);
 
-      const tid = EL.sendBase('fe80::1%en0', buffer);
+      const tid = EL.sendBase('fe80::1', buffer);
 
       expect(tid).toBeDefined();
       expect(Array.isArray(tid)).toBe(true);
+    });
+
+    test('既にスコープIDが含まれるIPv6アドレスに二重付与しない', () => {
+      const mockSocket = {
+        on: jest.fn(),
+        send: jest.fn((buffer, offset, length, port, address, callback) => {
+          // 二重付与（fe80::1%en0%en0）されていないこと
+          expect(address).toBe('fe80::1%en0');
+          if (callback) callback(null, buffer.length);
+        }),
+        close: jest.fn()
+      };
+
+      dgram.createSocket = jest.fn(() => mockSocket);
+      EL.usingIF.v6 = 'en0';
+
+      const buffer = Buffer.from([0x10, 0x81, 0x00, 0x01, 0x05, 0xff, 0x01, 0x0e, 0xf0, 0x01, 0x62, 0x01, 0x80, 0x00]);
+      EL.sendBase('fe80::1%en0', buffer);
     });
 
     test('IPv6送信時にソケットエラーが発生してもクラッシュしない', () => {

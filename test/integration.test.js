@@ -1,20 +1,19 @@
 /**
  * ECHONET Lite 結合テスト - 実ネットワーク版
- * MoekadenRoomとの連携テスト
+ * 実デバイスまたはシミュレータとの連携テスト
  * IPv4のみ、IPv6のみ、IPv4 & IPv6両方の3パターンをテスト
  */
 
 const EL = require('../index.js');
 
 /**
- * 実ネットワーク通信テスト（MoekadenRoomとの連携）
- * このテストを実行するにはMoekadenRoomがローカルで起動している必要があります
- * https://github.com/SonyCSL/MoekadenRoom
+ * 実ネットワーク通信テスト
+ * このテストを実行するには、ECHONET Liteデバイス（またはシミュレータ）がローカルネットワークで起動している必要があります。
  *
- * ECHONET Lite Search要求を送信してMoekadenRoomを自動発見します
+ * ECHONET Lite Search要求を送信してデバイスを自動発見します。
  * 実行: npm test -- integration.test.js
  */
-describe('EL - 実ネットワーク通信テスト (MoekadenRoom対応)', () => {
+describe('EL - 実ネットワーク通信テスト', () => {
 
   let consoleErrorSpy;
   let consoleLogSpy;
@@ -22,10 +21,10 @@ describe('EL - 実ネットワーク通信テスト (MoekadenRoom対応)', () =>
   let detectedDevices = [];
   const TIMEOUT = 10000; // 10秒タイムアウト
   const SEARCH_TIMEOUT = 10000; // Search応答待機時間
-  const IPV6_TIMEOUT = 15000; // IPv6はまだ開発中のため、タイムアウト時間を延長
+  const IPV6_TIMEOUT = 15000; // IPv6は開発環境により時間がかかる場合があるため延長
 
   beforeAll(() => {
-    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => { });
   });
 
   afterAll(() => {
@@ -41,10 +40,10 @@ describe('EL - 実ネットワーク通信テスト (MoekadenRoom対応)', () =>
   });
 
   /**
-   * MoekadenRoomを自動発見
+   * デバイスを自動発見
    * ECHONET Lite Search要求を送信して、応答デバイスを検出
    */
-  const discoverMoekadenRoom = (ipVersion = 4) => {
+  const discoverDevice = (ipVersion = 4) => {
     return new Promise((resolve, reject) => {
       const foundDevices = [];
       const timeoutMs = ipVersion === 6 ? IPV6_TIMEOUT : SEARCH_TIMEOUT;
@@ -52,8 +51,8 @@ describe('EL - 実ネットワーク通信テスト (MoekadenRoom対応)', () =>
         EL.release();
         const protocolName = ipVersion === 6 ? 'IPv6' : 'IPv4';
         const errorMsg = ipVersion === 6
-          ? `MoekadenRoom: ${protocolName} Search応答タイムアウト。MoekadenRoomのIPv6マルチキャスト対応を確認してください。`
-          : `MoekadenRoom: ${protocolName} Search応答タイムアウト`;
+          ? `${protocolName} Search応答タイムアウト。ネットワークのIPv6マルチキャスト対応を確認してください。`
+          : `${protocolName} Search応答タイムアウト`;
         reject(new Error(errorMsg));
       }, timeoutMs);
 
@@ -97,8 +96,8 @@ describe('EL - 実ネットワーク通信テスト (MoekadenRoom対応)', () =>
     });
   };
 
-  test('IPv4: MoekadenRoomのSearch自動発見', (done) => {
-    discoverMoekadenRoom(4)
+  test('IPv4: デバイスのSearch自動発見', (done) => {
+    discoverDevice(4)
       .then((devices) => {
         expect(devices.length).toBeGreaterThan(0);
         expect(devices[0]).toBeDefined();
@@ -109,14 +108,14 @@ describe('EL - 実ネットワーク通信テスト (MoekadenRoom対応)', () =>
       });
   });
 
-  test('IPv4のみ: MoekadenRoomからのマルチキャスト受信', (done) => {
-    discoverMoekadenRoom(4)
+  test('IPv4のみ: マルチキャスト受信テスト', (done) => {
+    discoverDevice(4)
       .then((devices) => {
         // Search応答があったので、データ受信テストを実行
-        const objList = ['013001']; // エアコンディショナー
+        const objList = ['0ef001']; // ノードプロファイルで待機
         const testTimeout = setTimeout(() => {
           EL.release();
-          done(new Error('タイムアウト: MoekadenRoomからデータを受信できませんでした'));
+          done(new Error('タイムアウト: デバイスからデータを受信できませんでした'));
         }, TIMEOUT);
 
         const userfunc = (rinfo, els, error) => {
@@ -147,13 +146,13 @@ describe('EL - 実ネットワーク通信テスト (MoekadenRoom対応)', () =>
       });
   });
 
-  test('IPv6のみ: MoekadenRoomからのマルチキャスト受信', (done) => {
-    discoverMoekadenRoom(6)
+  test('IPv6のみ: マルチキャスト受信テスト', (done) => {
+    discoverDevice(6)
       .then((devices) => {
-        const objList = ['013001'];
+        const objList = ['0ef001'];
         const testTimeout = setTimeout(() => {
           EL.release();
-          done(new Error('IPv6テストタイムアウト: MoekadenRoomがIPv6マルチキャストに応答していない可能性があります。MoekadenRoomのIPv6設定を確認してください。'));
+          done(new Error('IPv6テストタイムアウト: デバイスがIPv6マルチキャストに応答していない可能性があります。'));
         }, IPV6_TIMEOUT);
 
         const userfunc = (rinfo, els, error) => {
@@ -182,13 +181,13 @@ describe('EL - 実ネットワーク通信テスト (MoekadenRoom対応)', () =>
       });
   }, IPV6_TIMEOUT + 5000); // Jest timeout設定
 
-  test('IPv4 & IPv6両方: MoekadenRoomからの双方向受信', (done) => {
+  test('IPv4 & IPv6両方: 双方向受信テスト', (done) => {
     Promise.all([
-      discoverMoekadenRoom(4),
-      discoverMoekadenRoom(6)
+      discoverDevice(4),
+      discoverDevice(6)
     ])
       .then((results) => {
-        const objList = ['013001'];
+        const objList = ['0ef001'];
         const receivedCount = { v4: 0, v6: 0 };
         const testTimeout = setTimeout(() => {
           EL.release();
@@ -229,5 +228,5 @@ describe('EL - 実ネットワーク通信テスト (MoekadenRoom対応)', () =>
       .catch((error) => {
         done(error);
       });
-  }, IPV6_TIMEOUT * 2 + 5000); // Jest timeout設定（両方のProtocolが必要）
+  }, IPV6_TIMEOUT * 2 + 5000); // Jest timeout設定
 });
