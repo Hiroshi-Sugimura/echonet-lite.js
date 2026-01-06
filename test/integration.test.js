@@ -76,8 +76,7 @@ describe('EL - 実ネットワーク通信テスト', () => {
       try {
         // ノードプロファイル（0ef001）でSearch
         EL.initialize(['0ef001'], discoveryFunc, ipVersion, {
-          debugMode: false,
-          ignoreMe: false
+          debugMode: false
         });
 
         // Search要求を送信
@@ -132,8 +131,7 @@ describe('EL - 実ネットワーク通信テスト', () => {
 
           try {
             EL.initialize(objList, userfunc, 4, {
-              debugMode: false,
-              ignoreMe: false
+              debugMode: false
             });
           } catch (error) {
             clearTimeout(testTimeout);
@@ -171,8 +169,7 @@ describe('EL - 実ネットワーク通信テスト', () => {
 
           try {
             EL.initialize(objList, userfunc, 6, {
-              debugMode: false,
-              ignoreMe: false
+              debugMode: false
             });
           } catch (error) {
             clearTimeout(testTimeout);
@@ -230,8 +227,8 @@ describe('EL - 実ネットワーク通信テスト', () => {
 
           try {
             EL.initialize(objList, userfunc, 0, {
-              debugMode: false,
-              ignoreMe: false // 自身のパケットもカウントして、V4/V6デバイスが不在でもソケット動作を検証できるようにする
+              debugMode: false
+              // ignoreMe: false // 自身のパケットもカウントして、V4/V6デバイスが不在でもソケット動作を検証できるようにする
             });
             // 明示的にSearchを実行して応答を促す（bind/addMembership完了待ちを含む）
             setTimeout(() => {
