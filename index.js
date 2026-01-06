@@ -330,7 +330,9 @@ EL.initialize = function (objList, userfunc, ipVer = 4, Options = { v4: '', v6: 
 					const names = [...new Set(EL.nicList.v6.map(n => n.name))];
 					names.forEach(name => {
 						if (name.startsWith('awdl') || name.startsWith('utun') || name.startsWith('llw') || name.startsWith('lo')) return;
-						const ifSpec = (process.platform === 'win32' ? name : '::%' + name);
+						const ifSpec = (process.platform === 'win32')
+							? EL.nicList.v6.find(n => n.name === name)?.address || name
+							: '::%' + name;
 						try {
 							s6.addMembership(EL.EL_Multi6, ifSpec);
 							if (EL.debugMode) console.log('EL.initialize s6 joined multicast on:', name);
@@ -1124,7 +1126,10 @@ EL.sendBase = function (ip, buffer) {
 
 						// 送信前にマルチキャストインターフェースを設定
 						try {
-							client.setMulticastInterface('::%' + name);
+							const ifSpec = (process.platform === 'win32')
+								? EL.nicList.v6.find(n => n.name === name)?.address || name
+								: '::%' + name;
+							client.setMulticastInterface(ifSpec);
 						} catch (e) {
 							// 設定できない場合はそのまま続行
 						}
@@ -1159,7 +1164,10 @@ EL.sendBase = function (ip, buffer) {
 					// 送信前にマルチキャストインターフェースの設定を試みる
 					if (isMulticast && EL.usingIF.v6 !== '') {
 						try {
-							client.setMulticastInterface('::%' + EL.usingIF.v6);
+							const ifSpec = (process.platform === 'win32')
+								? EL.nicList.v6.find(n => n.name === EL.usingIF.v6)?.address || EL.usingIF.v6
+								: '::%' + EL.usingIF.v6;
+							client.setMulticastInterface(ifSpec);
 						} catch (e) { }
 					}
 
