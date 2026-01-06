@@ -783,6 +783,25 @@ x Warranty
 ```
 
 
+## ToDo for V3
+
+メジャーバージョンアップを計画しています。
+ライブラリ構造の近代化と、使いやすさ・テスト容易性の向上が目標です。
+
+### コールバック -> Promise / async-await
+現在の実装は初期化やハンドリングにコールバックを使用しています。
+フロー制御向上のため、PromiseベースのAPIを提供する予定です。
+
+```javascript
+await el.initialize(...);
+const devices = await el.search();
+```
+
+### 近代化とモジュール分割
+- 巨大な `index.js` を小さなモジュール（PacketParser, NetworkLayerなど）に分割する。
+- 完全にモダンなES構文 (ES2015+) を使用する。
+
+
 ## Log
 - 2.18.0 IPv6対応強化
 - 2.17.7 データチェック強化
