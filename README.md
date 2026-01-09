@@ -2,9 +2,11 @@
 
 このモジュールは**ECHONET Liteプロトコル**をサポートします．
 ECHONET Liteプロトコルはスマートハウス機器の通信プロトコルです．
+Node.js上で動作し、IPv4/IPv6デュアルスタックやマルチキャスト検索をサポートします。
 
-This module provides **ECHONET Lite protocol**.
+This module provides **ECHONET Lite protocol** for Node.js.
 The ECHONET Lite protocol is a communication protocol for smart home devices.
+It supports IPv4/IPv6 dual stack and multicast discovery.
 
 **注意：本モジュールによるECHONET Lite通信規格上の保証はなく、SDKとしてもECHONET Liteの認証を受けておりません。
 また、製品化の場合には各社・各自がECHONET Lite認証を取得する必要があります。**
@@ -755,6 +757,54 @@ The simplest sending method is 'sendOPC1.'
 EL.sendOPC1( '192.168.2.103', [0x05,0xff,0x01], [0x01,0x35,0x01], 0x61, 0x80, [0x30]);
 ```
 
+## 確実な機器発見の手法 / Robust Device Discovery
+
+Ver. 2.18.1 以降、インスタンスリスト通知(`d5`)や自ノードインスタンスリストS(`d6`)を受信した際、自動的に `EL.facilities` が更新され、プロパティマップも自動取得されるようになりました。
+したがって、アプリケーション側では `EL.search()` を呼んだ後、`EL.facilities` の変化を監視するのが最も確実です。
+
+Since Ver. 2.18.1, `EL.facilities` is automatically updated when Instance List Notification (`d5`) or Self-node Instance List S (`d6`) is received.
+Therefore, the most robust way to parse the network is to call `EL.search()` and observe `EL.facilities`.
+
+```javascript
+// 監視を開始
+EL.setObserveFacilities(1000, () => {
+    console.dir(EL.facilities);
+});
+
+// 検索パケット送信
+EL.search();
+```
+
+
+# Troubleshooting / トラブルシューティング
+
+## 機器が見つからない / Devices not found
+
+1. **Firewall / Security Software**:
+   - UDP 3610 port must be opened.
+   - Multicast (224.0.23.0 / FF02::1) must be allowed.
+   - Check Windows Defender or macOS Firewall settings.
+
+2. **Network Interface (Dual NICs)**:
+   - If you have multiple network interfaces (e.g., Wi-Fi and Ethernet), ECHONET Lite packets might be going out from the wrong interface.
+   - Specify the interface explicitly in `initialize`.
+
+   ```javascript
+   // IPv4: IP address, IPv6: Interface Name
+   EL.initialize(objList, callback, 0, { v4: '192.168.1.5', v6: 'en0' });
+   ```
+
+3. **IPv6 Multicast Issues**:
+   - In some environments (especially macOS or complex VLANs), IPv6 multicast (`FF02::1`) might fail to find devices if the Scope ID is not handled correctly.
+   - Ver. 2.18.1+ handles Scope IDs (e.g. `%en0`) correctly in `EL.facilities`.
+
+## "Search response timeout" in tests
+
+If `npm test` fails with timeout:
+- Ensure you possess an actual ECHONET Lite device in your network.
+- Or use a simulator like **[MoekadenRoom](https://github.com/SonyCSL/MoekadenRoom)**.
+- The default timeout is short; real devices might be slower to respond.
+
 
 # meta data
 
@@ -803,6 +853,7 @@ const devices = await el.search();
 
 
 ## Log
+- 2.18.1 IPv6 Scope IDの除外処理追加、インスタンスリスト(d5/d6)受信時の機器検出強化、パケット受信時の機器情報更新漏れ修正
 - 2.18.0 IPv6対応強化
 - 2.17.7 データチェック強化
 - 2.17.6 undefinedのチェック追加
