@@ -1,42 +1,23 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    
     <meta charset="utf-8">
-    <title>index.js - Documentation</title>
-    
-    
-    <script src="scripts/prettify/prettify.js"></script>
-    <script src="scripts/prettify/lang-css.js"></script>
+    <title>JSDoc: Source: index.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
     <!--[if lt IE 9]>
       <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
     <![endif]-->
-    <link type="text/css" rel="stylesheet" href="styles/prettify.css">
-    <link type="text/css" rel="stylesheet" href="styles/jsdoc.css">
-    <script src="scripts/nav.js" defer></script>
-    
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
 </head>
+
 <body>
 
-<input type="checkbox" id="nav-trigger" class="nav-trigger" />
-<label for="nav-trigger" class="navicon-button x">
-  <div class="navicon"></div>
-</label>
-
-<label for="nav-trigger" class="overlay"></label>
-
-<nav >
-    
-    
-    <h2><a href="index.html">Home</a></h2><h3>Namespaces</h3><ul><li><a href="EL.html">EL</a><ul class='methods'><li data-type='method'><a href="EL.html#.ELDATA2Array">ELDATA2Array</a></li><li data-type='method'><a href="EL.html#.bytesShow">bytesShow</a></li><li data-type='method'><a href="EL.html#.bytesToString">bytesToString</a></li><li data-type='method'><a href="EL.html#.clearObserveFacilities">clearObserveFacilities</a></li><li data-type='method'><a href="EL.html#.complementFacilities">complementFacilities</a></li><li data-type='method'><a href="EL.html#.complementFacilities_sub">complementFacilities_sub</a></li><li data-type='method'><a href="EL.html#.decreaseWaitings">decreaseWaitings</a></li><li data-type='method'><a href="EL.html#.eldataShow">eldataShow</a></li><li data-type='method'><a href="EL.html#.getClassList">getClassList</a></li><li data-type='method'><a href="EL.html#.getPropertyMaps">getPropertyMaps</a></li><li data-type='method'><a href="EL.html#.getSeparatedString_ELDATA">getSeparatedString_ELDATA</a></li><li data-type='method'><a href="EL.html#.getSeparatedString_String">getSeparatedString_String</a></li><li data-type='method'><a href="EL.html#.increaseWaitings">increaseWaitings</a></li><li data-type='method'><a href="EL.html#.initialize">initialize</a></li><li data-type='method'><a href="EL.html#.myIPaddress">myIPaddress</a></li><li data-type='method'><a href="EL.html#.objectSort">objectSort</a></li><li data-type='method'><a href="EL.html#.parseBytes">parseBytes</a></li><li data-type='method'><a href="EL.html#.parseDetail">parseDetail</a></li><li data-type='method'><a href="EL.html#.parseMapForm2">parseMapForm2</a></li><li data-type='method'><a href="EL.html#.parseString">parseString</a></li><li data-type='method'><a href="EL.html#.release">release</a></li><li data-type='method'><a href="EL.html#.renewFacilities">renewFacilities</a></li><li data-type='method'><a href="EL.html#.renewNICList">renewNICList</a></li><li data-type='method'><a href="EL.html#.replyGetDetail_sub">replyGetDetail_sub</a></li><li data-type='method'><a href="EL.html#.replyOPC1">replyOPC1</a></li><li data-type='method'><a href="EL.html#.replySetDetail">replySetDetail</a></li><li data-type='method'><a href="EL.html#.replySetDetail_sub">replySetDetail_sub</a></li><li data-type='method'><a href="EL.html#.returner">returner</a></li><li data-type='method'><a href="EL.html#.search">search</a></li><li data-type='method'><a href="EL.html#.sendArray">sendArray</a></li><li data-type='method'><a href="EL.html#.sendBase">sendBase</a></li><li data-type='method'><a href="EL.html#.sendDetails">sendDetails</a></li><li data-type='method'><a href="EL.html#.sendELDATA">sendELDATA</a></li><li data-type='method'><a href="EL.html#.sendOPC1">sendOPC1</a></li><li data-type='method'><a href="EL.html#.sendString">sendString</a></li><li data-type='method'><a href="EL.html#.setObserveFacilities">setObserveFacilities</a></li><li data-type='method'><a href="EL.html#.stringShow">stringShow</a></li><li data-type='method'><a href="EL.html#.toHexArray">toHexArray</a></li><li data-type='method'><a href="EL.html#.toHexString">toHexString</a></li></ul></li></ul><h3><a href="global.html">Global</a></h3>
-    
-</nav>
-
 <div id="main">
-    
-    <h1 class="page-title">index.js</h1>
-    
+
+    <h1 class="page-title">Source: index.js</h1>
 
     
 
@@ -76,6 +57,22 @@ const crypto = require('crypto'); // 安定ID生成用
 /**
  * facilitiesの型: { [ip: string]: { [SEOJ: string]: { [EPC: string]: string } } }
  * @typedef {Object&lt;string, Object&lt;string, Object&lt;string, string>>>} ELFacilities
+ */
+
+/**
+ * deviceIDsの1エントリ（機器識別番号をキーにした管理テーブルの値）
+ * device は EL.facilities[ip] への参照（シャローコピー）なので、
+ * EL.facilities 経由で書き込んだ値はそのまま device からも見える。
+ * @typedef {Object} ELDeviceIDEntry
+ * @property {string|null} ipv4 IPv4アドレス(未観測時はnull)
+ * @property {string|null} ipv6 IPv6アドレス(未観測時はnull)
+ * @property {Object&lt;string, Object&lt;string, string>>} device EL.facilities[ip] への参照 { [SEOJ]: { [EPC]: EDT } }
+ */
+
+/**
+ * deviceIDsの型: { [id: string]: ELDeviceIDEntry }
+ * id は EPC 0x83(識別番号)のHEX文字列
+ * @typedef {Object&lt;string, ELDeviceIDEntry>} ELDeviceIDs
  */
 
 /**
@@ -121,6 +118,7 @@ const crypto = require('crypto'); // 安定ID生成用
  * @property {boolean} debugMode デバッグログ出力
  * @property {ELFacilities} facilities 保持中の機器情報
  * @property {ELIdentificationEntry[]} identificationNumbers 識別番号の収集結果
+ * @property {ELDeviceIDs} deviceIDs 機器識別番号をキーにした管理テーブル。EL.facilities[ip]へのシャロー参照を保持するため追加メモリは最小限。次のメジャーバージョンまでの互換措置として維持。
  */
 
 /**
@@ -193,7 +191,10 @@ let EL = {
 	// データ形式の例
 	// { '192.168.0.3': { '05ff01': { d6: '' } },
 	// '192.168.0.4': { '05ff01': { '80': '30', '82': '30' } } }
-	identificationNumbers: []  // ELの識別番号リスト
+	identificationNumbers: [],  // ELの識別番号リスト
+	deviceIDs: {}  // 機器識別番号(EPC 0x83)をキーにした管理テーブル { [id]: { ipv4, ipv6, device } }
+	// deviceIDs[id].device は EL.facilities[ip] への参照（シャローコピー）なのでメモリ二重消費なし
+	// IPv4 を優先: ipv4 が確定済みなら device は IPv4 側の EL.facilities を指す
 };
 
 
@@ -270,6 +271,7 @@ EL.initialize = function (objList, userfunc, ipVer = 4, Options = { v4: '', v6: 
 	EL.observeFacilitiesTimerId = null;
 	EL.facilities = {};
 	EL.identificationNumbers = [];
+	EL.deviceIDs = {};
 
 	EL.debugMode ? console.log('EL.initialize() NIC list:', EL.nicList) : 0;
 
@@ -2115,6 +2117,8 @@ EL.returner = function (bytes, rinfo, userfunc) {
  * - アドレス/EOJごとの入れ子連想配列 `EL.facilities[address][SEOJ][EPC] = EDT(hex)` を更新。
  * - GET_SNA のようにPDC=0で値無し（空文字）の項目は保存しない。
  * - EPC=0x83(識別番号)は `EL.identificationNumbers` に {id, ip, OBJ} で追記（重複は追加しない）。
+ * - EPC=0x83 受信時に `EL.deviceIDs[id]` を作成/更新。ipv4/ipv6 フィールドを記録し、
+ *   device は EL.facilities[address] へのシャロー参照（IPv4優先: IPv4確定済みなら device は更新しない）。
  */
 // ネットワーク内のEL機器全体情報を更新する，受信したら勝手に実行される
 EL.renewFacilities = function (address, els) {
@@ -2150,6 +2154,31 @@ EL.renewFacilities = function (address, els) {
 				const exists = EL.identificationNumbers.some(entry => entry.id === idVal &amp;&amp; entry.ip === address &amp;&amp; entry.OBJ === els.SEOJ);
 				if (!exists) {
 					EL.identificationNumbers.push({ id: idVal, ip: address, OBJ: els.SEOJ });
+				}
+
+				// deviceIDs の更新
+				// address が IPv4 かどうかは ':' の有無で判断
+				const isIPv4 = address.indexOf(':') === -1;
+				if (!EL.deviceIDs[idVal]) {
+					// 新規登録: device は今のアドレスの facilities を参照（シャローコピー）
+					EL.deviceIDs[idVal] = {
+						ipv4: isIPv4 ? address : null,
+						ipv6: isIPv4 ? null : address,
+						device: EL.facilities[address]
+					};
+				} else {
+					// 既存エントリの更新
+					if (isIPv4) {
+						EL.deviceIDs[idVal].ipv4 = address;
+						// IPv4優先: IPv4が取れたら device は IPv4 側の facilities を指すように更新
+						EL.deviceIDs[idVal].device = EL.facilities[address];
+					} else {
+						EL.deviceIDs[idVal].ipv6 = address;
+						// IPv4優先: IPv4がまだない場合だけ device を IPv6 側で補完
+						if (!EL.deviceIDs[idVal].ipv4) {
+							EL.deviceIDs[idVal].device = EL.facilities[address];
+						}
+					}
 				}
 			}
 
@@ -2490,21 +2519,19 @@ module.exports = EL;
 
 
 
-    
-    
 </div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Namespaces</h3><ul><li><a href="EL.html">EL</a></li></ul><h3><a href="global.html">Global</a></h3>
+</nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Fri Jan 09 2026 12:36:51 GMT+0000 (Coordinated Universal Time) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Mon Jun 22 2026 17:57:44 GMT+0900 (Japan Standard Time)
 </footer>
 
-<script>prettyPrint();</script>
-<script src="scripts/polyfill.js"></script>
-<script src="scripts/linenumber.js"></script>
-
-
-
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
 </body>
 </html>

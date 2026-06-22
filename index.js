@@ -32,6 +32,22 @@ const crypto = require('crypto'); // 安定ID生成用
  */
 
 /**
+ * deviceIDsの1エントリ（機器識別番号をキーにした管理テーブルの値）
+ * device は EL.facilities[ip] への参照（シャローコピー）なので、
+ * EL.facilities 経由で書き込んだ値はそのまま device からも見える。
+ * @typedef {Object} ELDeviceIDEntry
+ * @property {string|null} ipv4 IPv4アドレス(未観測時はnull)
+ * @property {string|null} ipv6 IPv6アドレス(未観測時はnull)
+ * @property {Object<string, Object<string, string>>} device EL.facilities[ip] への参照 { [SEOJ]: { [EPC]: EDT } }
+ */
+
+/**
+ * deviceIDsの型: { [id: string]: ELDeviceIDEntry }
+ * id は EPC 0x83(識別番号)のHEX文字列
+ * @typedef {Object<string, ELDeviceIDEntry>} ELDeviceIDs
+ */
+
+/**
  * ECHONET Lite メインオブジェクトのプロパティ群
  * @typedef {Object} ELNamespace
  * @property {string} SETI_SNA 0x50 SetI_SNA
@@ -74,6 +90,7 @@ const crypto = require('crypto'); // 安定ID生成用
  * @property {boolean} debugMode デバッグログ出力
  * @property {ELFacilities} facilities 保持中の機器情報
  * @property {ELIdentificationEntry[]} identificationNumbers 識別番号の収集結果
+ * @property {ELDeviceIDs} deviceIDs 機器識別番号をキーにした管理テーブル。EL.facilities[ip]へのシャロー参照を保持するため追加メモリは最小限。次のメジャーバージョンまでの互換措置として維持。
  */
 
 /**
@@ -146,7 +163,10 @@ let EL = {
 	// データ形式の例
 	// { '192.168.0.3': { '05ff01': { d6: '' } },
 	// '192.168.0.4': { '05ff01': { '80': '30', '82': '30' } } }
-	identificationNumbers: []  // ELの識別番号リスト
+	identificationNumbers: [],  // ELの識別番号リスト
+	deviceIDs: {}  // 機器識別番号(EPC 0x83)をキーにした管理テーブル { [id]: { ipv4, ipv6, device } }
+	// deviceIDs[id].device は EL.facilities[ip] への参照（シャローコピー）なのでメモリ二重消費なし
+	// IPv4 を優先: ipv4 が確定済みなら device は IPv4 側の EL.facilities を指す
 };
 
 
@@ -223,6 +243,7 @@ EL.initialize = function (objList, userfunc, ipVer = 4, Options = { v4: '', v6: 
 	EL.observeFacilitiesTimerId = null;
 	EL.facilities = {};
 	EL.identificationNumbers = [];
+	EL.deviceIDs = {};
 
 	EL.debugMode ? console.log('EL.initialize() NIC list:', EL.nicList) : 0;
 
@@ -2068,6 +2089,8 @@ EL.returner = function (bytes, rinfo, userfunc) {
  * - アドレス/EOJごとの入れ子連想配列 `EL.facilities[address][SEOJ][EPC] = EDT(hex)` を更新。
  * - GET_SNA のようにPDC=0で値無し（空文字）の項目は保存しない。
  * - EPC=0x83(識別番号)は `EL.identificationNumbers` に {id, ip, OBJ} で追記（重複は追加しない）。
+ * - EPC=0x83 受信時に `EL.deviceIDs[id]` を作成/更新。ipv4/ipv6 フィールドを記録し、
+ *   device は EL.facilities[address] へのシャロー参照（IPv4優先: IPv4確定済みなら device は更新しない）。
  */
 // ネットワーク内のEL機器全体情報を更新する，受信したら勝手に実行される
 EL.renewFacilities = function (address, els) {
@@ -2103,6 +2126,31 @@ EL.renewFacilities = function (address, els) {
 				const exists = EL.identificationNumbers.some(entry => entry.id === idVal && entry.ip === address && entry.OBJ === els.SEOJ);
 				if (!exists) {
 					EL.identificationNumbers.push({ id: idVal, ip: address, OBJ: els.SEOJ });
+				}
+
+				// deviceIDs の更新
+				// address が IPv4 かどうかは ':' の有無で判断
+				const isIPv4 = address.indexOf(':') === -1;
+				if (!EL.deviceIDs[idVal]) {
+					// 新規登録: device は今のアドレスの facilities を参照（シャローコピー）
+					EL.deviceIDs[idVal] = {
+						ipv4: isIPv4 ? address : null,
+						ipv6: isIPv4 ? null : address,
+						device: EL.facilities[address]
+					};
+				} else {
+					// 既存エントリの更新
+					if (isIPv4) {
+						EL.deviceIDs[idVal].ipv4 = address;
+						// IPv4優先: IPv4が取れたら device は IPv4 側の facilities を指すように更新
+						EL.deviceIDs[idVal].device = EL.facilities[address];
+					} else {
+						EL.deviceIDs[idVal].ipv6 = address;
+						// IPv4優先: IPv4がまだない場合だけ device を IPv6 側で補完
+						if (!EL.deviceIDs[idVal].ipv4) {
+							EL.deviceIDs[idVal].device = EL.facilities[address];
+						}
+					}
 				}
 			}
 

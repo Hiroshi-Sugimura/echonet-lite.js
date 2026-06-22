@@ -274,6 +274,45 @@ EL.identificationNumbers
 ]
 ```
 
+## 機器番号キー管理テーブル, deviceIDs
+
+`EL.deviceIDs` は **機器識別番号（EPC `0x83`）をキー**にした辞書型テーブルです。
+IPv4 / IPv6 アドレスと機器情報（`EL.facilities[ip]` への**シャロー参照**）をまとめて保持します。
+`device` フィールドは `EL.facilities[ip]` と同じオブジェクトを指しているため、
+どちらから書き込んでも即座に反映され、**メモリの二重消費はありません**。
+IPv4 が取得済みであれば `device` は IPv4 側を優先します。
+
+こんな感じ
+
+```
+EL.deviceIDs =
+{
+  'fe0000776e5b0d002b5b0ef00100000000': {
+    ipv4: '192.168.2.11',   // IPv4アドレス (未観測時は null)
+    ipv6: 'fe80::1',        // IPv6アドレス (未観測時は null)
+    device: {               // EL.facilities['192.168.2.11'] への参照（シャローコピー）
+      '0ef001': { '80': '30', 'd6': '01013501' },
+      '013501': { '80': '30' }
+    }
+  }
+}
+```
+
+**アクセス例**
+
+```javascript
+// 識別番号からIPv4を得る
+const id = 'fe0000776e5b0d002b5b0ef00100000000';
+console.log(EL.deviceIDs[id].ipv4);  // '192.168.2.11'
+
+// 識別番号から機器のEOJごとのEPCを参照する
+console.log(EL.deviceIDs[id].device['013501']['80']);  // '30'
+
+// EL.facilities 経由で書き込むと deviceIDs.device にも即時反映される
+EL.facilities['192.168.2.11']['013501']['80'] = '31';
+console.log(EL.deviceIDs[id].device['013501']['80']);  // '31' (同一参照)
+```
+
 ## 自分がデバイス扱いしたい場合は下記の dev_details の形でEPC管理すると使える関数がある
 
 下記はエアコンと照明の詳細オブジェクトを持っている場合である。
@@ -769,10 +808,20 @@ Therefore, the most robust way to parse the network is to call `EL.search()` and
 // 監視を開始
 EL.setObserveFacilities(1000, () => {
     console.dir(EL.facilities);
+    // deviceIDs からも参照可能（同一オブジェクト参照のためメモリ増加なし）
+    console.dir(EL.deviceIDs);
 });
 
 // 検索パケット送信
 EL.search();
+
+// 識別番号が確定した機器にアクセスする例
+const id = Object.keys(EL.deviceIDs)[0];  // 最初に発見した機器
+if (id) {
+    const entry = EL.deviceIDs[id];
+    console.log('IPv4:', entry.ipv4, '/ IPv6:', entry.ipv6);
+    console.dir(entry.device);  // EL.facilities[ip] と同じ内容
+}
 ```
 
 
@@ -853,6 +902,7 @@ const devices = await el.search();
 
 
 ## Log
+- 2.19.0 機器識別番号(EPC 0x83)をキーにした管理テーブル `EL.deviceIDs` を追加。IPv4/IPv6両方に対応し、`EL.facilities[ip]`へのシャロー参照を保持することでメモリ二重消費を回避。IPv4優先の参照決定ルールを採用。
 - 2.18.1 IPv6 Scope IDの除外処理追加、インスタンスリスト(d5/d6)受信時の機器検出強化、パケット受信時の機器情報更新漏れ修正
 - 2.18.0 IPv6対応強化
 - 2.17.7 データチェック強化
